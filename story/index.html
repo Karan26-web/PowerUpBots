@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PowerUp Bots - Halves</title>
+<title>PowerUp Bots </title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;height:100%;overflow:hidden;background:#d5e5ff}
@@ -193,10 +193,22 @@ button{font:inherit}
 }
 
 .css-square{
-  background:linear-gradient(135deg,#a8db54 0%,#70ae27 58%,#5a941f 100%);
-  border:4px solid rgba(55,126,23,.28);
-  border-radius:10px;
-  box-shadow:inset 0 10px 18px rgba(255,255,255,.2),0 12px 14px rgba(58,88,139,.2);
+  background:#d23d62;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+}
+
+.css-square.whole-block,
+.css-square.half-inner{
+  filter:none;
+}
+.css-square.teach-shape-glow{
+  animation:teachGlowPulse 1.4s ease-in-out infinite!important;
+  filter:none!important;
+}
+.css-square.teach-shape-glow .half-inner{
+  filter:none!important;
 }
 
 .halves-row{
@@ -211,6 +223,10 @@ button{font:inherit}
   overflow:hidden;
   flex:0 0 auto;
   filter:drop-shadow(0 12px 14px rgba(58,88,139,.18));
+}
+.half-wrap.teach-shape-glow{
+  filter:none;
+  animation:teachGlowPulse 1.4s ease-in-out infinite!important;
 }
 
 .half-wrap .half-inner{
@@ -253,21 +269,26 @@ button{font:inherit}
 }
 
 /* ── Teaching shape styles ── */
+@keyframes teachGlowPulse{
+  0%,100%{filter:drop-shadow(0 0 10px rgba(255,255,0,1)) drop-shadow(0 0 28px rgba(210,255,0,.95)) drop-shadow(0 0 50px rgba(180,240,0,.8));}
+  50%{filter:drop-shadow(0 0 22px rgba(255,255,0,1)) drop-shadow(0 0 50px rgba(230,255,0,1)) drop-shadow(0 0 90px rgba(200,255,0,.95));}
+}
 .teach-shape-glow{
-  filter:drop-shadow(0 0 10px rgba(210,255,0,.95)) drop-shadow(0 0 22px rgba(170,225,0,.7));
+  filter:none;
+  animation:teachGlowPulse 1.4s ease-in-out infinite;
 }
 .teach-content-row{
   display:flex;
   align-items:center;
   justify-content:center;
-  gap:70px;
+  gap:48px;
   width:100%;
 }
 .teach-content-col{
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:24px;
+  gap:18px;
   width:100%;
 }
 .teach-big-label{
@@ -323,13 +344,24 @@ button{font:inherit}
 }
 .teach-horizontal-wrap{
   display:flex;
+  flex-direction:column;
   align-items:center;
-  gap:16px;
+  gap:8px;
+}
+.teach-horizontal-pieces{
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  gap:18px;
 }
 .teach-horizontal-tags{
   display:flex;
-  flex-direction:column;
-  gap:34px;
+  justify-content:center;
+  gap:60px;
+}
+.teach-horizontal-tags span{
+  min-width:80px;
+  text-align:center;
 }
 /* kept for any remaining references */
 .teach-title{color:#fff;font-size:28px;line-height:1.16;text-shadow:0 3px 9px rgba(0,0,0,.35);}
@@ -543,6 +575,11 @@ button{font:inherit}
 }
 
 #cutLine.show{opacity:1}
+
+#wrongSlash::before,
+#cutLine::before{
+  display:none;
+}
 
 .machine-hit{
   position:absolute;
@@ -952,14 +989,15 @@ var ROUNDS = [
     podAspectRight:1056 / 444,
     chargerOverlap:68,
     botWIntro:205,
-    botWReady:150
+    botWReady:150,
+    happyBotW:163
   },
   {
     name:"circle",
     label:"Circle",
     blockSrc:ASSETS + "CircleBlock.png",
-    blockW:190,
-    blockH:190,
+    blockW:220,
+    blockH:220,
     cut:"horizontal",
     startAngle:45,
     targetAngle:0,
@@ -969,13 +1007,14 @@ var ROUNDS = [
     pod:ASSETS + "SemiCircleHollowleft.png",
     podLeft:ASSETS + "SemiCircleHollowleft.png",
     podRight:ASSETS + "SemiCircleHollowright.png",
-    podW:150,
+    podW:160,
     botAspect:893 / 896,
     podAspectLeft:1098 / 520,
     podAspectRight:1098 / 520,
-    chargerOverlap:52,
-    botWIntro:205,
-    botWReady:150
+    chargerOverlap:60,
+    botWIntro:220,
+    botWReady:180,
+    happyBotW:163
   },
   {
     name:"square",
@@ -998,7 +1037,8 @@ var ROUNDS = [
     podAspectRight:1089 / 444,
     chargerOverlap:34,
     botWIntro:205,
-    botWReady:150
+    botWReady:150,
+    happyBotW:141
   }
 ];
 
@@ -1176,6 +1216,8 @@ function clearTargetFills(){
     if(!fill){ return; }
     fill.innerHTML = "";
     fill.className = "target-fill";
+    fill.style.clipPath = "";
+    fill.style.borderRadius = "";
   });
 }
 
@@ -1195,10 +1237,15 @@ function setupTargetSlots(r, layout){
   var podTopRight = podTopForRound(r, layout, "right");
   var isCircle = r.name === "circle";
   var isTriangle = r.name === "square";
-  var width = isCircle ? 122 : isTriangle ? 112 : 108;
-  var height = isCircle ? 60 : isTriangle ? 92 : 100;
-  var slotOffset = isCircle ? 28 : isTriangle ? 14 : 10;
-  var radius = isCircle ? "72px 72px 8px 8px" : isTriangle ? "6px" : "8px";
+  /* Slot dimensions calibrated to match the visual hollow in each pod image.
+     Circle: bowl/dome fills nearly full pod width, height = width/2.
+     Triangle: bounding box of hollow ~91% of pod width, square bounding box.
+     Rectangle: hollow is ~88% of pod width, square (each half is a square). */
+  var width = isCircle ? 154 : isTriangle ? 130 : 116;
+  var height = isCircle ? 77 : isTriangle ? 130 : 116;
+  /* slotOffset: pixels from the pod image TOP to the TOP of the fill div.
+     The hollow starts very close to the pod top in all pod images. */
+  var slotOffset = 6;
 
   [
     {fill:els.leftFill, top:podTopLeft + slotOffset},
@@ -1208,11 +1255,10 @@ function setupTargetSlots(r, layout){
     fill.style.top = item.top + "px";
     fill.style.width = width + "px";
     fill.style.height = height + "px";
-    fill.style.borderRadius = radius;
-    /* Triangular hollows get a matching clip-path so the fill looks like the actual half. */
-    fill.style.clipPath = isTriangle
-      ? (idx === 0 ? "polygon(0 0,100% 0,0 100%)" : "polygon(100% 0,100% 100%,0 100%)")
-      : "";
+    /* No clip-path or border-radius on the fill container — the piece inside has its own
+       clip-path from pieceGeometry, and circle images use natural transparency for the arc shape. */
+    fill.style.borderRadius = "";
+    fill.style.clipPath = "";
   });
 }
 
@@ -1370,6 +1416,16 @@ function cutPieceHome(width, height, angle, index, centerX, centerY){
   };
 }
 
+/* Maps slot index (0=left, 1=right) to the correct piece index for that round.
+   Circle: piece 0=top-half(dome) goes to right pod, piece 1=bottom-half(bowl) goes to left pod.
+   Other rounds: piece index matches slot index directly. */
+function pieceIndexForSlot(r, slotIndex){
+  if(r.name === "circle"){
+    return slotIndex === 0 ? 1 : 0;
+  }
+  return slotIndex;
+}
+
 function makeCutPiece(r, index, width, height, angle){
   var g = pieceGeometry(width, height, angle, index);
   var wrap = document.createElement("div");
@@ -1428,31 +1484,47 @@ function makeTeachingPieces(r, angle, width, height){
   t1.textContent = "Half";
 
   if(orientation === "horizontal"){
-    var wrap = document.createElement("div");
-    wrap.className = "teach-horizontal-wrap";
-    var tags = document.createElement("div");
-    tags.className = "teach-horizontal-tags";
-    var stack = document.createElement("div");
-    stack.className = "teach-piece-stack";
-    tags.appendChild(t0);
-    tags.appendChild(t1);
-    stack.appendChild(h0);
-    stack.appendChild(h1);
-    wrap.appendChild(tags);
-    wrap.appendChild(stack);
-    box.appendChild(wrap);
+    /* Show both halves side-by-side (dome on left, bowl on right) with centered labels below. */
+    var g0h = pieceGeometry(width, height, angle, 0);
+    var pieceW = g0h.width;
+    var piecesRow = document.createElement("div");
+    piecesRow.className = "teach-piece-row";
+    piecesRow.appendChild(h0);
+    piecesRow.appendChild(h1);
+    var labelBase = "min-width:"+pieceW+"px;text-align:center;color:#fff;font-size:20px;font-weight:900;text-shadow:0 2px 6px rgba(0,0,0,.3),0 0 5px rgba(77,202,255,.8);";
+    t0.style.cssText = labelBase;
+    t1.style.cssText = labelBase;
+    var labels = document.createElement("div");
+    labels.style.cssText = "display:flex;gap:18px;justify-content:center;margin-top:6px;";
+    labels.appendChild(t0);
+    labels.appendChild(t1);
+    box.appendChild(piecesRow);
+    box.appendChild(labels);
     return box;
   }
 
   /* Diagonal / slash: both triangular halves start overlapping so they look like the
      original square with a clean diagonal cut, then offset slightly along the cut axis. */
   if(orientation === "slash" || orientation === "backslash"){
+    var g0 = pieceGeometry(width, height, angle, 0);
+    var g1 = pieceGeometry(width, height, angle, 1);
     var splitBox = document.createElement("div");
     splitBox.style.cssText = "position:relative;width:"+width+"px;height:"+height+"px;flex-shrink:0;";
-    h0.style.position = "absolute"; h0.style.left = "0"; h0.style.top = "0";
-    h0.style.transform = "translate(-7px,-7px)";
-    h1.style.position = "absolute"; h1.style.left = "0"; h1.style.top = "0";
-    h1.style.transform = "translate(7px,7px)";
+    h0.classList.remove("teach-pop");
+    h1.classList.remove("teach-pop","teach-pop-d1");
+    h0.style.position = "absolute";
+    h0.style.left = g0.minX + "px";
+    h0.style.top = g0.minY + "px";
+    h1.style.position = "absolute";
+    h1.style.left = g1.minX + "px";
+    h1.style.top = g1.minY + "px";
+    if(orientation === "slash"){
+      h0.style.transform = "translate(-10px,-10px)";
+      h1.style.transform = "translate(10px,10px)";
+    } else {
+      h0.style.transform = "translate(10px,-10px)";
+      h1.style.transform = "translate(-10px,10px)";
+    }
     splitBox.appendChild(h0);
     splitBox.appendChild(h1);
     box.appendChild(splitBox);
@@ -1482,7 +1554,7 @@ function makeTeachingPieces(r, angle, width, height){
 function renderTeaching(kind, angle, equal){
   var r = currentRound();
   var cutAngle = angle === undefined ? canonicalCutAngle(r) : angle;
-  var w = r.name === "rectangle" ? 220 : 170;
+  var w = r.name === "rectangle" ? 220 : r.name === "circle" ? 165 : 185;
   var h = Math.round(w * r.blockH / r.blockW);
   els.teachContent.innerHTML = "";
 
@@ -1505,7 +1577,7 @@ function renderTeaching(kind, angle, equal){
     els.teachContent.appendChild(row);
 
   } else {
-    setInstruction(equal === false ? "These parts do not fit the slots." : "Each part is called a half.");
+    setInstruction(equal === false ? "These parts are not equal halves." : "Each part is called a half.");
     var col = document.createElement("div");
     col.className = "teach-content-col";
 
@@ -1523,7 +1595,7 @@ function renderTeaching(kind, angle, equal){
 
     var botLbl = document.createElement("div");
     botLbl.className = "teach-equal-label";
-    botLbl.textContent = equal === false ? "Won't Fit" : "2 Equal Parts";
+    botLbl.textContent = equal === false ? "Not Equal Parts" : "2 Equal Parts";
 
     botRow.appendChild(makeTeachingPieces(r, cutAngle, w, h));
     botRow.appendChild(botLbl);
@@ -1627,8 +1699,8 @@ function setupTutorial(){
   els.tutorialOverlay.classList.add("show");
   els.machineBlock.innerHTML = "";
   els.machineBlock.appendChild(makeBlock(r, r.blockW, r.blockH));
-  els.blockCover.style.width = (r.name === "rectangle" ? 242 : 242) + "px";
-  els.blockCover.style.height = (r.name === "rectangle" ? 136 : 224) + "px";
+  els.blockCover.style.width = (r.blockW + 22) + "px";
+  els.blockCover.style.height = (r.blockH + 22) + "px";
   els.blockCover.style.borderRadius = (r.name === "circle" ? "50%" : "18px");
   els.blockCover.style.opacity = "1";
   els.cutLine.style.width = r.blockW + "px";
@@ -1754,8 +1826,8 @@ function setupLaser(){
   els.tutorialOverlay.classList.remove("show");
   els.machineBlock.innerHTML = "";
   els.machineBlock.appendChild(makeBlock(r,r.blockW,r.blockH));
-  els.blockCover.style.width = (r.name === "rectangle" ? 242 : 242) + "px";
-  els.blockCover.style.height = (r.name === "rectangle" ? 136 : 224) + "px";
+  els.blockCover.style.width = (r.blockW + 22) + "px";
+  els.blockCover.style.height = (r.blockH + 22) + "px";
   els.blockCover.style.borderRadius = (r.name === "circle" ? "50%" : "18px");
   els.blockCover.style.opacity = "1";
   els.cutLine.style.width = r.blockW + "px";
@@ -2033,9 +2105,10 @@ function flyHalvesToSlots(r, angle, onDone){
   var center = machineCenterInGame();
   var targets = slotTargetsFromFills();
 
-  [0,1].forEach(function(i){
-    var home = cutPieceHome(r.blockW, r.blockH, angle, i, center.x, center.y);
-    var fly = makeCutPiece(r, i, r.blockW, r.blockH, angle);
+  [0,1].forEach(function(slotIdx){
+    var pieceIdx = pieceIndexForSlot(r, slotIdx);
+    var home = cutPieceHome(r.blockW, r.blockH, angle, pieceIdx, center.x, center.y);
+    var fly = makeCutPiece(r, pieceIdx, r.blockW, r.blockH, angle);
     fly.classList.add("flying-half");
     fly.style.left = home.left + "px";
     fly.style.top = home.top + "px";
@@ -2046,9 +2119,9 @@ function flyHalvesToSlots(r, angle, onDone){
 
     layer.appendChild(fly);
 
-    var scale = slotScaleForPiece(targets[i], home);
-    var dx = targets[i].x - home.centerX;
-    var dy = targets[i].y - home.centerY;
+    var scale = slotScaleForPiece(targets[slotIdx], home);
+    var dx = targets[slotIdx].x - home.centerX;
+    var dy = targets[slotIdx].y - home.centerY;
     requestAnimationFrame(function(){ requestAnimationFrame(function(){
       fly.style.transform = "translate("+dx+"px,"+dy+"px) scale("+scale+")";
     });});
@@ -2083,10 +2156,13 @@ function showSuccess(){
     setInstruction("Great cut! The halves will power the bots!");
     flyHalvesToSlots(r, cutAngle, function(){
       els.flightLayer.innerHTML = "";
-      fillSlotWithPiece(els.leftFill, r, 0, cutAngle);
-      fillSlotWithPiece(els.rightFill, r, 1, cutAngle);
+      fillSlotWithPiece(els.leftFill, r, pieceIndexForSlot(r,0), cutAngle);
+      fillSlotWithPiece(els.rightFill, r, pieceIndexForSlot(r,1), cutAngle);
       els.leftBot.src = r.happyBot;
       els.rightBot.src = r.happyBot;
+      var hw = (r.happyBotW || r.botWReady) + "px";
+      els.leftBot.style.width = hw;
+      els.rightBot.style.width = hw;
       els.leftBot.classList.add("happy","jump");
       els.rightBot.classList.add("happy","jump");
       els.leftPod.classList.add("glow");
@@ -2111,6 +2187,9 @@ function splitMachineBlock(angle){
   var trans = "transform 0.45s cubic-bezier(.34,1.3,.64,1)";
   var h0 = makeCutPiece(r,0,r.blockW,r.blockH,cutAngle);
   var h1 = makeCutPiece(r,1,r.blockW,r.blockH,cutAngle);
+  /* Remove the half-wrap drop-shadow in the machine — it looks odd for circles/triangles */
+  h0.style.filter = "none";
+  h1.style.filter = "none";
   els.machineBlock.innerHTML = "";
 
   if(orientation === "slash" || orientation === "backslash"){
@@ -2188,9 +2267,10 @@ function flyWrongToSlots(r, angle){
   var center = machineCenterInGame();
   var targets = slotTargetsFromFills();
 
-  [0,1].forEach(function(i){
-    var home = cutPieceHome(r.blockW, r.blockH, angle, i, center.x, center.y);
-    var fly = makeCutPiece(r, i, r.blockW, r.blockH, angle);
+  [0,1].forEach(function(slotIdx){
+    var pieceIdx = pieceIndexForSlot(r, slotIdx);
+    var home = cutPieceHome(r.blockW, r.blockH, angle, pieceIdx, center.x, center.y);
+    var fly = makeCutPiece(r, pieceIdx, r.blockW, r.blockH, angle);
     fly.style.position = "absolute";
     fly.style.left = home.left + "px";
     fly.style.top = home.top + "px";
@@ -2200,9 +2280,9 @@ function flyWrongToSlots(r, angle){
     fly.style.transition = "transform 0.72s cubic-bezier(.4,0,.2,1),box-shadow .28s ease,filter .28s ease";
     layer.appendChild(fly);
 
-    var scale = slotScaleForPiece(targets[i], home);
-    var dx = targets[i].x - home.centerX;
-    var dy = targets[i].y - home.centerY;
+    var scale = slotScaleForPiece(targets[slotIdx], home);
+    var dx = targets[slotIdx].x - home.centerX;
+    var dy = targets[slotIdx].y - home.centerY;
     requestAnimationFrame(function(){ requestAnimationFrame(function(){
       fly.style.transform = "translate("+dx+"px,"+dy+"px) scale("+scale+")";
     });});
