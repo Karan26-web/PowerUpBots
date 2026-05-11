@@ -1,0 +1,2308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PowerUp Bots - Halves</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#d5e5ff}
+body{display:flex;align-items:center;justify-content:center}
+button{font:inherit}
+
+#game{
+  position:absolute;
+  width:1280px;
+  height:720px;
+  overflow:hidden;
+  transform-origin:top left;
+  font-family:"Trebuchet MS","Arial Rounded MT Bold",Arial,sans-serif;
+  color:#154aa5;
+  user-select:none;
+}
+
+.bg{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  z-index:0;
+}
+
+.hidden{opacity:0;pointer-events:none}
+
+#instruction{
+  position:absolute;
+  top:8px;
+  left:32px;
+  width:1120px;
+  height:150px;
+  z-index:40;
+  transition:opacity .28s ease,transform .28s ease;
+}
+
+#instruction.hidden{transform:translateY(-8px)}
+
+#instruction img{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+
+#instructionText{
+  position:absolute;
+  left:154px;
+  right:14px;
+  top:42px;
+  min-height:58px;
+  display:flex;
+  align-items:center;
+  color:#154aa5;
+  font-size:26px;
+  line-height:1.14;
+  font-weight:900;
+  letter-spacing:0;
+}
+
+#scene{
+  position:absolute;
+  inset:0;
+  z-index:5;
+}
+
+.bot-slot{
+  position:absolute;
+  width:260px;
+  height:520px;
+  transform-origin:bottom center;
+}
+
+.bot-img{
+  position:absolute;
+  left:50%;
+  bottom:0;
+  max-width:none;
+  object-fit:contain;
+  transform:translateX(-50%);
+  transition:filter .35s ease,transform .45s cubic-bezier(.18,.89,.35,1.18);
+}
+
+.bot-img.happy{
+  filter:drop-shadow(0 0 16px rgba(116,219,255,.95));
+}
+
+.bot-img.jump{
+  animation:botJump .82s ease-in-out 2;
+}
+
+@keyframes botJump{
+  0%,100%{transform:translateX(-50%) translateY(0)}
+  42%{transform:translateX(-50%) translateY(-28px)}
+}
+
+.pod-img{
+  position:absolute;
+  left:50%;
+  top:0;
+  width:134px;
+  height:auto;
+  transform:translateX(-50%);
+  object-fit:contain;
+  opacity:0;
+  transition:opacity .35s ease,filter .35s ease;
+}
+
+.pod-img.visible{opacity:1}
+.pod-img.glow{animation:podGlow 1s ease-in-out 2}
+
+@keyframes podGlow{
+  0%,100%{filter:brightness(1)}
+  50%{filter:brightness(1.55) saturate(1.75) drop-shadow(0 0 16px rgba(76,222,255,.9))}
+}
+
+.layout-intro .left-bot{left:360px;bottom:0}
+.layout-intro .right-bot{right:360px;bottom:0}
+.layout-intro .bot-img{width:205px}
+.layout-intro .pod-img{display:none}
+
+.layout-ready .left-bot{left:110px;bottom:0}
+.layout-ready .right-bot{right:110px;bottom:0}
+.layout-ready .bot-slot{top:0;bottom:auto;height:720px}
+.layout-ready .left-bot,.layout-ready .right-bot{bottom:auto}
+.layout-ready .bot-img{width:235px}
+.layout-ready .bot-img{bottom:0}
+.layout-ready .pod-img{display:block;top:156px}
+.layout-ready .pod-img{width:160px}
+.layout-ready .pod-img.visible{opacity:1}
+
+.layout-laser .bot-slot{top:0;height:720px}
+.layout-laser .left-bot{left:20px}
+.layout-laser .right-bot{right:20px}
+.layout-laser .bot-img{width:148px;bottom:0}
+.layout-laser .pod-img{display:block;top:180px;width:132px}
+.layout-laser .pod-img.visible{opacity:1}
+
+.layout-clear .bot-slot{display:none}
+
+.target-fill{
+  position:absolute;
+  left:50%;
+  top:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  opacity:0;
+  transform:translateX(-50%);
+  pointer-events:none;
+  z-index:3;
+  transition:opacity .25s ease,filter .35s ease;
+}
+
+.target-fill.filled{opacity:1}
+.target-fill.glow{animation:targetGlow .9s ease-in-out 2}
+
+@keyframes targetGlow{
+  0%,100%{filter:brightness(1)}
+  50%{filter:brightness(1.35) drop-shadow(0 0 12px rgba(88,225,255,.9))}
+}
+
+#shapeStage{
+  position:absolute;
+  left:50%;
+  top:360px;
+  width:520px;
+  min-height:220px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transform:translate(-50%,-50%);
+  z-index:12;
+  transition:opacity .28s ease,transform .28s ease;
+}
+
+#shapeStage.hidden{transform:translate(-50%,-47%)}
+
+.whole-block,.half-inner{
+  display:block;
+  max-width:none;
+  filter:drop-shadow(0 12px 14px rgba(58,88,139,.2));
+}
+
+.css-square{
+  background:linear-gradient(135deg,#a8db54 0%,#70ae27 58%,#5a941f 100%);
+  border:4px solid rgba(55,126,23,.28);
+  border-radius:10px;
+  box-shadow:inset 0 10px 18px rgba(255,255,255,.2),0 12px 14px rgba(58,88,139,.2);
+}
+
+.halves-row{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:18px;
+}
+
+.half-wrap{
+  position:relative;
+  overflow:hidden;
+  flex:0 0 auto;
+  filter:drop-shadow(0 12px 14px rgba(58,88,139,.18));
+}
+
+.half-wrap .half-inner{
+  position:absolute;
+  left:0;
+  top:0;
+}
+
+#teachStage{
+  position:absolute;
+  left:50%;
+  top:428px;
+  width:760px;
+  height:456px;
+  transform:translate(-50%,-50%);
+  z-index:18;
+  transition:opacity .35s ease,transform .55s cubic-bezier(.34,1.4,.64,1);
+}
+
+#teachStage.hidden{transform:translate(-50%,-47%)}
+
+#teachStage>img{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+
+#teachContent{
+  position:absolute;
+  inset:58px 48px 52px 48px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:0;
+  color:#fff;
+  font-weight:900;
+}
+
+/* ── Teaching shape styles ── */
+.teach-shape-glow{
+  filter:drop-shadow(0 0 10px rgba(210,255,0,.95)) drop-shadow(0 0 22px rgba(170,225,0,.7));
+}
+.teach-content-row{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:70px;
+  width:100%;
+}
+.teach-content-col{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:24px;
+  width:100%;
+}
+.teach-big-label{
+  color:#fff;
+  font-size:42px;
+  font-weight:900;
+  text-shadow:0 3px 10px rgba(0,0,0,.4);
+  white-space:nowrap;
+}
+.teach-halves-box{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+}
+.teach-half-tags{
+  display:flex;
+  justify-content:space-around;
+  margin-top:5px;
+}
+.teach-half-tag{
+  color:#fff;
+  font-size:20px;
+  font-weight:900;
+  text-shadow:0 2px 6px rgba(0,0,0,.3),0 0 5px rgba(77,202,255,.8);
+}
+.teach-equal-label{
+  color:#fff;
+  font-size:36px;
+  font-weight:900;
+  text-shadow:0 3px 9px rgba(0,0,0,.35);
+  white-space:nowrap;
+}
+.teach-piece-row{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:18px;
+}
+.teach-piece-stack{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+}
+.teach-label-row{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:80px;
+  width:100%;
+}
+.teach-horizontal-wrap{
+  display:flex;
+  align-items:center;
+  gap:16px;
+}
+.teach-horizontal-tags{
+  display:flex;
+  flex-direction:column;
+  gap:34px;
+}
+/* kept for any remaining references */
+.teach-title{color:#fff;font-size:28px;line-height:1.16;text-shadow:0 3px 9px rgba(0,0,0,.35);}
+.teach-title .yellow{color:#ffe766}
+.teach-row{display:flex;align-items:center;justify-content:center;gap:18px;}
+.teach-op{color:#fff;font-size:38px;font-weight:900;text-shadow:0 3px 9px rgba(0,0,0,.35);}
+.teach-label{margin-top:10px;color:#ffe766;font-size:21px;line-height:1.1;font-weight:900;text-shadow:0 3px 9px rgba(0,0,0,.35);}
+
+#playStage{
+  position:absolute;
+  left:50%;
+  top:422px;
+  width:720px;
+  height:431px;
+  transform:translate(-50%,-50%);
+  z-index:18;
+  border:0;
+  background:transparent;
+  cursor:pointer;
+  transition:opacity .28s ease,transform .28s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+
+#playStage.hidden{transform:translate(-50%,-47%)}
+
+#playStage img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+
+#machineStage{
+  --ring-size:500px;
+  --ring-center-y:250px;
+  position:absolute;
+  left:50%;
+  top:425px;
+  width:900px;
+  height:600px;
+  transform:translate(-50%,-50%);
+  z-index:20;
+  transition:opacity .28s ease,transform .28s ease;
+}
+
+#machineStage.hidden{transform:translate(-50%,-47%)}
+
+#machineImg{
+  position:absolute;
+  left:50%;
+  top:0;
+  width:var(--ring-size);
+  height:var(--ring-size);
+  transform:translateX(-50%);
+  object-fit:contain;
+  pointer-events:none;
+}
+
+/* ── LaserMachine.png overlay (tutorial guide lines, same ring center) ── */
+#tutorialOverlay{
+  position:absolute;
+  left:50%;
+  top:0;
+  width:var(--ring-size);
+  height:var(--ring-size);
+  transform:translateX(-50%);
+  object-fit:contain;
+  pointer-events:none;
+  z-index:1;
+  opacity:0;
+  transition:opacity .2s ease;
+}
+#tutorialOverlay.show{opacity:1}
+
+/* ── Laser.png — rotating sprite (Laser.png: 258×172, nozzle on the right) ── */
+#laserImg{
+  position:absolute;
+  width:96px;
+  height:64px;
+  object-fit:contain;
+  pointer-events:none;
+  z-index:7;
+  display:none;
+}
+
+/* ── Beam.svg — only shown on CUT ── */
+#beamImg{
+  position:absolute;
+  width:308px;
+  height:308px;
+  object-fit:contain;
+  pointer-events:none;
+  z-index:6;
+  transform-origin:14.47% 14.47%;
+  display:none;
+  transition:opacity .18s ease;
+}
+
+#machineBlock{
+  position:absolute;
+  left:50%;
+  top:var(--ring-center-y);
+  transform:translate(-50%,-50%);
+  z-index:4;
+  transition:transform .55s cubic-bezier(.18,.89,.35,1.18);
+}
+
+#blockCover{
+  position:absolute;
+  left:50%;
+  top:var(--ring-center-y);
+  width:290px;
+  height:140px;
+  transform:translate(-50%,-50%);
+  background:transparent;
+  border-radius:18px;
+  z-index:3;
+}
+
+@keyframes blockVibrate{
+  0%,100%{transform:translate(-50%,-50%)}
+  10%{transform:translate(calc(-50% + 7px),-50%)}
+  25%{transform:translate(calc(-50% - 7px),-50%)}
+  40%{transform:translate(calc(-50% + 5px),-50%)}
+  55%{transform:translate(calc(-50% - 5px),-50%)}
+  70%{transform:translate(calc(-50% + 3px),-50%)}
+  85%{transform:translate(calc(-50% - 3px),-50%)}
+}
+
+#machineBlock.vibrate{
+  animation:blockVibrate 0.48s ease-in-out;
+}
+
+
+#laserBurst{
+  position:absolute;
+  left:50%;
+  top:var(--ring-center-y);
+  width:220px;
+  height:220px;
+  transform:translate(-50%,-50%);
+  object-fit:contain;
+  opacity:0;
+  z-index:9;
+  pointer-events:none;
+  display:none;
+}
+
+#laserBurst.show{animation:burst .75s ease-out forwards}
+
+@keyframes burst{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.35)}
+  30%{opacity:.9}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1.25)}
+}
+
+#wrongSlash{
+  --cut-angle:-38deg;
+  position:absolute;
+  left:50%;
+  top:var(--ring-center-y);
+  width:270px;
+  height:170px;
+  transform:translate(-50%,-50%);
+  border-radius:12px;
+  overflow:hidden;
+  opacity:0;
+  z-index:10;
+  pointer-events:none;
+}
+
+#wrongSlash::before{
+  content:"";
+  position:absolute;
+  left:-16%;
+  top:50%;
+  width:132%;
+  height:4px;
+  border-radius:999px;
+  background:#e9fbff;
+  box-shadow:0 0 0 1px rgba(255,255,255,.8),0 0 9px rgba(1,185,254,.7);
+  transform:translateY(-50%) rotate(var(--cut-angle));
+}
+
+#wrongSlash.show{opacity:1}
+
+#cutLine{
+  --cut-angle:135deg;
+  position:absolute;
+  left:50%;
+  top:var(--ring-center-y);
+  width:242px;
+  height:136px;
+  transform:translate(-50%,-50%);
+  overflow:hidden;
+  opacity:0;
+  z-index:8;
+  pointer-events:none;
+}
+
+#cutLine::before{
+  content:"";
+  position:absolute;
+  left:-16%;
+  top:50%;
+  width:132%;
+  height:4px;
+  border-radius:999px;
+  background:#c6f7fb;
+  box-shadow:0 0 0 1px rgba(255,255,255,.72),0 0 10px rgba(1,185,254,.78),0 0 20px rgba(1,185,254,.36);
+  transform:translateY(-50%) rotate(var(--cut-angle));
+}
+
+#cutLine.show{opacity:1}
+
+.machine-hit{
+  position:absolute;
+  border:0;
+  background:transparent;
+  cursor:pointer;
+  z-index:30;
+  border-radius:22px;
+  -webkit-tap-highlight-color:transparent;
+}
+
+.machine-hit:focus-visible{
+  outline:4px solid rgba(255,255,255,.9);
+  outline-offset:2px;
+}
+
+#hitLeft{left:44px;top:208px;width:116px;height:84px}
+#hitRight{right:44px;top:208px;width:116px;height:84px}
+#hitCut{left:50%;top:500px;width:136px;height:100px;transform:translateX(-50%);border-radius:999px}
+
+/* ── Visible button images (idle state; src swaps on press) ── */
+#btnLeft{
+  position:absolute;
+  left:44px;
+  top:208px;
+  width:116px;
+  height:84px;
+  object-fit:contain;
+  pointer-events:none;
+  z-index:25;
+}
+#btnRight{
+  position:absolute;
+  right:44px;
+  top:208px;
+  width:116px;
+  height:84px;
+  object-fit:contain;
+  pointer-events:none;
+  z-index:25;
+}
+#btnCut{
+  position:absolute;
+  left:50%;
+  top:500px;
+  width:136px;
+  height:auto;
+  transform:translateX(-50%);
+  object-fit:contain;
+  pointer-events:none;
+  z-index:26;
+}
+
+/* ── TappedCutButton.png tutorial highlight ── */
+#cutOverlay{
+  position:absolute;
+  left:50%;
+  top:500px;
+  width:136px;
+  height:auto;
+  transform:translateX(-50%);
+  object-fit:contain;
+  pointer-events:none;
+  z-index:27;
+  opacity:0;
+}
+#cutOverlay.show{opacity:1}
+#cutOverlay.flash{animation:cutFlash .32s ease-out forwards}
+@keyframes cutFlash{0%{opacity:1}100%{opacity:0}}
+
+
+.machine-hit.pressed{animation:hitPress .18s ease}
+
+@keyframes hitPress{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(.92)}
+}
+
+.tutorial-bubble{
+  position:absolute;
+  z-index:31;
+  object-fit:contain;
+  filter:drop-shadow(0 8px 12px rgba(44,92,139,.22));
+  transition:opacity .3s ease,transform .3s ease;
+  pointer-events:none;
+}
+
+/* bubbles below left/right buttons; cut bubble above cut button */
+#bubbleLeft{width:300px;left:-108px;top:300px}
+#bubbleRight{width:300px;left:708px;top:300px}
+#bubbleCut{width:330px;left:606px;top:398px}
+
+.tutorial-bubble.fade{opacity:0;transform:translateY(8px)}
+
+#flightLayer{
+  position:absolute;
+  inset:0;
+  z-index:55;
+  pointer-events:none;
+}
+
+.flying-half{
+  position:absolute;
+  left:0;
+  top:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:transform .9s cubic-bezier(.18,.89,.32,1.08),opacity .9s ease;
+  will-change:transform,opacity;
+}
+
+.fit-piece{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transform-origin:center center;
+}
+
+#tryAgain,#nextButton{
+  position:absolute;
+  left:50%;
+  bottom:4px;
+  width:168px;
+  height:auto;
+  transform:translateX(-50%);
+  border:0;
+  background:transparent;
+  z-index:45;
+  cursor:pointer;
+  transition:opacity .22s ease,transform .12s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+
+#tryAgain img,#nextButton img{display:block;width:100%;height:auto}
+#tryAgain:active{transform:translateX(-50%) scale(.96)}
+#nextButton:active{opacity:.82}
+
+#finishButton{
+  width:180px;
+  border:0;
+  background:transparent;
+  cursor:pointer;
+  transition:transform .12s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+
+#finishButton img{display:block;width:100%;height:auto}
+#finishButton:active{transform:scale(.96)}
+
+#completeStage{
+  position:absolute;
+  inset:0;
+  z-index:60;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  gap:22px;
+  background:rgba(215,231,255,.48);
+  backdrop-filter:blur(1px);
+  transition:opacity .35s ease;
+}
+
+.complete-board{
+  position:relative;
+  width:760px;
+  height:456px;
+}
+
+.complete-board>img{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+
+.complete-copy{
+  position:absolute;
+  inset:96px 92px 82px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:18px;
+  text-align:center;
+  color:#fff;
+  font-weight:900;
+  text-shadow:0 3px 9px rgba(0,0,0,.35);
+}
+
+.complete-title{font-size:48px;line-height:1.05}
+.complete-sub{font-size:27px;line-height:1.18;color:#ffe766}
+
+/* ── Interactive kid-game animations ── */
+@keyframes piecePopIn{
+  0%  {opacity:0;transform:scale(.45) rotate(-10deg)}
+  65% {transform:scale(1.15) rotate(4deg)}
+  100%{opacity:1;transform:scale(1) rotate(0)}
+}
+.teach-pop{animation:piecePopIn .4s cubic-bezier(.34,1.5,.64,1) both}
+.teach-pop-d1{animation-delay:.16s}
+
+@keyframes sparkDot{
+  0%  {opacity:1;transform:translate(0,0) scale(1)}
+  100%{opacity:0;transform:translate(var(--sx),var(--sy)) scale(0)}
+}
+.spark-dot{
+  position:absolute;
+  border-radius:50%;
+  pointer-events:none;
+  animation:sparkDot .75s ease-out both;
+}
+
+@keyframes nextBtnPop{
+  0%  {opacity:0;transform:translateX(-50%) scale(.2) rotate(-15deg)}
+  60% {transform:translateX(-50%) scale(1.2) rotate(5deg)}
+  80% {transform:translateX(-50%) scale(.94) rotate(-1deg)}
+  100%{opacity:1;transform:translateX(-50%) scale(1) rotate(0)}
+}
+@keyframes nextBtnGlow{
+  0%,100%{filter:none}
+  50%    {filter:drop-shadow(0 0 14px rgba(116,219,255,.95)) brightness(1.12)}
+}
+#nextButton:not(.hidden){
+  animation:nextBtnPop .5s cubic-bezier(.34,1.3,.64,1) both,
+            nextBtnGlow 1.4s ease-in-out .52s infinite;
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<main id="game" aria-label="PowerUp Bots halves game">
+  <img class="bg" src="assets/Mainbg.png" alt="">
+
+  <section id="instruction" class="hidden" aria-live="polite">
+    <img src="assets/instructionPannel.png" alt="">
+    <div id="instructionText"></div>
+  </section>
+
+  <section id="scene">
+    <div id="bots" class="layout-intro">
+      <div class="bot-slot left-bot">
+        <div class="target-fill" id="leftFill"></div>
+        <img class="pod-img" id="leftPod" src="assets/SquareHollow.png" alt="">
+        <img class="bot-img" id="leftBot" src="assets/SquareBotSadState.png" alt="">
+      </div>
+      <div class="bot-slot right-bot">
+        <div class="target-fill" id="rightFill"></div>
+        <img class="pod-img" id="rightPod" src="assets/SquareHollow.png" alt="">
+        <img class="bot-img" id="rightBot" src="assets/SquareBotSadState.png" alt="">
+      </div>
+    </div>
+
+    <div id="shapeStage" class="hidden" aria-hidden="true"></div>
+
+    <div id="teachStage" class="hidden" aria-hidden="true">
+      <img src="assets/TeachingScreen.png" alt="">
+      <div id="teachContent"></div>
+    </div>
+
+    <button id="playStage" class="hidden" type="button" aria-label="Start the laser game">
+      <img src="assets/TutorialAfterScreen.png" alt="">
+    </button>
+
+    <div id="machineStage" class="hidden" aria-hidden="true">
+      <!-- base machine (always LaserMachineWithoutLines) -->
+      <img id="machineImg" src="assets/LaserMachineWithoutLines.png" alt="">
+      <!-- LaserMachine.png overlay — tutorial guide lines only -->
+      <img id="tutorialOverlay" src="assets/LaserMachine.png" alt="" aria-hidden="true">
+      <!-- Beam.svg — hidden by default, only shown on CUT -->
+      <img id="beamImg" src="assets/Beam.svg" alt="" aria-hidden="true">
+      <!-- Laser.png rotating sprite -->
+      <img id="laserImg" src="assets/Laser.png" alt="" aria-hidden="true">
+      <div id="blockCover"></div>
+      <div id="machineBlock"></div>
+      <img id="laserBurst" src="assets/laserlight.png" alt="">
+      <div id="cutLine"></div>
+      <div id="wrongSlash"></div>
+      <!-- Tutorial instruction bubbles (below left/right buttons; above cut button) -->
+      <img id="bubbleLeft"  class="tutorial-bubble" src="assets/InstruictionTutorialLeft.png" alt="">
+      <img id="bubbleRight" class="tutorial-bubble" src="assets/InstructionTutorialRight.png" alt="">
+      <img id="bubbleCut"   class="tutorial-bubble" src="assets/InstructionTutorialCutButton.png" alt="">
+      <!-- Visible button images (src swaps on press) -->
+      <img id="btnLeft"  src="assets/LeftButton.png"  alt="" aria-hidden="true">
+      <img id="btnRight" src="assets/RightButton.png" alt="" aria-hidden="true">
+      <img id="btnCut"   src="assets/CutButton.png"   alt="" aria-hidden="true">
+      <!-- TappedCutButton.png tutorial highlight -->
+      <img id="cutOverlay" src="assets/TappedCutButton.png" alt="" aria-hidden="true">
+      <!-- Invisible hit areas -->
+      <button id="hitLeft"  class="machine-hit" type="button" aria-label="Move laser left"></button>
+      <button id="hitRight" class="machine-hit" type="button" aria-label="Move laser right"></button>
+      <button id="hitCut"   class="machine-hit" type="button" aria-label="Cut the block"></button>
+    </div>
+
+    <div id="flightLayer" aria-hidden="true"></div>
+
+    <button id="tryAgain" class="hidden" type="button" aria-label="Try again">
+      <img src="assets/TryAgainButton.png" alt="">
+    </button>
+
+    <button id="nextButton" class="hidden" type="button" aria-label="Next">
+      <img src="assets/nextButton.png" alt="">
+    </button>
+  </section>
+
+  <section id="completeStage" class="hidden" aria-live="polite">
+    <div class="complete-board">
+      <img src="assets/TeachingScreen.png" alt="">
+      <div class="complete-copy">
+        <div class="complete-title">Amazing!</div>
+        <div class="complete-sub">You made halves from rectangles, circles, and squares.</div>
+      </div>
+    </div>
+    <button id="finishButton" type="button" aria-label="Finish">
+      <img src="assets/nextButton.png" alt="">
+    </button>
+  </section>
+</main>
+
+<script>
+(function(){
+  var game = document.getElementById("game");
+
+  function resize(){
+    var scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+    game.style.transform = "scale(" + scale + ")";
+    game.style.left = ((window.innerWidth - 1280 * scale) / 2) + "px";
+    game.style.top = ((window.innerHeight - 720 * scale) / 2) + "px";
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+})();
+
+var ASSETS = "assets/";
+
+/* ── Web Audio sounds ── */
+var _ac = null;
+function _ctx(){ if(!_ac){ var AC=window.AudioContext||window.webkitAudioContext; if(AC) _ac=new AC(); } return _ac; }
+function _beep(type,freq,dur,vol,freqEnd){
+  var ctx=_ctx(); if(!ctx) return;
+  try{
+    var o=ctx.createOscillator(), g=ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type=type||'sine'; o.frequency.setValueAtTime(freq,ctx.currentTime);
+    if(freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd,ctx.currentTime+dur);
+    g.gain.setValueAtTime(vol||0.22,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
+    o.start(ctx.currentTime); o.stop(ctx.currentTime+dur+0.01);
+  }catch(e){}
+}
+function sndTap(){ _beep('sine',520,0.07,0.18); }
+function sndRotate(){ _beep('sine',440,0.09,0.15); _beep('sine',580,0.07,0.1); }
+function sndCut(){
+  _beep('sawtooth',900,0.05,0.25,900);
+  setTimeout(function(){ _beep('sawtooth',700,0.35,0.2,80); },50);
+}
+function sndSuccess(){ _beep('sine',660,0.12,0.2); setTimeout(function(){ _beep('sine',880,0.18,0.22); },130); }
+function sndWrong(){ _beep('sawtooth',200,0.25,0.18,120); }
+function sndTurr(){
+  var ctx=_ctx(); if(!ctx) return;
+  try{
+    var o=ctx.createOscillator(),g=ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type='sawtooth';
+    o.frequency.setValueAtTime(210,ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(105,ctx.currentTime+0.13);
+    g.gain.setValueAtTime(0.32,ctx.currentTime);
+    g.gain.setValueAtTime(0.28,ctx.currentTime+0.13);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.38);
+    o.start(ctx.currentTime); o.stop(ctx.currentTime+0.39);
+    var o2=ctx.createOscillator(),g2=ctx.createGain();
+    o2.connect(g2); g2.connect(ctx.destination);
+    o2.type='square';
+    o2.frequency.setValueAtTime(105,ctx.currentTime);
+    o2.frequency.exponentialRampToValueAtTime(52,ctx.currentTime+0.38);
+    g2.gain.setValueAtTime(0.14,ctx.currentTime);
+    g2.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.38);
+    o2.start(ctx.currentTime); o2.stop(ctx.currentTime+0.39);
+  }catch(e){}
+}
+
+var ROUNDS = [
+  {
+    name:"rectangle",
+    label:"Rectangle",
+    blockSrc:ASSETS + "RectangleBlock.png",
+    blockW:220,
+    blockH:110,
+    cut:"vertical",
+    startAngle:45,
+    targetAngle:90,
+    targetAngle2:270,
+    sadBot:ASSETS + "SquareBotSadState.png",
+    happyBot:ASSETS + "happyPinkBot.png",
+    pod:ASSETS + "SquareHollow.png",
+    podLeft:ASSETS + "SquareHollow.png",
+    podRight:ASSETS + "SquareHollow.png",
+    podW:132,
+    botAspect:894 / 606,
+    podAspectLeft:1056 / 444,
+    podAspectRight:1056 / 444,
+    chargerOverlap:68,
+    botWIntro:205,
+    botWReady:150
+  },
+  {
+    name:"circle",
+    label:"Circle",
+    blockSrc:ASSETS + "CircleBlock.png",
+    blockW:190,
+    blockH:190,
+    cut:"horizontal",
+    startAngle:45,
+    targetAngle:0,
+    targetAngle2:180,
+    sadBot:ASSETS + "CircleBot.png",
+    happyBot:ASSETS + "HappyCircleBot.png",
+    pod:ASSETS + "SemiCircleHollowleft.png",
+    podLeft:ASSETS + "SemiCircleHollowleft.png",
+    podRight:ASSETS + "SemiCircleHollowright.png",
+    podW:150,
+    botAspect:893 / 896,
+    podAspectLeft:1098 / 520,
+    podAspectRight:1098 / 520,
+    chargerOverlap:52,
+    botWIntro:205,
+    botWReady:150
+  },
+  {
+    name:"square",
+    label:"Square",
+    blockSrc:"",
+    blockW:190,
+    blockH:190,
+    cut:"diagonal",
+    startAngle:45,
+    targetAngle:135,
+    targetAngle2:315,
+    sadBot:ASSETS + "SquareBOt.png",
+    happyBot:ASSETS + "HappyTriangleBot.png",
+    pod:ASSETS + "TriangularHollowLeft.png",
+    podLeft:ASSETS + "TriangularHollowLeft.png",
+    podRight:ASSETS + "TriangularHollowRight.png",
+    podW:142,
+    botAspect:784 / 742,
+    podAspectLeft:1054 / 469,
+    podAspectRight:1089 / 444,
+    chargerOverlap:34,
+    botWIntro:205,
+    botWReady:150
+  }
+];
+
+var FLOW = [
+  {scene:"intro", text:"Let us charge the bots.", duration:2100},
+  {scene:"ready", text:"The bots are ready to get charged!", duration:2300},
+  {scene:"whole", text:"Here is one whole energy block.", duration:2200},
+  {scene:"needs", text:"Each bot needs a part of the energy block.", duration:2300},
+  {scene:"halves", text:"We need to cut the block into two equal parts.", duration:2300},
+  {scene:"tutorial"},
+  {scene:"play", duration:1500},
+  {scene:"laser"}
+];
+
+var state = {
+  round:0,
+  step:0,
+  angle:0,
+  lastCutAngle:0,
+  locked:false,
+  timers:[],
+  tutorialTimer:null,
+  tutActive:false,
+  tutStep:0,
+  orbitCurrent:0,
+  orbitTarget:0,
+  orbitRaf:null,
+  orbitActive:false
+};
+
+var els = {
+  instruction:document.getElementById("instruction"),
+  instructionText:document.getElementById("instructionText"),
+  bots:document.getElementById("bots"),
+  leftBot:document.getElementById("leftBot"),
+  rightBot:document.getElementById("rightBot"),
+  leftPod:document.getElementById("leftPod"),
+  rightPod:document.getElementById("rightPod"),
+  leftFill:document.getElementById("leftFill"),
+  rightFill:document.getElementById("rightFill"),
+  shapeStage:document.getElementById("shapeStage"),
+  teachStage:document.getElementById("teachStage"),
+  teachContent:document.getElementById("teachContent"),
+  playStage:document.getElementById("playStage"),
+  machineStage:document.getElementById("machineStage"),
+  machineImg:document.getElementById("machineImg"),
+  tutorialOverlay:document.getElementById("tutorialOverlay"),
+  laserImg:document.getElementById("laserImg"),
+  beamImg:document.getElementById("beamImg"),
+  machineBlock:document.getElementById("machineBlock"),
+  blockCover:document.getElementById("blockCover"),
+  laserBurst:document.getElementById("laserBurst"),
+  cutLine:document.getElementById("cutLine"),
+  wrongSlash:document.getElementById("wrongSlash"),
+  bubbleLeft:document.getElementById("bubbleLeft"),
+  bubbleRight:document.getElementById("bubbleRight"),
+  bubbleCut:document.getElementById("bubbleCut"),
+  btnLeft:document.getElementById("btnLeft"),
+  btnRight:document.getElementById("btnRight"),
+  btnCut:document.getElementById("btnCut"),
+  cutOverlay:document.getElementById("cutOverlay"),
+  hitLeft:document.getElementById("hitLeft"),
+  hitRight:document.getElementById("hitRight"),
+  hitCut:document.getElementById("hitCut"),
+  flightLayer:document.getElementById("flightLayer"),
+  tryAgain:document.getElementById("tryAgain"),
+  nextButton:document.getElementById("nextButton"),
+  completeStage:document.getElementById("completeStage"),
+  finishButton:document.getElementById("finishButton")
+};
+
+function show(el){ el.classList.remove("hidden"); }
+function hide(el){ el.classList.add("hidden"); }
+
+function clearTimers(){
+  state.timers.forEach(function(id){ clearTimeout(id); });
+  state.timers = [];
+  if(state.tutorialTimer){
+    clearTimeout(state.tutorialTimer);
+    state.tutorialTimer = null;
+  }
+}
+
+function later(fn, delay){
+  var id = setTimeout(fn, delay);
+  state.timers.push(id);
+}
+
+function currentRound(){
+  return ROUNDS[state.round];
+}
+
+function setInstruction(text){
+  if(!text){
+    hide(els.instruction);
+    els.instructionText.textContent = "";
+    return;
+  }
+  els.instructionText.textContent = text;
+  show(els.instruction);
+}
+
+function resetScene(){
+  hide(els.shapeStage);
+  hide(els.teachStage);
+  hide(els.playStage);
+  hide(els.machineStage);
+  hide(els.tryAgain);
+  hide(els.nextButton);
+  hide(els.completeStage);
+  els.shapeStage.innerHTML = "";
+  els.teachContent.innerHTML = "";
+  els.machineBlock.classList.remove("vibrate");
+  els.machineBlock.innerHTML = "";
+  els.flightLayer.innerHTML = "";
+  clearTargetFills();
+  els.cutLine.classList.remove("show");
+  els.wrongSlash.classList.remove("show");
+  if(state.orbitRaf){ cancelAnimationFrame(state.orbitRaf); state.orbitRaf = null; }
+  state.orbitActive = false;
+  els.laserImg.style.display = "none";
+  els.beamImg.style.display  = "none";
+  els.tutorialOverlay.classList.remove("show");
+  els.laserBurst.classList.remove("show");
+  [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){
+    el.classList.remove("fade");
+  });
+  els.cutOverlay.classList.remove("show");
+  els.cutOverlay.classList.remove("flash");
+  els.btnLeft.src  = ASSETS + "LeftButton.png";
+  els.btnRight.src = ASSETS + "RightButton.png";
+  els.btnCut.src   = ASSETS + "CutButton.png";
+  els.hitLeft.disabled = false;
+  els.hitRight.disabled = false;
+  els.hitCut.disabled = false;
+  state.locked = false;
+  state.tutActive = false;
+  state.tutStep = 0;
+}
+
+function setupBots(layout){
+  var r = currentRound();
+  els.bots.className = layout;
+  els.leftBot.src = r.sadBot;
+  els.rightBot.src = r.sadBot;
+  els.leftPod.src  = r.podLeft  || r.pod;
+  els.rightPod.src = r.podRight || r.pod;
+  els.leftBot.style.width = (layout === "layout-intro" ? r.botWIntro : r.botWReady) + "px";
+  els.rightBot.style.width = (layout === "layout-intro" ? r.botWIntro : r.botWReady) + "px";
+  var podTopLeft = podTopForRound(r, layout, "left");
+  var podTopRight = podTopForRound(r, layout, "right");
+  var podW = r.podW || 132;
+  els.leftPod.style.top = podTopLeft + "px";
+  els.rightPod.style.top = podTopRight + "px";
+  els.leftPod.style.width = podW + "px";
+  els.rightPod.style.width = podW + "px";
+  els.leftBot.className = "bot-img";
+  els.rightBot.className = "bot-img";
+  els.leftPod.className = "pod-img";
+  els.rightPod.className = "pod-img";
+  clearTargetFills();
+  setupTargetSlots(r, layout);
+  if(layout === "layout-ready"){
+    els.leftPod.classList.add("visible");
+    els.rightPod.classList.add("visible");
+  }
+  if(layout === "layout-laser"){
+    els.leftPod.classList.add("visible");
+    els.rightPod.classList.add("visible");
+  }
+}
+
+function clearTargetFills(){
+  [els.leftFill,els.rightFill].forEach(function(fill){
+    if(!fill){ return; }
+    fill.innerHTML = "";
+    fill.className = "target-fill";
+  });
+}
+
+function podTopForRound(r, layout, side){
+  if(layout !== "layout-laser" && layout !== "layout-ready"){
+    return 0;
+  }
+  var botW = r.botWReady;
+  var botTop = 720 - botW * (r.botAspect || 1.2);
+  var podW = r.podW || 132;
+  var podAspect = side === "right" ? (r.podAspectRight || r.podAspectLeft || 2.3) : (r.podAspectLeft || 2.3);
+  return botTop - podW * podAspect + (r.chargerOverlap || 14);
+}
+
+function setupTargetSlots(r, layout){
+  var podTopLeft = podTopForRound(r, layout, "left");
+  var podTopRight = podTopForRound(r, layout, "right");
+  var isCircle = r.name === "circle";
+  var isTriangle = r.name === "square";
+  var width = isCircle ? 122 : isTriangle ? 112 : 108;
+  var height = isCircle ? 60 : isTriangle ? 92 : 100;
+  var slotOffset = isCircle ? 28 : isTriangle ? 14 : 10;
+  var radius = isCircle ? "72px 72px 8px 8px" : isTriangle ? "6px" : "8px";
+
+  [
+    {fill:els.leftFill, top:podTopLeft + slotOffset},
+    {fill:els.rightFill, top:podTopRight + slotOffset}
+  ].forEach(function(item, idx){
+    var fill = item.fill;
+    fill.style.top = item.top + "px";
+    fill.style.width = width + "px";
+    fill.style.height = height + "px";
+    fill.style.borderRadius = radius;
+    /* Triangular hollows get a matching clip-path so the fill looks like the actual half. */
+    fill.style.clipPath = isTriangle
+      ? (idx === 0 ? "polygon(0 0,100% 0,0 100%)" : "polygon(100% 0,100% 100%,0 100%)")
+      : "";
+  });
+}
+
+function makeBlock(r, width, height){
+  if(r.blockSrc){
+    var img = document.createElement("img");
+    img.src = r.blockSrc;
+    img.className = "whole-block";
+    img.style.width = width + "px";
+    img.style.height = height + "px";
+    if(r.name === "circle"){
+      img.style.borderRadius = "50%";
+    }
+    return img;
+  }
+  var square = document.createElement("div");
+  square.className = "whole-block css-square";
+  square.style.width = width + "px";
+  square.style.height = height + "px";
+  return square;
+}
+
+function normalizedAngle(angle){
+  return ((angle % 360) + 360) % 360;
+}
+
+function lineAngleDegrees(angle){
+  var snap = Math.round((normalizedAngle(angle) % 180) / 45) * 45;
+  return snap === 180 ? 0 : snap;
+}
+
+function canonicalCutAngle(r){
+  if(r.cut === "horizontal"){ return 0; }
+  if(r.cut === "diagonal"){ return 135; }
+  return 90;
+}
+
+function cutOrientation(angle){
+  var snap = lineAngleDegrees(angle);
+  if(snap === 0){ return "horizontal"; }
+  if(snap === 90){ return "vertical"; }
+  if(snap === 45){ return "backslash"; }
+  return "slash";
+}
+
+function lineSideForPiece(orientation, index){
+  if(orientation === "horizontal"){
+    return index === 0 ? 1 : -1;
+  }
+  if(orientation === "backslash"){
+    return index === 0 ? 1 : -1;
+  }
+  return index === 0 ? -1 : 1;
+}
+
+function clipPolygon(points, width, height, angle, keepSign){
+  var rad = lineAngleDegrees(angle) * Math.PI / 180;
+  var dx = Math.cos(rad);
+  var dy = Math.sin(rad);
+  var cx = width / 2;
+  var cy = height / 2;
+  var eps = 0.001;
+
+  function side(p){
+    return (p.x - cx) * dy - (p.y - cy) * dx;
+  }
+  function inside(s){
+    return keepSign > 0 ? s >= -eps : s <= eps;
+  }
+  function intersect(a, b, sa, sb){
+    var t = sa / (sa - sb);
+    return {
+      x:a.x + (b.x - a.x) * t,
+      y:a.y + (b.y - a.y) * t
+    };
+  }
+
+  var output = [];
+  for(var i=0; i<points.length; i++){
+    var current = points[i];
+    var prev = points[(i + points.length - 1) % points.length];
+    var currentSide = side(current);
+    var prevSide = side(prev);
+    var currentInside = inside(currentSide);
+    var prevInside = inside(prevSide);
+
+    if(currentInside){
+      if(!prevInside){
+        output.push(intersect(prev, current, prevSide, currentSide));
+      }
+      output.push(current);
+    } else if(prevInside){
+      output.push(intersect(prev, current, prevSide, currentSide));
+    }
+  }
+
+  return output.filter(function(p, index, arr){
+    var prev = arr[(index + arr.length - 1) % arr.length];
+    return Math.abs(p.x - prev.x) > eps || Math.abs(p.y - prev.y) > eps;
+  });
+}
+
+function pieceGeometry(width, height, angle, index){
+  var orientation = cutOrientation(angle);
+  var rect = [
+    {x:0,y:0},
+    {x:width,y:0},
+    {x:width,y:height},
+    {x:0,y:height}
+  ];
+  var polygon = clipPolygon(rect, width, height, angle, lineSideForPiece(orientation, index));
+
+  if(polygon.length < 3){
+    polygon = rect;
+  }
+
+  var minX = Math.min.apply(null, polygon.map(function(p){ return p.x; }));
+  var minY = Math.min.apply(null, polygon.map(function(p){ return p.y; }));
+  var maxX = Math.max.apply(null, polygon.map(function(p){ return p.x; }));
+  var maxY = Math.max.apply(null, polygon.map(function(p){ return p.y; }));
+  var boxW = Math.max(1, maxX - minX);
+  var boxH = Math.max(1, maxY - minY);
+  var clip = polygon.map(function(p){
+    var x = ((p.x - minX) / boxW * 100).toFixed(3).replace(/\.?0+$/,"");
+    var y = ((p.y - minY) / boxH * 100).toFixed(3).replace(/\.?0+$/,"");
+    return x + "% " + y + "%";
+  }).join(",");
+
+  return {
+    minX:minX,
+    minY:minY,
+    width:boxW,
+    height:boxH,
+    clip:"polygon(" + clip + ")",
+    orientation:orientation
+  };
+}
+
+function cutPieceSize(width, height, angle, index){
+  var g = pieceGeometry(width, height, angle, index || 0);
+  return {width:g.width, height:g.height};
+}
+
+function cutPieceHome(width, height, angle, index, centerX, centerY){
+  var g = pieceGeometry(width, height, angle, index);
+  var left = centerX - width / 2 + g.minX;
+  var top = centerY - height / 2 + g.minY;
+  return {
+    left:left,
+    top:top,
+    centerX:left + g.width / 2,
+    centerY:top + g.height / 2,
+    width:g.width,
+    height:g.height
+  };
+}
+
+function makeCutPiece(r, index, width, height, angle){
+  var g = pieceGeometry(width, height, angle, index);
+  var wrap = document.createElement("div");
+  wrap.className = "half-wrap";
+  wrap.style.width = g.width + "px";
+  wrap.style.height = g.height + "px";
+  wrap.style.clipPath = g.clip;
+
+  var inner = makeBlock(r, width, height);
+  inner.classList.add("half-inner");
+  inner.style.filter = "none";
+  inner.style.left = (-g.minX) + "px";
+  inner.style.top = (-g.minY) + "px";
+  wrap.appendChild(inner);
+  return wrap;
+}
+
+function makeHalf(r, index, width, height){
+  return makeCutPiece(r, index, width, height, canonicalCutAngle(r));
+}
+
+function renderWhole(){
+  var r = currentRound();
+  els.shapeStage.innerHTML = "";
+  els.shapeStage.appendChild(makeBlock(r, r.blockW, r.blockH));
+  show(els.shapeStage);
+}
+
+function renderHalves(target, size){
+  var r = currentRound();
+  var width = size && size.width ? size.width : r.blockW;
+  var height = size && size.height ? size.height : r.blockH;
+  var row = document.createElement("div");
+  row.className = "halves-row";
+  row.appendChild(makeHalf(r,0,width,height));
+  row.appendChild(makeHalf(r,1,width,height));
+  target.innerHTML = "";
+  target.appendChild(row);
+}
+
+function makeTeachingPieces(r, angle, width, height){
+  var orientation = cutOrientation(angle);
+  var box = document.createElement("div");
+  box.className = "teach-halves-box";
+
+  var h0 = makeCutPiece(r, 0, width, height, angle);
+  var h1 = makeCutPiece(r, 1, width, height, angle);
+  h0.classList.add("teach-shape-glow","teach-pop");
+  h1.classList.add("teach-shape-glow","teach-pop","teach-pop-d1");
+
+  var t0 = document.createElement("span");
+  var t1 = document.createElement("span");
+  t0.className = "teach-half-tag";
+  t1.className = "teach-half-tag";
+  t0.textContent = "Half";
+  t1.textContent = "Half";
+
+  if(orientation === "horizontal"){
+    var wrap = document.createElement("div");
+    wrap.className = "teach-horizontal-wrap";
+    var tags = document.createElement("div");
+    tags.className = "teach-horizontal-tags";
+    var stack = document.createElement("div");
+    stack.className = "teach-piece-stack";
+    tags.appendChild(t0);
+    tags.appendChild(t1);
+    stack.appendChild(h0);
+    stack.appendChild(h1);
+    wrap.appendChild(tags);
+    wrap.appendChild(stack);
+    box.appendChild(wrap);
+    return box;
+  }
+
+  /* Diagonal / slash: both triangular halves start overlapping so they look like the
+     original square with a clean diagonal cut, then offset slightly along the cut axis. */
+  if(orientation === "slash" || orientation === "backslash"){
+    var splitBox = document.createElement("div");
+    splitBox.style.cssText = "position:relative;width:"+width+"px;height:"+height+"px;flex-shrink:0;";
+    h0.style.position = "absolute"; h0.style.left = "0"; h0.style.top = "0";
+    h0.style.transform = "translate(-7px,-7px)";
+    h1.style.position = "absolute"; h1.style.left = "0"; h1.style.top = "0";
+    h1.style.transform = "translate(7px,7px)";
+    splitBox.appendChild(h0);
+    splitBox.appendChild(h1);
+    box.appendChild(splitBox);
+    var dlrow = document.createElement("div");
+    dlrow.className = "teach-label-row";
+    dlrow.appendChild(t0);
+    dlrow.appendChild(t1);
+    box.appendChild(dlrow);
+    return box;
+  }
+
+  var pieces = document.createElement("div");
+  pieces.className = "teach-piece-row";
+  pieces.appendChild(h0);
+  pieces.appendChild(h1);
+
+  var labels = document.createElement("div");
+  labels.className = "teach-label-row";
+  labels.appendChild(t0);
+  labels.appendChild(t1);
+
+  box.appendChild(pieces);
+  box.appendChild(labels);
+  return box;
+}
+
+function renderTeaching(kind, angle, equal){
+  var r = currentRound();
+  var cutAngle = angle === undefined ? canonicalCutAngle(r) : angle;
+  var w = r.name === "rectangle" ? 220 : 170;
+  var h = Math.round(w * r.blockH / r.blockW);
+  els.teachContent.innerHTML = "";
+
+  if(kind === "teach-one"){
+    setInstruction("When an object is divided into two equal parts.");
+    /* Layout: [Shape with glow]   1 Whole */
+    var row = document.createElement("div");
+    row.className = "teach-content-row";
+    row.style.justifyContent = "center";
+
+    var blk = makeBlock(r, w, h);
+    blk.classList.add("teach-shape-glow");
+
+    var lbl = document.createElement("div");
+    lbl.className = "teach-big-label";
+    lbl.textContent = "1 Whole";
+
+    row.appendChild(blk);
+    row.appendChild(lbl);
+    els.teachContent.appendChild(row);
+
+  } else {
+    setInstruction(equal === false ? "These parts do not fit the slots." : "Each part is called a half.");
+    var col = document.createElement("div");
+    col.className = "teach-content-col";
+
+    var topRow = document.createElement("div");
+    topRow.className = "teach-content-row";
+    var topBlk = makeBlock(r, w, h);
+    var topLbl = document.createElement("div");
+    topLbl.className = "teach-big-label";
+    topLbl.textContent = "1 Whole";
+    topRow.appendChild(topBlk);
+    topRow.appendChild(topLbl);
+
+    var botRow = document.createElement("div");
+    botRow.className = "teach-content-row";
+
+    var botLbl = document.createElement("div");
+    botLbl.className = "teach-equal-label";
+    botLbl.textContent = equal === false ? "Won't Fit" : "2 Equal Parts";
+
+    botRow.appendChild(makeTeachingPieces(r, cutAngle, w, h));
+    botRow.appendChild(botLbl);
+
+    col.appendChild(topRow);
+    col.appendChild(botRow);
+    els.teachContent.appendChild(col);
+  }
+  show(els.teachStage);
+}
+
+function renderStep(){
+  clearTimers();
+  resetScene();
+
+  var r = currentRound();
+  var step = FLOW[state.step];
+  var text = step.text ? step.text.replace("{shape}", r.name) : "";
+
+  if(step.scene === "intro"){
+    setInstruction(text);
+    setupBots("layout-intro");
+  }
+
+  if(step.scene === "ready"){
+    setInstruction(text);
+    setupBots("layout-ready");
+  }
+
+  if(step.scene === "whole"){
+    setInstruction(text);
+    setupBots("layout-ready");
+    renderWhole();
+  }
+
+  if(step.scene === "needs"){
+    setInstruction(text);
+    setupBots("layout-ready");
+    renderWhole();
+  }
+
+  if(step.scene === "halves"){
+    setInstruction(text);
+    setupBots("layout-ready");
+    renderWhole();
+  }
+
+  if(step.scene === "play"){
+    setInstruction("");
+    setupBots("layout-clear");
+    show(els.playStage);
+  }
+
+  if(step.scene === "tutorial"){
+    if(state.round > 0){
+      nextStep();
+      return;
+    }
+    setupTutorial();
+    return;
+  }
+
+  if(step.scene === "laser"){
+    setupLaser();
+    return;
+  }
+
+  if(step.duration){
+    later(nextStep, step.duration);
+  }
+}
+
+function nextStep(){
+  state.step++;
+  if(state.step >= FLOW.length){
+    state.step = FLOW.length - 1;
+  }
+  renderStep();
+}
+
+/* ── Tutorial guided sequence (right cut demo → left cut demo) ── */
+var TUTORIAL_START_ANGLE = 180;
+var TUTORIAL_RIGHT_CUT_ANGLE = 135;
+var TUTORIAL_LEFT_CUT_ANGLE = 225;
+var TUT = [
+  {text:"Move and line up the laser.", bubble:"right", btn:"right"},
+  {text:"Tap to cut the block.",       bubble:"cut",   btn:"cut"},
+  {text:"Move and line up the laser.", bubble:"left",  btn:"left"},
+  {text:"Tap to cut the block.",       bubble:"cut",   btn:"cut"}
+];
+
+function setupTutorial(){
+  var r = currentRound();
+  state.tutActive = true;
+  state.tutStep = -1;
+  state.locked = false;
+  state.angle = TUTORIAL_START_ANGLE;
+  setupBots("layout-laser");
+  setInstruction("Use the laser to cut the block.");
+  /* LaserMachine.png as tutorial overlay; LaserMachineWithoutLines stays as base */
+  els.tutorialOverlay.classList.add("show");
+  els.machineBlock.innerHTML = "";
+  els.machineBlock.appendChild(makeBlock(r, r.blockW, r.blockH));
+  els.blockCover.style.width = (r.name === "rectangle" ? 242 : 242) + "px";
+  els.blockCover.style.height = (r.name === "rectangle" ? 136 : 224) + "px";
+  els.blockCover.style.borderRadius = (r.name === "circle" ? "50%" : "18px");
+  els.blockCover.style.opacity = "1";
+  els.cutLine.style.width = r.blockW + "px";
+  els.cutLine.style.height = r.blockH + "px";
+  els.cutLine.style.borderRadius = (r.name === "circle" ? "50%" : "0");
+  els.cutLine.classList.remove("show");
+  els.wrongSlash.style.width = els.blockCover.style.width;
+  els.wrongSlash.style.height = els.blockCover.style.height;
+  els.wrongSlash.style.borderRadius = els.blockCover.style.borderRadius;
+  state.orbitActive = true;
+  snapLaser(TUTORIAL_START_ANGLE);
+  showLaserHead();
+  /* Hide all bubbles; tutSetStep reveals the right one */
+  [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){
+    el.classList.add("fade");
+  });
+  els.cutOverlay.classList.remove("show");
+  els.hitLeft.disabled = true;
+  els.hitRight.disabled = true;
+  els.hitCut.disabled = true;
+  show(els.machineStage);
+  later(function(){
+    if(state.tutActive && state.tutStep === -1){
+      tutSetStep(0);
+    }
+  }, 900);
+}
+
+function tutSetStep(n){
+  state.tutStep = n;
+  var t = TUT[n];
+  setInstruction("");
+  els.bots.className = "layout-clear";
+  els.bubbleLeft.classList.add("fade");
+  els.bubbleRight.classList.add("fade");
+  els.bubbleCut.classList.add("fade");
+  if(t.bubble === "left")  els.bubbleLeft.classList.remove("fade");
+  if(t.bubble === "right") els.bubbleRight.classList.remove("fade");
+  if(t.bubble === "cut"){
+    els.bubbleCut.classList.remove("fade");
+    /* TappedCutButton.png highlights the cut button as a prompt */
+    els.cutOverlay.classList.add("show");
+  } else {
+    els.cutOverlay.classList.remove("show");
+  }
+  els.hitLeft.disabled  = (t.btn !== "left");
+  els.hitRight.disabled = (t.btn !== "right");
+  els.hitCut.disabled   = (t.btn !== "cut");
+}
+
+function tutHandleRight(){
+  if(!state.tutActive || state.tutStep !== 0 || state.locked){ return; }
+  pressButton(els.hitRight);
+  sndRotate();
+  [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){ el.classList.add("fade"); });
+  state.angle = TUTORIAL_RIGHT_CUT_ANGLE;
+  updateLaser(); /* smooth orbital rotation — NO beam */
+  els.hitLeft.disabled = true;
+  els.hitRight.disabled = true;
+  els.hitCut.disabled = true;
+  later(function(){ tutSetStep(1); }, 520);
+}
+
+function tutHandleLeft(){
+  if(!state.tutActive || state.tutStep !== 2 || state.locked){ return; }
+  pressButton(els.hitLeft);
+  sndRotate();
+  [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){ el.classList.add("fade"); });
+  state.angle = TUTORIAL_LEFT_CUT_ANGLE;
+  updateLaser(); /* smooth orbital rotation — NO beam */
+  els.hitLeft.disabled = true;
+  els.hitRight.disabled = true;
+  els.hitCut.disabled = true;
+  later(function(){ tutSetStep(3); }, 520);
+}
+
+function tutHandleCut(){
+  if(!state.tutActive || (state.tutStep !== 1 && state.tutStep !== 3) || state.locked){ return; }
+  var cutStep = state.tutStep;
+  state.locked = true;
+  pressButton(els.hitCut);
+  sndCut();
+  [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){ el.classList.add("fade"); });
+  els.cutOverlay.classList.remove("show");
+  els.hitLeft.disabled = true;
+  els.hitRight.disabled = true;
+  els.hitCut.disabled = true;
+  showBeam(state.angle); /* Beam.svg fires on CUT */
+  later(function(){
+    hideBeam();
+    splitMachineBlock(state.angle);
+  }, 950);
+  later(function(){
+    if(cutStep === 1){
+      resetTutorialCut(TUTORIAL_START_ANGLE);
+      state.locked = false;
+      tutSetStep(2);
+    } else {
+      state.tutActive = false;
+      nextStep();
+    }
+  }, 1900);
+}
+
+function resetTutorialCut(angle){
+  var r = currentRound();
+  hideBeam();
+  els.cutLine.classList.remove("show");
+  els.machineBlock.innerHTML = "";
+  els.machineBlock.appendChild(makeBlock(r, r.blockW, r.blockH));
+  state.angle = angle;
+  snapLaser(angle);
+  showLaserHead();
+}
+
+function setupLaser(){
+  var r = currentRound();
+  setInstruction("Move the laser to the center, then tap the blue button to cut.");
+  setupBots("layout-laser");
+  state.angle = r.startAngle;
+  state.locked = false;
+  /* Gameplay: no tutorial overlay */
+  els.tutorialOverlay.classList.remove("show");
+  els.machineBlock.innerHTML = "";
+  els.machineBlock.appendChild(makeBlock(r,r.blockW,r.blockH));
+  els.blockCover.style.width = (r.name === "rectangle" ? 242 : 242) + "px";
+  els.blockCover.style.height = (r.name === "rectangle" ? 136 : 224) + "px";
+  els.blockCover.style.borderRadius = (r.name === "circle" ? "50%" : "18px");
+  els.blockCover.style.opacity = "1";
+  els.cutLine.style.width = r.blockW + "px";
+  els.cutLine.style.height = r.blockH + "px";
+  els.cutLine.style.borderRadius = (r.name === "circle" ? "50%" : "0");
+  els.cutLine.classList.remove("show");
+  els.wrongSlash.style.width = els.blockCover.style.width;
+  els.wrongSlash.style.height = els.blockCover.style.height;
+  els.wrongSlash.style.borderRadius = els.blockCover.style.borderRadius;
+  state.orbitActive = true;
+  snapLaser(r.startAngle);
+  showLaserHead();
+  /* Gameplay starts clean; tutorial prompts are only shown in the guided flow. */
+  [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){
+    el.classList.add("fade");
+  });
+  show(els.machineStage);
+}
+
+/* ── Orbital laser system — all geometry is anchored to the ring and nozzle. ── */
+var MACHINE_NATIVE_SIZE   = 1454;
+var RING_INNER_R_NATIVE   = 648;
+
+var LASER_SRC_W           = 258;
+var LASER_SRC_H           = 172;
+var LASER_W               = 96;
+var LASER_H               = 64;
+/* Source-pixel anchors in Laser.png: rear body pivot and glowing emission point. */
+var LASER_BODY_SRC_X      = 42;
+var LASER_BODY_SRC_Y      = 86;
+var LASER_NOZZLE_SRC_X    = 238;
+var LASER_NOZZLE_SRC_Y    = 86;
+
+var BEAM_NATIVE_SIZE      = 683;
+var BEAM_START_NATIVE     = 98.8398;
+var BEAM_END_NATIVE       = 583.34;
+var BEAM_START_PCT        = BEAM_START_NATIVE / BEAM_NATIVE_SIZE;
+var BEAM_LINE_PCT         = (BEAM_END_NATIVE - BEAM_START_NATIVE) / BEAM_NATIVE_SIZE;
+
+function ringGeometry(){
+  var w = els.machineStage.clientWidth || 900;
+  var styles = getComputedStyle(els.machineStage);
+  var ringSize = parseFloat(styles.getPropertyValue("--ring-size")) || 500;
+  var centerY = parseFloat(styles.getPropertyValue("--ring-center-y")) || ringSize / 2;
+  var ringScale = ringSize / MACHINE_NATIVE_SIZE;
+  return {
+    centerX:w / 2,
+    centerY:centerY,
+    radius:RING_INNER_R_NATIVE * ringScale
+  };
+}
+
+function laserAnchors(deg){
+  var g = ringGeometry();
+  var orbitRad = deg * Math.PI / 180;
+  var beamRad = orbitRad + Math.PI;
+  var laserScale = LASER_W / LASER_SRC_W;
+  var bodyLocalX = LASER_BODY_SRC_X * laserScale;
+  var bodyLocalY = LASER_BODY_SRC_Y * laserScale;
+  var nozzleLocalX = LASER_NOZZLE_SRC_X * laserScale;
+  var nozzleLocalY = LASER_NOZZLE_SRC_Y * laserScale;
+  var bodyOffset = nozzleLocalX - bodyLocalX;
+
+  var orbitX = g.centerX + g.radius * Math.cos(orbitRad);
+  var orbitY = g.centerY + g.radius * Math.sin(orbitRad);
+  var laserX = orbitX - Math.cos(beamRad) * bodyOffset;
+  var laserY = orbitY - Math.sin(beamRad) * bodyOffset;
+
+  return {
+    nozzleX:orbitX,
+    nozzleY:orbitY,
+    bodyX:laserX,
+    bodyY:laserY,
+    bodyLocalX:bodyLocalX,
+    bodyLocalY:bodyLocalY,
+    nozzleLocalX:nozzleLocalX,
+    nozzleLocalY:nozzleLocalY,
+    rotationDeg:deg + 180,
+    radius:g.radius
+  };
+}
+
+function positionLaser(deg){
+  var p = laserAnchors(deg);
+  els.laserImg.style.left = (p.bodyX - p.bodyLocalX) + "px";
+  els.laserImg.style.top = (p.bodyY - p.bodyLocalY) + "px";
+  els.laserImg.style.transformOrigin = p.bodyLocalX + "px " + p.bodyLocalY + "px";
+  els.laserImg.style.transform = "rotate(" + p.rotationDeg + "deg)";
+}
+
+function positionBeam(deg){
+  var p = laserAnchors(deg);
+  var beamSize = (Math.SQRT2 * p.radius) / BEAM_LINE_PCT;
+  var startPx = BEAM_START_PCT * beamSize;
+  els.beamImg.style.width = beamSize + "px";
+  els.beamImg.style.height = beamSize + "px";
+  els.beamImg.style.left = (p.nozzleX - startPx) + "px";
+  els.beamImg.style.top = (p.nozzleY - startPx) + "px";
+  els.beamImg.style.transformOrigin = startPx + "px " + startPx + "px";
+  /* Beam.svg points 45° by default; deg + 135° aims it from nozzle to center. */
+  els.beamImg.style.transform = "rotate(" + (deg + 135) + "deg)";
+  els.wrongSlash.style.setProperty("--cut-angle", deg + "deg");
+  els.cutLine.style.setProperty("--cut-angle", deg + "deg");
+}
+
+function showBeam(deg){
+  positionBeam(deg);
+  els.beamImg.style.display = "block";
+  els.beamImg.style.opacity = "1";
+}
+
+function showCutLine(deg){
+  els.cutLine.style.setProperty("--cut-angle", deg + "deg");
+  els.cutLine.classList.add("show");
+}
+
+function hideBeam(){
+  els.beamImg.style.opacity = "0";
+  setTimeout(function(){
+    if(els.beamImg.style.opacity === "0"){ els.beamImg.style.display = "none"; }
+  }, 220);
+}
+
+function _animateOrbit(){
+  if(!state.orbitActive){ return; }
+  var diff = state.orbitTarget - state.orbitCurrent;
+  /* shortest-arc wraparound */
+  if(diff >  180){ diff -= 360; }
+  if(diff < -180){ diff += 360; }
+  state.orbitCurrent += diff * 0.18;
+  positionLaser(state.orbitCurrent);
+  if(Math.abs(diff) > 0.3){
+    state.orbitRaf = requestAnimationFrame(_animateOrbit);
+  } else {
+    state.orbitCurrent = state.orbitTarget;
+    positionLaser(state.orbitCurrent);
+    state.orbitRaf = null;
+  }
+}
+
+function snapLaser(deg){
+  if(state.orbitRaf){ cancelAnimationFrame(state.orbitRaf); state.orbitRaf = null; }
+  state.orbitCurrent = deg;
+  state.orbitTarget  = deg;
+  positionLaser(deg);
+}
+
+function updateLaser(){
+  state.orbitTarget = state.angle;
+  if(!state.orbitActive){ return; }
+  if(state.orbitRaf){ cancelAnimationFrame(state.orbitRaf); state.orbitRaf = null; }
+  state.orbitRaf = requestAnimationFrame(_animateOrbit);
+}
+
+function showLaserHead(){
+  els.laserImg.style.display = "block";
+  /* beam stays hidden until CUT */
+  els.beamImg.style.display  = "none";
+  els.cutLine.classList.remove("show");
+}
+
+function pressButton(button){
+  button.classList.remove("pressed");
+  void button.offsetWidth;
+  button.classList.add("pressed");
+
+  if(button === els.hitLeft){
+    els.btnLeft.src = ASSETS + "LeftButtonClicked.png";
+    setTimeout(function(){ els.btnLeft.src = ASSETS + "LeftButton.png"; }, 220);
+  } else if(button === els.hitRight){
+    els.btnRight.src = ASSETS + "RightButtonClicked.png";
+    setTimeout(function(){ els.btnRight.src = ASSETS + "RightButton.png"; }, 220);
+  } else if(button === els.hitCut){
+    els.btnCut.src = ASSETS + "ClickedCutButton.png";
+    setTimeout(function(){ els.btnCut.src = ASSETS + "CutButton.png"; }, 320);
+  }
+}
+
+function rotateLaser(delta, button){
+  if(state.locked){ return; }
+  pressButton(button);
+  sndRotate();
+  [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){ el.classList.add("fade"); });
+  state.angle = (state.angle + delta + 360) % 360;
+  updateLaser();
+}
+
+function angleDiff(a,b){
+  var diff = Math.abs(a-b) % 360;
+  return diff > 180 ? 360 - diff : diff;
+}
+
+function wrongPieceClip(angle, index){
+  var normalized = ((angle % 360) + 360) % 360;
+  var diagonalDown = (normalized > 90 && normalized < 270);
+  if(diagonalDown){
+    return index === 0 ? "polygon(0 0,100% 0,100% 100%)" : "polygon(0 0,0 100%,100% 100%)";
+  }
+  return index === 0 ? "polygon(0 0,100% 0,0 100%)" : "polygon(100% 0,100% 100%,0 100%)";
+}
+
+function machineCenterInGame(){
+  var styles = getComputedStyle(els.machineStage);
+  var top = parseFloat(styles.top) || 425;
+  var height = els.machineStage.clientHeight || 600;
+  var centerY = parseFloat(styles.getPropertyValue("--ring-center-y")) || 250;
+  return {
+    x:640,
+    y:top - height / 2 + centerY
+  };
+}
+
+function slotTargetsFromFills(){
+  var leftW = parseFloat(els.leftFill.style.width || "0");
+  var leftH = parseFloat(els.leftFill.style.height || "0");
+  var rightW = parseFloat(els.rightFill.style.width || "0");
+  var rightH = parseFloat(els.rightFill.style.height || "0");
+  var leftY = parseFloat(els.leftFill.style.top || "0") + leftH / 2;
+  var rightY = parseFloat(els.rightFill.style.top || "0") + rightH / 2;
+  return [
+    {x:150,y:leftY,width:leftW,height:leftH},
+    {x:1130,y:rightY,width:rightW,height:rightH}
+  ];
+}
+
+function cutBlock(){
+  if(state.locked){ return; }
+  var r = currentRound();
+  state.locked = true;
+  state.lastCutAngle = state.angle;
+  pressButton(els.hitCut);
+  sndCut();
+  [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){ el.classList.add("fade"); });
+  showBeam(state.angle); /* Beam.svg fires on CUT — was hidden during alignment */
+
+  later(function(){
+    hideBeam();
+    var correct = angleDiff(state.angle,r.targetAngle) <= 8 ||
+                  (r.targetAngle2 !== undefined && angleDiff(state.angle,r.targetAngle2) <= 8);
+    if(correct){
+      state.lastCutAngle = state.angle;
+      showSuccess();
+    } else {
+      showFail();
+    }
+  },650);
+}
+
+function slotScaleForPiece(target, piece){
+  return Math.min(
+    (target.width || piece.width) / piece.width,
+    (target.height || piece.height) / piece.height
+  );
+}
+
+function fillSlotWithPiece(fill, r, index, angle){
+  var w = parseFloat(fill.style.width || "0");
+  var h = parseFloat(fill.style.height || "0");
+  var piece = makeCutPiece(r, index, r.blockW, r.blockH, angle);
+  var home = cutPieceHome(r.blockW, r.blockH, angle, index, 0, 0);
+  var scale = slotScaleForPiece({width:w,height:h}, home);
+  fill.innerHTML = "";
+  piece.style.transform = "scale(" + scale + ")";
+  piece.style.transformOrigin = "center center";
+  piece.style.filter = "none";
+  fill.appendChild(piece);
+  fill.classList.add("filled");
+}
+
+/* ── fly the two half-pieces from machine center to bot charging slots ── */
+function flyHalvesToSlots(r, angle, onDone){
+  var layer = els.flightLayer;
+  layer.innerHTML = "";
+
+  var center = machineCenterInGame();
+  var targets = slotTargetsFromFills();
+
+  [0,1].forEach(function(i){
+    var home = cutPieceHome(r.blockW, r.blockH, angle, i, center.x, center.y);
+    var fly = makeCutPiece(r, i, r.blockW, r.blockH, angle);
+    fly.classList.add("flying-half");
+    fly.style.left = home.left + "px";
+    fly.style.top = home.top + "px";
+    fly.style.width = home.width + "px";
+    fly.style.height = home.height + "px";
+    fly.style.transformOrigin = "center center";
+    fly.style.transition = "transform .9s cubic-bezier(.18,.89,.32,1.08),opacity .9s ease";
+
+    layer.appendChild(fly);
+
+    var scale = slotScaleForPiece(targets[i], home);
+    var dx = targets[i].x - home.centerX;
+    var dy = targets[i].y - home.centerY;
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){
+      fly.style.transform = "translate("+dx+"px,"+dy+"px) scale("+scale+")";
+    });});
+  });
+
+  setTimeout(onDone, 1050);
+}
+
+function showSuccess(){
+  var r = currentRound();
+  var cutAngle = state.lastCutAngle;
+  sndSuccess();
+  splitMachineBlock(cutAngle);
+  setInstruction("Great cut!");
+
+  /* 1 – teach-one: 1 Whole */
+  later(function(){
+    hide(els.machineStage);
+    setupBots("layout-clear");
+    renderTeaching("teach-one", cutAngle, true);
+  }, 1000);
+
+  /* 2 – teach-two: halves — show the exact cut the child made */
+  later(function(){
+    renderTeaching("teach-two", cutAngle, true);
+  }, 3800);
+
+  /* 3 – fly halves to bots */
+  later(function(){
+    hide(els.teachStage);
+    setupBots("layout-laser");
+    setInstruction("Great cut! The halves will power the bots!");
+    flyHalvesToSlots(r, cutAngle, function(){
+      els.flightLayer.innerHTML = "";
+      fillSlotWithPiece(els.leftFill, r, 0, cutAngle);
+      fillSlotWithPiece(els.rightFill, r, 1, cutAngle);
+      els.leftBot.src = r.happyBot;
+      els.rightBot.src = r.happyBot;
+      els.leftBot.classList.add("happy","jump");
+      els.rightBot.classList.add("happy","jump");
+      els.leftPod.classList.add("glow");
+      els.rightPod.classList.add("glow");
+      var tgts = slotTargetsFromFills();
+      burstCelebration(tgts[0].x, tgts[0].y);
+      burstCelebration(tgts[1].x, tgts[1].y);
+    });
+  }, 7000);
+
+  /* Show Next button — child taps to advance manually */
+  later(function(){
+    setInstruction("You did it! Tap Next for the next shape!");
+    show(els.nextButton);
+  }, 8500);
+}
+
+function splitMachineBlock(angle){
+  var r = currentRound();
+  var cutAngle = angle === undefined ? canonicalCutAngle(r) : angle;
+  var orientation = cutOrientation(cutAngle);
+  var trans = "transform 0.45s cubic-bezier(.34,1.3,.64,1)";
+  var h0 = makeCutPiece(r,0,r.blockW,r.blockH,cutAngle);
+  var h1 = makeCutPiece(r,1,r.blockW,r.blockH,cutAngle);
+  els.machineBlock.innerHTML = "";
+
+  if(orientation === "slash" || orientation === "backslash"){
+    var g0 = pieceGeometry(r.blockW, r.blockH, cutAngle, 0);
+    var g1 = pieceGeometry(r.blockW, r.blockH, cutAngle, 1);
+    var container = document.createElement("div");
+    container.style.cssText = "position:relative;width:"+r.blockW+"px;height:"+r.blockH+"px;";
+    h0.style.position = "absolute"; h0.style.left = g0.minX + "px"; h0.style.top = g0.minY + "px";
+    h1.style.position = "absolute"; h1.style.left = g1.minX + "px"; h1.style.top = g1.minY + "px";
+    container.appendChild(h0);
+    container.appendChild(h1);
+    els.machineBlock.appendChild(container);
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){
+      h0.style.transition = trans;
+      h1.style.transition = trans;
+      if(orientation === "slash"){
+        h0.style.transform = "translate(-12px,-12px)";
+        h1.style.transform = "translate(12px,12px)";
+      } else {
+        h0.style.transform = "translate(12px,-12px)";
+        h1.style.transform = "translate(-12px,12px)";
+      }
+    });});
+    return;
+  }
+
+  var row = document.createElement("div");
+  row.className = "halves-row";
+  row.style.gap = "0";
+  row.style.flexDirection = orientation === "vertical" ? "row" : "column";
+  row.appendChild(h0);
+  row.appendChild(h1);
+  els.machineBlock.appendChild(row);
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){
+    h0.style.transition = trans;
+    h1.style.transition = trans;
+    if(orientation === "vertical"){
+      h0.style.transform = "translateX(-13px)";
+      h1.style.transform = "translateX(13px)";
+    } else {
+      h0.style.transform = "translateY(-10px)";
+      h1.style.transform = "translateY(10px)";
+    }
+  });});
+}
+
+function showFail(){
+  var r = currentRound();
+  var cutAngle = state.lastCutAngle || state.angle;
+  sndTurr();
+  els.machineBlock.classList.remove("vibrate");
+  void els.machineBlock.offsetWidth;
+  els.machineBlock.classList.add("vibrate");
+  els.wrongSlash.classList.add("show");
+  splitMachineBlock(cutAngle);
+  setInstruction("Let’s look at the parts you made.");
+
+  later(function(){
+    hide(els.machineStage);
+    setupBots("layout-clear");
+    renderTeaching("teach-two", cutAngle, false);
+  }, 1050);
+
+  later(function(){
+    hide(els.teachStage);
+    setupBots("layout-laser");
+    setInstruction("Make sure both parts fit into the slots.");
+    flyWrongToSlots(r, cutAngle);
+  }, 4300);
+}
+
+function flyWrongToSlots(r, angle){
+  var layer = els.flightLayer;
+  layer.innerHTML = "";
+  var center = machineCenterInGame();
+  var targets = slotTargetsFromFills();
+
+  [0,1].forEach(function(i){
+    var home = cutPieceHome(r.blockW, r.blockH, angle, i, center.x, center.y);
+    var fly = makeCutPiece(r, i, r.blockW, r.blockH, angle);
+    fly.style.position = "absolute";
+    fly.style.left = home.left + "px";
+    fly.style.top = home.top + "px";
+    fly.style.width = home.width + "px";
+    fly.style.height = home.height + "px";
+    fly.style.transformOrigin = "center center";
+    fly.style.transition = "transform 0.72s cubic-bezier(.4,0,.2,1),box-shadow .28s ease,filter .28s ease";
+    layer.appendChild(fly);
+
+    var scale = slotScaleForPiece(targets[i], home);
+    var dx = targets[i].x - home.centerX;
+    var dy = targets[i].y - home.centerY;
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){
+      fly.style.transform = "translate("+dx+"px,"+dy+"px) scale("+scale+")";
+    });});
+  });
+
+  /* Rejection flash after landing */
+  later(function(){
+    sndTurr();
+    for(var i=0; i<layer.children.length; i++){
+      layer.children[i].style.boxShadow = "0 0 0 4px #ff4040, 0 0 28px rgba(255,50,50,.85)";
+      layer.children[i].style.filter = "brightness(1.2) saturate(1.6)";
+    }
+    later(function(){ show(els.tryAgain); }, 700);
+  }, 850);
+}
+
+function tryAgain(){
+  var r = currentRound();
+  state.locked = false;
+  state.angle = r.startAngle;
+  els.flightLayer.innerHTML = "";
+  show(els.machineStage);
+  setupBots("layout-laser");
+  snapLaser(r.startAngle);
+  hideBeam();
+  els.cutLine.classList.remove("show");
+  els.machineBlock.classList.remove("vibrate");
+  els.machineBlock.innerHTML = "";
+  els.machineBlock.appendChild(makeBlock(r,r.blockW,r.blockH));
+  els.wrongSlash.classList.remove("show");
+  hide(els.tryAgain);
+  setInstruction("Move the laser to the center, then tap the blue button to cut.");
+}
+
+function nextRound(){
+  clearTimers();
+  state.round++;
+  state.step = 0;
+  if(state.round >= ROUNDS.length){
+    completeGame();
+    return;
+  }
+  renderStep();
+}
+
+function completeGame(){
+  resetScene();
+  setInstruction("All bots are charged!");
+  show(els.completeStage);
+  try{
+    parent.postMessage({type:"activity_complete"}, "*");
+  }catch(e){}
+}
+
+function finishGame(){
+  state.round = 0;
+  state.step = 0;
+  hide(els.completeStage);
+  renderStep();
+}
+
+function burstCelebration(cx, cy){
+  var colors = ["#FFE566","#4DCAFF","#FF6B8B","#7BFF83","#FF9D4D","#C87AFF","#FF4DA3","#56FFE0"];
+  var count = 22;
+  for(var i = 0; i < count; i++){
+    var dot = document.createElement("div");
+    dot.className = "spark-dot";
+    var angle = (i / count) * 2 * Math.PI;
+    var dist = 70 + Math.random() * 90;
+    var sx = Math.cos(angle) * dist;
+    var sy = Math.sin(angle) * dist;
+    var size = 8 + Math.random() * 8;
+    dot.style.cssText = "left:"+(cx - size/2)+"px;top:"+(cy - size/2)+"px;" +
+      "width:"+size+"px;height:"+size+"px;background:"+colors[i % colors.length]+";"+
+      "animation-delay:"+(Math.random()*0.18)+"s;";
+    dot.style.setProperty("--sx", sx.toFixed(1)+"px");
+    dot.style.setProperty("--sy", sy.toFixed(1)+"px");
+    els.flightLayer.appendChild(dot);
+    (function(el){ setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 1100); })(dot);
+  }
+}
+
+els.playStage.addEventListener("click", function(){ sndTap(); nextStep(); });
+els.hitLeft.addEventListener("click", function(){
+  if(state.tutActive){ tutHandleLeft(); return; }
+  rotateLaser(-45, els.hitLeft);
+});
+els.hitRight.addEventListener("click", function(){
+  if(state.tutActive){ tutHandleRight(); return; }
+  rotateLaser(45, els.hitRight);
+});
+els.hitCut.addEventListener("click", function(){
+  if(state.tutActive){ tutHandleCut(); return; }
+  cutBlock();
+});
+els.tryAgain.addEventListener("click", function(){ sndTap(); tryAgain(); });
+els.nextButton.addEventListener("click", function(){ sndTap(); nextRound(); });
+els.finishButton.addEventListener("click", function(){ sndTap(); finishGame(); });
+
+renderStep();
+</script>
+</body>
+</html>
