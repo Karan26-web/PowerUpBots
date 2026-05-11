@@ -205,7 +205,7 @@ button{font:inherit}
 }
 .css-square.teach-shape-glow{
   animation:teachGlowPulse 1.4s ease-in-out infinite!important;
-  filter:none!important;
+  filter:none;
 }
 .css-square.teach-shape-glow .half-inner{
   filter:none!important;
@@ -1237,15 +1237,15 @@ function setupTargetSlots(r, layout){
   var podTopRight = podTopForRound(r, layout, "right");
   var isCircle = r.name === "circle";
   var isTriangle = r.name === "square";
-  /* Slot dimensions calibrated to match the visual hollow in each pod image.
-     Circle: bowl/dome fills nearly full pod width, height = width/2.
-     Triangle: bounding box of hollow ~91% of pod width, square bounding box.
-     Rectangle: hollow is ~88% of pod width, square (each half is a square). */
-  var width = isCircle ? 154 : isTriangle ? 130 : 116;
-  var height = isCircle ? 77 : isTriangle ? 130 : 116;
-  /* slotOffset: pixels from the pod image TOP to the TOP of the fill div.
-     The hollow starts very close to the pod top in all pod images. */
-  var slotOffset = 6;
+  /* Slot dimensions calibrated to the visual hollow in each pod image.
+     Circle pod (160px wide): inner hollow ≈92% of width = 148px; semicircle height = 74px.
+     Triangle pod (142px wide): hollow bounding box ≈91% = 130px × 130px.
+     Rectangle pod (132px wide): square hollow ≈88% = 116px × 116px. */
+  var width  = isCircle ? 148 : isTriangle ? 130 : 116;
+  var height = isCircle ?  74 : isTriangle ? 130 : 116;
+  /* slotOffset: pixels from the pod image top to the top edge of the fill div.
+     All pod hollows start ~6 px below the pod image top (thin rim/frame). */
+  var slotOffset = isCircle ? 8 : 6;
 
   [
     {fill:els.leftFill, top:podTopLeft + slotOffset},
@@ -1503,36 +1503,19 @@ function makeTeachingPieces(r, angle, width, height){
     return box;
   }
 
-  /* Diagonal / slash: both triangular halves start overlapping so they look like the
-     original square with a clean diagonal cut, then offset slightly along the cut axis. */
+  /* Diagonal cuts: show the two triangular halves side-by-side with a clear gap,
+     matching the layout of vertical/horizontal cuts for uniform appearance. */
   if(orientation === "slash" || orientation === "backslash"){
-    var g0 = pieceGeometry(width, height, angle, 0);
-    var g1 = pieceGeometry(width, height, angle, 1);
-    var splitBox = document.createElement("div");
-    splitBox.style.cssText = "position:relative;width:"+width+"px;height:"+height+"px;flex-shrink:0;";
-    h0.classList.remove("teach-pop");
-    h1.classList.remove("teach-pop","teach-pop-d1");
-    h0.style.position = "absolute";
-    h0.style.left = g0.minX + "px";
-    h0.style.top = g0.minY + "px";
-    h1.style.position = "absolute";
-    h1.style.left = g1.minX + "px";
-    h1.style.top = g1.minY + "px";
-    if(orientation === "slash"){
-      h0.style.transform = "translate(-10px,-10px)";
-      h1.style.transform = "translate(10px,10px)";
-    } else {
-      h0.style.transform = "translate(10px,-10px)";
-      h1.style.transform = "translate(-10px,10px)";
-    }
-    splitBox.appendChild(h0);
-    splitBox.appendChild(h1);
-    box.appendChild(splitBox);
-    var dlrow = document.createElement("div");
-    dlrow.className = "teach-label-row";
-    dlrow.appendChild(t0);
-    dlrow.appendChild(t1);
-    box.appendChild(dlrow);
+    var diagRow = document.createElement("div");
+    diagRow.className = "teach-piece-row";
+    diagRow.appendChild(h0);
+    diagRow.appendChild(h1);
+    var diagLabels = document.createElement("div");
+    diagLabels.className = "teach-label-row";
+    diagLabels.appendChild(t0);
+    diagLabels.appendChild(t1);
+    box.appendChild(diagRow);
+    box.appendChild(diagLabels);
     return box;
   }
 
@@ -1584,6 +1567,8 @@ function renderTeaching(kind, angle, equal){
     var topRow = document.createElement("div");
     topRow.className = "teach-content-row";
     var topBlk = makeBlock(r, w, h);
+    /* Whole block glows first to highlight it, halves glow after a brief delay */
+    topBlk.classList.add("teach-shape-glow");
     var topLbl = document.createElement("div");
     topLbl.className = "teach-big-label";
     topLbl.textContent = "1 Whole";
@@ -1597,7 +1582,22 @@ function renderTeaching(kind, angle, equal){
     botLbl.className = "teach-equal-label";
     botLbl.textContent = equal === false ? "Not Equal Parts" : "2 Equal Parts";
 
-    botRow.appendChild(makeTeachingPieces(r, cutAngle, w, h));
+    var halvesBox = makeTeachingPieces(r, cutAngle, w, h);
+    /* Remove glow from halves initially; whole block glows first for 1.3 s,
+       then halves take over the glow. */
+    halvesBox.querySelectorAll(".teach-shape-glow").forEach(function(el){
+      el.classList.remove("teach-shape-glow");
+    });
+    setTimeout(function(){
+      topBlk.classList.remove("teach-shape-glow");
+      halvesBox.querySelectorAll(".half-wrap").forEach(function(el){
+        el.classList.add("teach-shape-glow");
+      });
+      /* For CSS-square whole blocks, also glow via the css-square rule */
+      var cssSquarePieces = halvesBox.querySelectorAll(".css-square.whole-block");
+      cssSquarePieces.forEach(function(el){ el.classList.add("teach-shape-glow"); });
+    }, 1300);
+    botRow.appendChild(halvesBox);
     botRow.appendChild(botLbl);
 
     col.appendChild(topRow);
@@ -2267,6 +2267,12 @@ function flyWrongToSlots(r, angle){
   var center = machineCenterInGame();
   var targets = slotTargetsFromFills();
 
+  /* Use canonical (correct-cut) piece dimensions for uniform scale across both slots.
+     This ensures wrong-cut pieces land at the same visual size regardless of cut angle. */
+  var canonAngle = canonicalCutAngle(r);
+  var canonG = pieceGeometry(r.blockW, r.blockH, canonAngle, 0);
+  var uniformScale = slotScaleForPiece(targets[0], {width:canonG.width, height:canonG.height});
+
   [0,1].forEach(function(slotIdx){
     var pieceIdx = pieceIndexForSlot(r, slotIdx);
     var home = cutPieceHome(r.blockW, r.blockH, angle, pieceIdx, center.x, center.y);
@@ -2280,7 +2286,7 @@ function flyWrongToSlots(r, angle){
     fly.style.transition = "transform 0.72s cubic-bezier(.4,0,.2,1),box-shadow .28s ease,filter .28s ease";
     layer.appendChild(fly);
 
-    var scale = slotScaleForPiece(targets[slotIdx], home);
+    var scale = uniformScale;
     var dx = targets[slotIdx].x - home.centerX;
     var dy = targets[slotIdx].y - home.centerY;
     requestAnimationFrame(function(){ requestAnimationFrame(function(){
