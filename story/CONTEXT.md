@@ -1,15 +1,15 @@
-# CONTEXT — Mystery of Missing Pages Ebook
+# CONTEXT — PowerUpBots Halves Game
 
-## Last updated: 2026-05-07
+## Last updated: 2026-05-11
 
 ---
 
 ## Project Overview
 
-A single-page interactive flipbook ebook (`ebook.html`) built with **turn.js**. Two-page landscape spread (820×472px). 15 spreads total (0–14). Alternates between video pages and quiz interaction pages.
+A single-page interactive energy-halves game (`index.html`). Two green robots appear in a de-energized state. The player uses a laser tool to cut an energy block into two equal halves, which then power both robots. Three rounds, each with a different block shape (rectangle, circle, square/triangle). The first round includes a guided tutorial.
 
-**Ebook title:** "The Mystery of Missing Pages" (also subtitled "Maale & Gopu's Big Adventure")  
-**Main file:** `/Users/karan/StorylineSample/story/ebook.html` (~6970 lines)
+**Main file:** `/Users/karan/PowerUpBots/story/index.html` (~2400 lines, fully self-contained HTML/CSS/JS)  
+**Assets:** `/Users/karan/PowerUpBots/story/assets/` — 36 PNG/SVG files
 
 ---
 
@@ -17,339 +17,186 @@ A single-page interactive flipbook ebook (`ebook.html`) built with **turn.js**. 
 
 ```
 story/
-├── main.html              ← ONLY file to edit
-├── CONTEXT.md              ← this file
-├── audio/
-│   ├── Quirky_Podcast_Jingle.mp3  ← background loop music
-│   ├── poem1.mp3 … poem7.mp3      ← plays at 72% of each video clip
-│   ├── q1.mp3… q7.mp3            ← quiz narration audio
-│   └── oops!wrong .mp3            ← NOTE: space before .mp3 in filename
-├── video/
-│   └── page1-clip.mp4 … page7-clip.mp4   ← one per video spread
-└── .vscode/assets/
-    ├── q1Mainbg.png   … q7Mainbg.png     ← quiz background (includes character + doors)
-    ├── q1Option1.png  … q7Option1.png     ← left thought-bubble image (cloud shape)
-    ├── q1Option2.png  … q7Option2.png     ← right thought-bubble image (cloud shape)
-    ├── q1CorrectOption.png … q7CorrectOption.png
-    ├── q1IncorrectOption.png … q7IncorrectOption.png
-    ├── q1wrongbg.png                      ← Q1-only: bg image for wrong state
-    └── q1wrongOption.png                  ← Q1-only: NOT used in current code
+├── index.html          ← ONLY file to edit
+├── CONTEXT.md          ← this file
+└── assets/
+    ├── Mainbg.png                     ← background
+    ├── CircleBlock.png                ← circle energy block
+    ├── RectangleBlock.png             ← rectangle energy block
+    ├── LaserMachine.png               ← machine ring with guide lines (tutorial only)
+    ├── LaserMachineWithoutLines.png   ← machine ring base (always visible)
+    ├── Laser.png                      ← rotating laser sprite (258×172 source)
+    ├── Beam.svg                       ← laser beam (fired on CUT only)
+    ├── laserlight.png                 ← glow effect
+    ├── SemiCircleHollowleft.png       ← circle round left pod
+    ├── SemiCircleHollowright.png      ← circle round right pod
+    ├── SquareHollow.png               ← rectangle round pods (both sides)
+    ├── TriangularHollowLeft.png       ← triangle/square round left pod
+    ├── TriangularHollowRight.png      ← triangle/square round right pod
+    ├── TeachingScreen.png             ← frame for teaching panels
+    ├── TutorialAfterScreen.png        ← "Let's Play" button image
+    ├── SquareBotSadState.png          ← rectangle round sad bot
+    ├── happyPinkBot.png               ← rectangle round happy bot
+    ├── CircleBot.png                  ← circle round sad bot
+    ├── HappyCircleBot.png             ← circle round happy bot
+    ├── SquareBOt.png                  ← square/triangle round sad bot
+    ├── HappyTriangleBot.png           ← square/triangle round happy bot
+    └── (UI buttons, bubbles, etc.)
 ```
 
-**Important:** `oops!wrong .mp3` has a literal space before `.mp3`. Always reference as `'audio/oops!wrong .mp3'`.
+---
+
+## Game Flow
+
+### ROUNDS (3 total, defined in `ROUNDS` array ~line 970)
+
+| # | Name | Block | Cut | Target Angle | Left Pod | Right Pod |
+|---|------|-------|-----|-------------|----------|-----------|
+| 0 | rectangle | RectangleBlock.png 220×110 | vertical | 90° or 270° | SquareHollow | SquareHollow |
+| 1 | circle | CircleBlock.png 220×220 | horizontal | 0° or 180° | SemiCircleHollowleft | SemiCircleHollowright |
+| 2 | square | CSS div 190×190 (purple #9B5FD9) | diagonal | 135° or 315° | TriangularHollowLeft | TriangularHollowRight |
+
+### FLOW (per round, defined in `FLOW` array ~line 1045)
+
+```
+intro → ready → whole → needs → halves → tutorial* → play* → laser
+```
+
+\* `tutorial` scene: runs guided sequence only on round 0 (skips to next on rounds 1+).  
+\* `play` scene ("Let's Play" button): shown only on round 0 (skips to next on rounds 1+).
+
+### Scene Descriptions
+
+- **intro / ready / whole / needs / halves**: Narration scenes with bot layout and shape display. Auto-advance via `duration` timer.
+- **tutorial**: Guided laser demo with bubbles. Shows LaserMachine.png overlay (guide lines). Only round 0.
+- **play**: Shows TutorialAfterScreen.png "Let's Play" button. User taps to proceed. Only round 0.
+- **laser**: Interactive gameplay — user moves laser and taps CUT. No guide line overlay.
 
 ---
 
-## Page Sequence (STORY.pages indices)
+## Key Components
 
-| Index | Type     | Content                        | Notes                              |
-|-------|----------|--------------------------------|------------------------------------|
-| 0     | Video    | `video/page1-clip.mp4`         | poem1.mp3 at 72% of duration       |
-| 1     | Quiz     | Q1_HTML                        | q1.mp3 plays on navigation         |
-| 2     | Video    | `video/page2-clip.mp4`         | poem2.mp3 at 72% of duration       |
-| 3     | Quiz     | Q2_HTML                        | q2.mp3 plays on navigation         |
-| 4     | Video    | `video/page3-clip.mp4`         | poem3.mp3 at 72% of duration       |
-| 5     | Quiz     | Q3_HTML                        | q3.mp3 plays on navigation         |
-| 6     | Video    | `video/page4-clip.mp4`         | poem4.mp3 at 72% of duration       |
-| 7     | Quiz     | Q4_HTML                        | q4.mp3 plays on navigation         |
-| 8     | Video    | `video/page5-clip.mp4`         | poem5.mp3 at 72% of duration       |
-| 9     | Quiz     | Q5_HTML (Rectangle)            | q5.mp3 plays on navigation         |
-| 10    | Video    | `video/page6-clip.mp4`         | poem6.mp3 at 72% of duration       |
-| 11    | Quiz     | Q6_HTML (Circle)               | q6.mp3 plays on navigation         |
-| 12    | Video    | `video/page7-clip.mp4`         | poem7.mp3 at 72% of duration       |
-| 13    | Quiz     | Q7_HTML (Square)               | q7.mp3 plays on navigation         |
-| 14    | Count    | isCountPage: true              | Star count/completion page          |
+### Machine / Laser System (~lines 1819–2076)
 
-turn.js adds 2 cover pages, so turn.js page number = spread index + 2.
+- Ring diameter: `--ring-size` CSS var (500px default)
+- Laser.png orbits the ring at `state.angle` degrees
+- Right button: rotate -45°, Left button: rotate +45°
+- CUT button: fires beam, checks if `state.angle` is within ±8° of `targetAngle` (or `targetAngle2`)
+- Correct → `showSuccess()`, Wrong → `showFail()`
+
+### Cut Geometry (~lines 1284–1447)
+
+- `pieceGeometry(width, height, angle, index)`: Sutherland-Hodgman polygon clip — returns bounding box + CSS clip-path for each half
+- `makeCutPiece(r, index, w, h, angle)`: Creates `div.half-wrap` with `clip-path` and inner block; `borderRadius` is explicitly set to `"0"` on inner to prevent white-line artifacts at cut boundary
+- `cutOrientation(angle)`: 0°→"horizontal", 90°→"vertical", 45°→"backslash", 135°→"slash"
+- `pieceIndexForSlot(r, slotIndex)`: For circle round, piece 0 (dome) goes to RIGHT slot, piece 1 (bowl) to LEFT (swapped). All other rounds: slot 0→piece 0, slot 1→piece 1.
+
+### Teaching Screens (~lines 1537–1608)
+
+- **teach-one**: Shows whole block + "1 Whole" label (`.teach-big-label`)
+- **teach-two**: Shows whole block + "2 Equal Parts" or "Not Equal Parts" label (`.teach-equal-label`), plus the two cut halves side by side
+
+**Text styling** (lines ~294, ~318):
+```css
+font-size: 64px; color: #fff; font-weight: 900;
+-webkit-text-stroke: 4px #0E60BD; paint-order: stroke fill;
+text-shadow: 0 0 24px #00A0F9, 0 4px 10px rgba(0,96,189,.4);
+```
+Both labels (big and equal) share the SAME styling. Only the block shape changes between rounds.
+
+### Success Flow (`showSuccess`, ~line 2133)
+
+1. `splitMachineBlock` — block splits into two pieces with animation
+2. Teaching screen 1: "1 Whole" (1000ms delay)
+3. Teaching screen 2: "2 Equal Parts" (3800ms delay)
+4. `flyHalvesToSlots` — pieces animate from machine center to bot pod slots (7000ms)
+5. Bots switch to happy state, pods glow, confetti burst
+6. "Next" button appears (8500ms)
+
+### Fail Flow (`showFail`, ~line 2239)
+
+1. `splitMachineBlock` + `wrongSlash` overlay shown
+2. Teaching screen 2: "Not Equal Parts" (1050ms)
+3. `flyWrongToSlots` — wrong pieces animate to slots, bounce back with red flash
+4. "Try Again" button appears
+5. On retry: `tryAgain()` resets laser, block, unlocks interaction
+6. After 1st fail: alignment lines shown (LaserMachine overlay via `tutorialOverlay`)
 
 ---
 
-## Quiz Answer Keys
+## Attempt Tracking & Hint System
 
-| Quiz | Question idiom       | Left option (o1)           | Right option (o2)          | Correct |
-|------|----------------------|----------------------------|----------------------------|---------|
-| Q1   | "break the ice"      | Hammer breaking ice        | Children shaking hands     | RIGHT (o2) |
-| Q2   | "hit the nail on the head" | Girl thumbs up        | Person hammering nail      | LEFT (o1) |
-| Q3   | "raining cats and dogs" | Cats/dogs falling from sky | Rainy street scene      | LEFT (o1) — wait, needs verification |
-| Q4   | "under the weather"  | Sick girl with cup         | Girl standing in rain      | LEFT (o1) |
-| Q5   | Rectangle halves game | N/A — full interactive game (see below) | N/A | N/A — laser-cut mechanic |
-| Q6   | Circle halves        | TBD (assets pending)       | TBD (assets pending)       | LEFT (o1) — swap listeners if needed |
-| Q7   | Square halves        | TBD (assets pending)       | TBD (assets pending)       | LEFT (o1) — swap listeners if needed |
+- **1st attempt wrong**: No alignment lines shown
+- **2nd attempt wrong**: Alignment lines (LaserMachine.png overlay) revealed
+- **3rd attempt wrong**: Correct alignment line highlighted
 
-*Verify Q3 by checking `o1.addEventListener("click", wrong/correct)` in Q3_HTML script.*
-*Q5 is NOT a two-option quiz — it is a multi-slide interactive game (see Rectangle Game section below).*
-*Q6/Q7 still use the standard two-option quiz pattern. Default o1=correct. To flip: swap correct()/wrong() on o1/o2 AND swap CorrectOption/IncorrectOption src.*
+*(Implemented via `state.attempts` counter — check current implementation)*
 
 ---
 
-## Architecture
+## Bot / Pod Layout
 
-### turn.js Flipbook
+Three CSS layout classes on `#bots`:
+- `layout-intro`: Bots far apart (center), no pods
+- `layout-ready`: Bots at sides with pods visible (156px from top)
+- `layout-laser`: Bots at edges with pods, smaller size (laser gameplay)
+- `layout-clear`: Bots hidden (teaching screens, play screen)
 
-- `$('#flipbook').turn({...})` at the bottom of `ebook.html`
-- Pages injected at startup via `STORY.pages.forEach(...)` using `$('#flipbook').turn('addPage', ...)`
-- Each spread is a `.page` div with `data-si="N"` (spread index N)
-- Spread size: **820 × 472 px** (full two-page spread as one div)
+Pod and fill sizes (from `setupTargetSlots`, ~line 1235):
+| Round | podW | Fill W | Fill H | slotOffset |
+|-------|------|--------|--------|------------|
+| Rectangle | 132 | 116 | 116 | 6 |
+| Circle | 160 | 148 | 74 | 8 |
+| Square/Triangle | 142 | 130 | 130 | 6 |
 
-### Key turn.js Events
+---
+
+## Known Design Decisions
+
+- **Square block uses CSS, not PNG**: `r.blockSrc = ""` — rendered as `div.css-square { background: #9B5FD9 }`. Color changed from original pink (#d23d62) to purple (#9B5FD9).
+- **Circle borderRadius on inner cut piece = "0"**: Explicitly cleared in `makeCutPiece` to prevent white-line artifact at the horizontal cut boundary when two semicircles are displayed adjacent.
+- **Horizontal split gap fix**: In `splitMachineBlock`, h0 gets `marginBottom: "-1px"` for horizontal (circle) cuts to close the 1px rendering gap between stacked semicircles.
+- **Let's Play screen**: Only shown on round 0 (tutorial). Rounds 1+ skip directly to laser gameplay.
+- **Laser beam hidden during alignment**: Beam.svg only appears on CUT action, not during laser positioning.
+- **Tutorial only on round 0**: The `{scene:"tutorial"}` step calls `nextStep()` immediately for `state.round > 0`.
+
+---
+
+## Audio
+
+| Sound | Trigger |
+|-------|---------|
+| `sndTap()` | Button tap (play/cut) |
+| `sndCut()` | Laser fires on CUT |
+| `sndSuccess()` | Correct cut |
+| `sndTurr()` | Wrong cut / rejection |
+
+Sounds are synthesized via Web Audio API — no external audio files.
+
+---
+
+## Key JS Global State (`state` object, ~line 1056)
 
 ```javascript
-// Fires when flip starts — use to STOP audio
-turning: function(e, page, view) {
-  // stop __currentPoemAudio and __currentQuizAudio here
+{
+  round: 0,           // current round index (0-2)
+  step: 0,            // current FLOW step index
+  angle: 0,           // current laser angle (degrees)
+  lastCutAngle: 0,    // angle at which CUT was pressed
+  locked: false,      // true while cut animation plays
+  tutActive: false,   // true during tutorial sequence
+  tutStep: 0,         // current tutorial step (0-3)
+  orbitActive: true,  // laser orbit animation running
 }
-
-// Fires when flip COMPLETES — use to START playback
-turned: function(e, page, view) {
-  // curSpread = spread index (0-based)
-  // play video, trigger poem audio listener, trigger quiz audio
-}
 ```
-
-### Global Variables
-
-| Variable | Purpose |
-|---|---|
-| `curSpread` | Current spread index (0-based). -1 at start. |
-| `window.__currentPoemAudio` | Audio object for currently playing poem. Nulled and paused on `turning`. |
-| `window.__currentQuizAudio` | Audio object for currently playing quiz narration. Nulled and paused on `turning`. |
-| `STORY` | Config object: `{ bgMusic, title, pages: [...] }` |
-| `bgMusic` (element) | `<audio id="bgMusic">` — background loop |
-
----
-
-## Quiz System Architecture
-
-### HTML Structure (per quiz, e.g. Q2/Q3/Q4 standard pattern)
-
-```html
-<div id="q2s" class="quiz-scene is-question" data-state="question">
-  <img id="q2bg" class="quiz-bg" src=".vscode/assets/q2Mainbg.png">
-  <div id="q2hd" class="quiz-feedback" aria-hidden="true">
-    <!-- feedback banner: checkmark + title + copy -->
-  </div>
-  <img id="q2o1" class="quiz-option" src=".vscode/assets/q2Option1.png">
-  <img id="q2o2" class="quiz-option" src=".vscode/assets/q2Option2.png">
-  <div id="q2dl" class="quiz-tail" aria-hidden="true"><span></span><span></span></div>
-  <div id="q2dr" class="quiz-tail" aria-hidden="true"><span></span><span></span></div>
-  <button id="q2rt" class="quiz-retry" type="button">Try Again</button>
-  <button id="q2nx" class="quiz-next" type="button">Next</button>
-</div>
-<script>
-  setTimeout(function() {
-    // init quiz logic: correct(), wrong(), reset()
-  }, 0);
-</script>
-```
-
-**Q1 difference:** Uses `<div id="q1hd" class="quiz-action-hit">` (invisible hit area for wrong-bg animation) PLUS a separate `<div class="quiz-feedback">`. The wrong state changes `bg.src` to `q1wrongbg.png` (which already has circles drawn in).
-
-### Quiz State Machine
-
-CSS class on `#qNs` (the `.quiz-scene` element):
-- `.is-question` — default, options are clickable
-- `.is-correct` — correct answer selected, show feedback, show Next button
-- `.is-wrong` — wrong answer selected, show retry button
-
-`setState("question"|"correct"|"wrong")` toggles these classes.
-
-### CSS Tail Dots (quiz-tail)
-
-The `.quiz-tail` divs with `<span>` children form thought-bubble connector circles between the character and the cloud options.
-
-**IMPORTANT:** All quiz background images (`q1Mainbg.png` through `q4Mainbg.png`) already have these circles drawn into the image. Therefore ALL CSS tails are permanently hidden:
-
-```css
-#q1dl, #q1dr { opacity: 0; }
-#q2dl, #q2dr { opacity: 0; }
-#q3dl, #q3dr { opacity: 0; }
-#q4dl, #q4dr { opacity: 0; }
-```
-
-**Never** add `#qNs.is-correct` or `#qNs.is-wrong` overrides to show these tails — it causes double-circles.
-
-### CSS Option Sizes (Question State)
-
-The flipbook spread is 820px wide. Options are positioned as `position: absolute` inside the quiz scene (also 820×472).
-
-```css
-/* Q1 — MUST use different CSS sizes to compensate for image padding difference:
-   q1Option1.png fills only 72.7% of its canvas (27% transparent padding around cloud)
-   q1Option2.png fills 94.4% of its canvas (almost no padding)
-   At equal CSS sizes, q1Option2 appears ~30% bigger. Calibrated values make visual clouds equal (~245x190px). */
-#q1o1 { left: 20px;  top: 80px;  width: 337px; height: 249px; }
-#q1o2 { left: 510px; top: 110px; width: 259px; height: 190px; }
-
-/* Q2, Q3, Q4 — both options equal size */
-#q2o1 { left: 25px;  top: 85px;  width: 300px; height: 220px; }
-#q2o2 { left: 495px; top: 85px;  width: 300px; height: 220px; }
-#q3o1 { left: 25px;  top: 85px;  width: 300px; height: 220px; }
-#q3o2 { left: 495px; top: 85px;  width: 300px; height: 220px; }
-#q4o1 { left: 25px;  top: 85px;  width: 300px; height: 220px; }
-#q4o2 { left: 495px; top: 85px;  width: 300px; height: 220px; }
-```
-
-When the correct answer is selected, the correct option gets `quizCorrectPop` animation and grows. When wrong, the selected option gets `quizWrongShake` animation and grows. See CSS `#qNs.is-correct #qNo1/o2` rules (~lines 881–1013).
-
-### CSS Feedback Buttons
-
-```css
-/* Next button (blue) — shared */
-.quiz-next { ... background: linear-gradient(180deg, #4fc3f7, #1565c0); }
-
-/* Retry button (red) — shared */
-.quiz-retry { ... background: linear-gradient(180deg, #f9826c, #e63946); }
-```
-
-Buttons are `display: none` by default, shown by state CSS:
-```css
-#q2s.is-wrong .quiz-retry   { display: block; }
-#q2s.is-correct .quiz-next  { display: block; }
-#q2s.is-correct .quiz-feedback { display: flex; }
-```
-
----
-
-## Audio System
-
-### Background Music
-```javascript
-STORY.bgMusic = "audio/Quirky_Podcast_Jingle.mp3";
-// Volume 0.35, loop=true. Starts on first user interaction.
-```
-
-### Poem Audio (72% of video)
-Triggered in `turned` handler. Each video page has a `poemMap`:
-```javascript
-var poemMap = { 0:'audio/poem1.mp3', 2:'audio/poem2.mp3', 4:'audio/poem3.mp3', 6:'audio/poem4.mp3' };
-```
-A `timeupdate` listener fires once when `currentTime >= duration * 0.72`.
-
-### Quiz Narration Audio
-Triggered in `turned` handler 600ms after navigation:
-```javascript
-var quizAudioMap = { 1:'audio/q1.mp3', 3:'audio/q2.mp3', 5:'audio/q3.mp3', 7:'audio/q4.mp3' };
-```
-Also plays on **Retry** click: `rt.addEventListener("click", function() { reset(); setTimeout(playQAudio, 200); })`.
-
-**Does NOT play on initial page build** — `reset()` in each quiz script does NOT call `playQAudio()`. Audio only fires from the `turned` event or retry.
-
-### Wrong Answer Sound
-```javascript
-new Audio('audio/oops!wrong .mp3')  // note the space in filename
-```
-Plays immediately on wrong option click. No `window.__currentQuizAudio` override — it's fire-and-forget.
-
-### Correct Answer Sound
-WebAudio synth tones (not a file). See `playQuizFeedbackSound('correct')`.
-
----
-
-## Key CSS Sections (by line range in ebook.html)
-
-| Lines | Content |
-|---|---|
-| ~821–851 | `.quiz-scene`, `.quiz-bg`, `.quiz-option` base styles |
-| ~852–911 | Q1 option positions + is-correct/is-wrong states |
-| ~912–960 | `.quiz-tail` base CSS + Q1 tail hidden rule |
-| ~961–1060 | Q2 option positions + states + Q2 tail hidden |
-| ~1071–1175 | `.quiz-feedback`, `.quiz-action-hit`, `.quiz-next` button |
-| ~1179–1260 | `@keyframes quizCorrectPop`, `@keyframes quizWrongShake`, `.quiz-retry` |
-| ~1277–1380 | Q3 option positions + states + Q3 tail hidden |
-| ~1380–1440 | Q4 option positions + states + Q4 tail hidden |
-| ~1441–1530 | Q5 option positions + states + Q5 tail hidden |
-| ~1485–1570 | Q6 option positions + states + Q6 tail hidden |
-| ~1529–1610 | Q7 option positions + states + Q7 tail hidden |
-
----
-
-## Key JS Sections (by line range in ebook.html)
-
-| Lines | Content |
-|---|---|
-| ~5167–5278 | `var Q1_HTML = \`...\`` |
-| ~5280–5390 | `var Q2_HTML = \`...\`` |
-| ~5391–5501 | `var Q3_HTML = \`...\`` |
-| ~5502–5611 | `var Q4_HTML = \`...\`` |
-| ~5734–5844 | `var Q5_HTML = \`...\`` (Rectangle) |
-| ~5845–5955 | `var Q6_HTML = \`...\`` (Circle) |
-| ~5956–6066 | `var Q7_HTML = \`...\`` (Square) |
-| ~6068–6160 | `var STORY = { bgMusic, title, pages: [...] }` |
-| ~5670–5850 | Page injection loop (`STORY.pages.forEach`) |
-| ~6150–6165 | `initMusic()`, `startMusic()` |
-| ~6220–6260 | `turning` event handler (stop audio, stop video) |
-| ~6261–6300 | `turned` event handler (start video, poem audio, quiz audio, overlay) |
-
----
-
-## How to Add a New Quiz Page
-
-1. Define `var Q5_HTML = \`...\`` following the Q2/Q3/Q4 pattern (NOT Q1 pattern).
-2. Add CSS for `#q5o1`, `#q5o2`, `#q5dl/#q5dr`, `#q5s.is-correct/is-wrong` states.
-3. Set `#q5dl, #q5dr { opacity: 0; }` — never show CSS tails.
-4. Add `{ image: null, video: null, html: Q5_HTML, dialogues: [] }` to `STORY.pages`.
-5. Add corresponding video page before it.
-6. Add to `quizAudioMap` in `turned` handler with the new spread index.
-7. Add to `poemMap` if the preceding video page has a poem.
-
----
-
-## Rectangle Game (Q5 — Spread 9)
-
-Q5_HTML is a fully self-contained multi-slide interactive game, **not** a two-option quiz. It does not use `.quiz-scene`, `.quiz-option`, or any of the standard Q2–Q4 CSS classes.
-
-### Game Slides (8 total, indices 0–7)
-
-| Slide | ID      | Content |
-|-------|---------|---------|
-| 0     | `q5p0`  | "Let us charge the bots!" — two CSS bots, tap to advance |
-| 1     | `q5p1`  | "We need to cut this block into TWO EQUAL PARTS!" — rectangle + bots |
-| 2     | `q5p2`  | Tutorial: laser ring demo, dimmed arrows + cut button, tap to advance |
-| 3     | `q5p3`  | "You are all set! Let's Play" — blue grid board, play button |
-| 4     | `q5p4`  | **Interactive**: move ring to center with ← → arrows, then CUT |
-| 5     | `q5p5`  | "When an object is divided into two equal parts…" — 1 Whole label |
-| 6     | `q5p6`  | "Each part is called a HALF" — Half + Half = 2 Equal Parts |
-| 7     | `q5p7`  | "Great job! You know about HALVES!" — Next button |
-
-### Interactive Game Mechanics (Slide 4)
-
-- Pink rectangle 240×72px; laser ring 80×80px positioned with `left` CSS
-- `pos` starts at 30px (ring center at 70px, left of rect center 120px)
-- Each arrow click moves ±20px; valid range 0–160px
-- **CENTER = 80** (ring left when centered: ring center = 80+40 = 120 = rect center)
-- **TOL = 18**: ring turns green (`ok` class) when `|pos - 80| ≤ 18`
-- Only positions reachable by 20px steps that land in zone [62–98]: pos=80 (center)
-- CUT button enabled only when ring is in zone → triggers cut-line animation → advance to slide 5
-
-### All CSS Self-Contained
-
-All CSS is in a `<style>` tag inside `Q5_HTML`. Class prefix `q5` everywhere. No dependency on the main stylesheet's quiz classes. The `#q5w` wrapper fills `inset: 0` within the 820×472 page.
-
-### Audio
-
-- `q5.mp3` plays via `quizAudioMap` in the `turned` handler (spread index 9)
-- No audio is triggered by the game's internal slide transitions
-- `playQuizFeedbackSound('correct')` fires on CUT
-
----
-
-## Known Design Decisions & Constraints
-
-- **Q1 uses `q1wrongbg.png`** for its wrong state background (image swap), while Q2/Q3/Q4 keep the main bg on wrong state and just animate the option.
-- **CSS tails permanently hidden** — all background images have circles baked in. Adding any opacity override causes double circles.
-- **Quiz audio fires from `turned`, not from `reset()`** — prevents audio playing at page build time on startup.
-- **`oops!wrong .mp3` has a space in the filename** — this is intentional (the actual file on disk has that name).
-- **Poem audio uses `_poemPlayed` flag** on the video element to prevent double-firing on `timeupdate`.
-- **turn.js page numbering:** internal page numbers are 1-based and offset by 2 (two cover blanks). Spread index = turn.js page - 2. Use `curSpread` variable, not turn.js page number.
 
 ---
 
 ## How to Update This File
 
-Edit this file (`CONTEXT.md`) whenever:
-- A new quiz is added or removed
-- Option image assets are replaced (update fill/size notes)
-- CSS line ranges shift significantly
-- Audio files are renamed or added
-- Quiz answer keys change
-- Any architectural decision is made that future AI needs to know
+Edit whenever:
+- New round shapes are added
+- Pod/fill sizes change
+- Game flow scenes change
+- CSS variables or key pixel values shift
+- Design decisions are made that future AI needs to know

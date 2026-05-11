@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PowerUp Bots </title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;height:100%;overflow:hidden;background:#d5e5ff}
 body{display:flex;align-items:center;justify-content:center}
@@ -96,6 +97,25 @@ button{font:inherit}
 
 .bot-img.jump{
   animation:botJump .82s ease-in-out 2;
+}
+
+.electric-pulse {
+  position: absolute;
+  left: 50%;
+  top: 150px;
+  width: 4px;
+  height: 40px;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 0 16px 6px #74dbff;
+  transform: translateX(-50%);
+  animation: pulseDown 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  z-index: 10;
+}
+@keyframes pulseDown {
+  0% { transform: translate(-50%, 0); opacity: 1; }
+  80% { transform: translate(-50%, 380px); opacity: 1; }
+  100% { transform: translate(-50%, 380px); opacity: 0; }
 }
 
 @keyframes botJump{
@@ -193,7 +213,7 @@ button{font:inherit}
 }
 
 .css-square{
-  background:#d23d62;
+  background:#9B5FD9;
   border:0;
   border-radius:0;
   box-shadow:none;
@@ -220,9 +240,11 @@ button{font:inherit}
 
 .half-wrap{
   position:relative;
-  overflow:hidden;
+  /* overflow:hidden removed to allow drop-shadow to trace child clip-path accurately */
   flex:0 0 auto;
   filter:drop-shadow(0 12px 14px rgba(58,88,139,.18));
+  transform:translateZ(0);
+  background:transparent;
 }
 .half-wrap.teach-shape-glow{
   filter:none;
@@ -238,9 +260,9 @@ button{font:inherit}
 #teachStage{
   position:absolute;
   left:50%;
-  top:428px;
-  width:760px;
-  height:456px;
+  top:430px;
+  width:840px;
+  height:503px;
   transform:translate(-50%,-50%);
   z-index:18;
   transition:opacity .35s ease,transform .55s cubic-bezier(.34,1.4,.64,1);
@@ -258,7 +280,7 @@ button{font:inherit}
 
 #teachContent{
   position:absolute;
-  inset:58px 48px 52px 48px;
+  inset:60px 58px 58px 58px;
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -270,8 +292,8 @@ button{font:inherit}
 
 /* ── Teaching shape styles ── */
 @keyframes teachGlowPulse{
-  0%,100%{filter:drop-shadow(0 0 10px rgba(255,255,0,1)) drop-shadow(0 0 28px rgba(210,255,0,.95)) drop-shadow(0 0 50px rgba(180,240,0,.8));}
-  50%{filter:drop-shadow(0 0 22px rgba(255,255,0,1)) drop-shadow(0 0 50px rgba(230,255,0,1)) drop-shadow(0 0 90px rgba(200,255,0,.95));}
+  0%,100%{filter:url(#alpha-glow-teach) brightness(1) saturate(1.1);}
+  50%{filter:url(#alpha-glow-teach) brightness(1.3) saturate(1.3);}
 }
 .teach-shape-glow{
   filter:none;
@@ -281,22 +303,30 @@ button{font:inherit}
   display:flex;
   align-items:center;
   justify-content:center;
-  gap:48px;
+  gap:38px;
   width:100%;
 }
 .teach-content-col{
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:18px;
+  gap:22px;
   width:100%;
 }
-.teach-big-label{
-  color:#fff;
-  font-size:42px;
-  font-weight:900;
-  text-shadow:0 3px 10px rgba(0,0,0,.4);
-  white-space:nowrap;
+.teach-big-label,
+.teach-equal-label {
+  font-family: 'Fredoka', 'Arial Rounded MT Bold', sans-serif;
+  color: #fff;
+  font-size: 42px;
+  line-height: 1.1;
+  font-weight: 700;
+  -webkit-text-stroke: 6px #0E60BD;
+  paint-order: stroke fill;
+  text-shadow: 0 0 14px rgba(0,160,249,0.8), 0 0 20px rgba(0,160,249,0.6);
+  white-space: nowrap;
+}
+.teach-equal-label {
+  text-align: center;
 }
 .teach-halves-box{
   display:flex;
@@ -311,16 +341,9 @@ button{font:inherit}
 }
 .teach-half-tag{
   color:#fff;
-  font-size:20px;
+  font-size:18px;
   font-weight:900;
   text-shadow:0 2px 6px rgba(0,0,0,.3),0 0 5px rgba(77,202,255,.8);
-}
-.teach-equal-label{
-  color:#fff;
-  font-size:36px;
-  font-weight:900;
-  text-shadow:0 3px 9px rgba(0,0,0,.35);
-  white-space:nowrap;
 }
 .teach-piece-row{
   display:flex;
@@ -339,8 +362,11 @@ button{font:inherit}
   display:flex;
   align-items:center;
   justify-content:center;
-  gap:80px;
+  gap:62px;
   width:100%;
+}
+.static-glow{
+  filter:url(#alpha-glow-teach) brightness(1.15) saturate(1.15) !important;
 }
 .teach-horizontal-wrap{
   display:flex;
@@ -670,7 +696,7 @@ button{font:inherit}
 /* bubbles below left/right buttons; cut bubble above cut button */
 #bubbleLeft{width:300px;left:-108px;top:300px}
 #bubbleRight{width:300px;left:708px;top:300px}
-#bubbleCut{width:330px;left:606px;top:398px}
+#bubbleCut{width:330px;left:560px;top:450px}
 
 .tutorial-bubble.fade{opacity:0;transform:translateY(8px)}
 
@@ -1023,9 +1049,9 @@ var ROUNDS = [
     blockW:190,
     blockH:190,
     cut:"diagonal",
-    startAngle:45,
-    targetAngle:135,
-    targetAngle2:315,
+    startAngle:90,
+    targetAngle:45,
+    targetAngle2:225,
     sadBot:ASSETS + "SquareBOt.png",
     happyBot:ASSETS + "HappyTriangleBot.png",
     pod:ASSETS + "TriangularHollowLeft.png",
@@ -1241,10 +1267,10 @@ function setupTargetSlots(r, layout){
      Circle pod (160px wide): inner hollow ≈92% of width = 148px; semicircle height = 74px.
      Triangle pod (142px wide): hollow bounding box ≈91% = 130px × 130px.
      Rectangle pod (132px wide): square hollow ≈88% = 116px × 116px. */
-  var width  = isCircle ? 148 : isTriangle ? 130 : 116;
-  var height = isCircle ?  74 : isTriangle ? 130 : 116;
+  var width  = isCircle ? 148 : 116;
+  var height = isCircle ?  74 : 116;
   /* slotOffset: pixels from the pod image top to the top edge of the fill div.
-     All pod hollows start ~6 px below the pod image top (thin rim/frame). */
+     Reverted to exact calibration to perfectly fit the hollows. */
   var slotOffset = isCircle ? 8 : 6;
 
   [
@@ -1255,6 +1281,21 @@ function setupTargetSlots(r, layout){
     fill.style.top = item.top + "px";
     fill.style.width = width + "px";
     fill.style.height = height + "px";
+    
+    /* Adjust for visual mass alignment of the square's diagonal cut */
+    if (isTriangle) {
+      if (idx === 0) {
+        fill.style.marginLeft = "0px";
+        fill.style.marginTop = "0px";
+      } else {
+        fill.style.marginLeft = "0px";
+        fill.style.marginTop = "0px";
+      }
+    } else {
+      fill.style.marginLeft = "0px";
+      fill.style.marginTop = "0px";
+    }
+
     /* No clip-path or border-radius on the fill container — the piece inside has its own
        clip-path from pieceGeometry, and circle images use natural transparency for the arc shape. */
     fill.style.borderRadius = "";
@@ -1292,7 +1333,7 @@ function lineAngleDegrees(angle){
 
 function canonicalCutAngle(r){
   if(r.cut === "horizontal"){ return 0; }
-  if(r.cut === "diagonal"){ return 135; }
+  if(r.cut === "diagonal"){ return 45; }
   return 90;
 }
 
@@ -1386,6 +1427,11 @@ function pieceGeometry(width, height, angle, index){
     var y = ((p.y - minY) / boxH * 100).toFixed(3).replace(/\.?0+$/,"");
     return x + "% " + y + "%";
   }).join(",");
+  var clipInner = polygon.map(function(p){
+    var x = (p.x / width * 100).toFixed(3).replace(/\.?0+$/,"");
+    var y = (p.y / height * 100).toFixed(3).replace(/\.?0+$/,"");
+    return x + "% " + y + "%";
+  }).join(",");
 
   return {
     minX:minX,
@@ -1393,6 +1439,7 @@ function pieceGeometry(width, height, angle, index){
     width:boxW,
     height:boxH,
     clip:"polygon(" + clip + ")",
+    clipInner:"polygon(" + clipInner + ")",
     orientation:orientation
   };
 }
@@ -1418,9 +1465,13 @@ function cutPieceHome(width, height, angle, index, centerX, centerY){
 
 /* Maps slot index (0=left, 1=right) to the correct piece index for that round.
    Circle: piece 0=top-half(dome) goes to right pod, piece 1=bottom-half(bowl) goes to left pod.
-   Other rounds: piece index matches slot index directly. */
+   Square: piece 0=upper-right goes to right pod, piece 1=lower-left goes to left pod (45° cut).
+   Rectangle: piece index matches slot index directly. */
 function pieceIndexForSlot(r, slotIndex){
   if(r.name === "circle"){
+    return slotIndex === 0 ? 1 : 0;
+  }
+  if(r.name === "square"){
     return slotIndex === 0 ? 1 : 0;
   }
   return slotIndex;
@@ -1432,13 +1483,19 @@ function makeCutPiece(r, index, width, height, angle){
   wrap.className = "half-wrap";
   wrap.style.width = g.width + "px";
   wrap.style.height = g.height + "px";
-  wrap.style.clipPath = g.clip;
+  /* Remove clipPath from wrap so drop-shadow works correctly on its children */
 
   var inner = makeBlock(r, width, height);
   inner.classList.add("half-inner");
   inner.style.filter = "none";
+  if (r.name === "circle") {
+    inner.style.borderRadius = "50%";
+  } else {
+    inner.style.borderRadius = "0";
+  }
   inner.style.left = (-g.minX) + "px";
   inner.style.top = (-g.minY) + "px";
+  inner.style.clipPath = g.clipInner; /* Apply clipPath directly to the inner content */
   wrap.appendChild(inner);
   return wrap;
 }
@@ -1447,10 +1504,12 @@ function makeHalf(r, index, width, height){
   return makeCutPiece(r, index, width, height, canonicalCutAngle(r));
 }
 
-function renderWhole(){
+function renderWhole(glow){
   var r = currentRound();
   els.shapeStage.innerHTML = "";
-  els.shapeStage.appendChild(makeBlock(r, r.blockW, r.blockH));
+  var block = makeBlock(r, r.blockW, r.blockH);
+  if (glow) block.classList.add("static-glow");
+  els.shapeStage.appendChild(block);
   show(els.shapeStage);
 }
 
@@ -1537,52 +1596,71 @@ function makeTeachingPieces(r, angle, width, height){
 function renderTeaching(kind, angle, equal){
   var r = currentRound();
   var cutAngle = angle === undefined ? canonicalCutAngle(r) : angle;
-  var w = r.name === "rectangle" ? 220 : r.name === "circle" ? 165 : 185;
+  var w = r.name === "rectangle" ? 170 : r.name === "circle" ? 145 : 130;
   var h = Math.round(w * r.blockH / r.blockW);
   els.teachContent.innerHTML = "";
 
   if(kind === "teach-one"){
     setInstruction("When an object is divided into two equal parts.");
-    /* Layout: [Shape with glow]   1 Whole */
-    var row = document.createElement("div");
-    row.className = "teach-content-row";
-    row.style.justifyContent = "center";
+    
+    var grid = document.createElement("div");
+    grid.style.display = "grid";
+    grid.style.gridTemplateColumns = "auto auto";
+    grid.style.gap = "40px 40px";
+    grid.style.alignItems = "center";
+    grid.style.justifyContent = "center";
 
+    var topBlkWrap = document.createElement("div");
+    topBlkWrap.style.display = "flex";
+    topBlkWrap.style.justifyContent = "center";
     var blk = makeBlock(r, w, h);
     blk.classList.add("teach-shape-glow");
+    topBlkWrap.appendChild(blk);
 
+    var topLblWrap = document.createElement("div");
+    topLblWrap.style.display = "flex";
+    topLblWrap.style.justifyContent = "flex-start";
     var lbl = document.createElement("div");
     lbl.className = "teach-big-label";
     lbl.textContent = "1 Whole";
+    topLblWrap.appendChild(lbl);
 
-    row.appendChild(blk);
-    row.appendChild(lbl);
-    els.teachContent.appendChild(row);
+    grid.appendChild(topBlkWrap);
+    grid.appendChild(topLblWrap);
+    
+    els.teachContent.appendChild(grid);
 
   } else {
     setInstruction(equal === false ? "These parts are not equal halves." : "Each part is called a half.");
-    var col = document.createElement("div");
-    col.className = "teach-content-col";
+    
+    var grid = document.createElement("div");
+    grid.style.display = "grid";
+    grid.style.gridTemplateColumns = "auto auto";
+    grid.style.gap = "40px 40px";
+    grid.style.alignItems = "center";
+    grid.style.justifyContent = "center";
 
-    var topRow = document.createElement("div");
-    topRow.className = "teach-content-row";
+    var topBlkWrap = document.createElement("div");
+    topBlkWrap.style.display = "flex";
+    topBlkWrap.style.justifyContent = "center";
     var topBlk = makeBlock(r, w, h);
     /* Whole block glows first to highlight it, halves glow after a brief delay */
     topBlk.classList.add("teach-shape-glow");
+    topBlkWrap.appendChild(topBlk);
+
+    var topLblWrap = document.createElement("div");
+    topLblWrap.style.display = "flex";
+    topLblWrap.style.justifyContent = "flex-start";
     var topLbl = document.createElement("div");
     topLbl.className = "teach-big-label";
     topLbl.textContent = "1 Whole";
-    topRow.appendChild(topBlk);
-    topRow.appendChild(topLbl);
+    topLblWrap.appendChild(topLbl);
 
-    var botRow = document.createElement("div");
-    botRow.className = "teach-content-row";
-
-    var botLbl = document.createElement("div");
-    botLbl.className = "teach-equal-label";
-    botLbl.textContent = equal === false ? "Not Equal Parts" : "2 Equal Parts";
-
+    var halvesWrap = document.createElement("div");
+    halvesWrap.style.display = "flex";
+    halvesWrap.style.justifyContent = "center";
     var halvesBox = makeTeachingPieces(r, cutAngle, w, h);
+    
     /* Remove glow from halves initially; whole block glows first for 1.3 s,
        then halves take over the glow. */
     halvesBox.querySelectorAll(".teach-shape-glow").forEach(function(el){
@@ -1597,12 +1675,23 @@ function renderTeaching(kind, angle, equal){
       var cssSquarePieces = halvesBox.querySelectorAll(".css-square.whole-block");
       cssSquarePieces.forEach(function(el){ el.classList.add("teach-shape-glow"); });
     }, 1300);
-    botRow.appendChild(halvesBox);
-    botRow.appendChild(botLbl);
+    
+    halvesWrap.appendChild(halvesBox);
 
-    col.appendChild(topRow);
-    col.appendChild(botRow);
-    els.teachContent.appendChild(col);
+    var botLblWrap = document.createElement("div");
+    botLblWrap.style.display = "flex";
+    botLblWrap.style.justifyContent = "flex-start";
+    var botLbl = document.createElement("div");
+    botLbl.className = "teach-equal-label";
+    botLbl.textContent = equal === false ? "2 Equal Parts" : "2 Equal Parts";
+    botLblWrap.appendChild(botLbl);
+
+    grid.appendChild(topBlkWrap);
+    grid.appendChild(topLblWrap);
+    grid.appendChild(halvesWrap);
+    grid.appendChild(botLblWrap);
+    
+    els.teachContent.appendChild(grid);
   }
   show(els.teachStage);
 }
@@ -1625,25 +1714,14 @@ function renderStep(){
     setupBots("layout-ready");
   }
 
-  if(step.scene === "whole"){
+  if(step.scene === "whole" || step.scene === "needs" || step.scene === "halves"){
     setInstruction(text);
     setupBots("layout-ready");
-    renderWhole();
-  }
-
-  if(step.scene === "needs"){
-    setInstruction(text);
-    setupBots("layout-ready");
-    renderWhole();
-  }
-
-  if(step.scene === "halves"){
-    setInstruction(text);
-    setupBots("layout-ready");
-    renderWhole();
+    renderWhole(true);
   }
 
   if(step.scene === "play"){
+    if(state.round > 0){ nextStep(); return; }
     setInstruction("");
     setupBots("layout-clear");
     show(els.playStage);
@@ -1676,15 +1754,19 @@ function nextStep(){
   renderStep();
 }
 
-/* ── Tutorial guided sequence (right cut demo → left cut demo) ── */
+/* ── Tutorial guided sequence (4 moves × 4 cuts demo) ── */
 var TUTORIAL_START_ANGLE = 180;
-var TUTORIAL_RIGHT_CUT_ANGLE = 135;
-var TUTORIAL_LEFT_CUT_ANGLE = 225;
+/* Angles the laser moves to at each movement step (steps 0,2,4,6) */
+var TUTORIAL_STEP_ANGLES = [135, 90, 225, 270];
 var TUT = [
-  {text:"Move and line up the laser.", bubble:"right", btn:"right"},
-  {text:"Tap to cut the block.",       bubble:"cut",   btn:"cut"},
-  {text:"Move and line up the laser.", bubble:"left",  btn:"left"},
-  {text:"Tap to cut the block.",       bubble:"cut",   btn:"cut"}
+  {bubble:"right", btn:"right"},   /* step 0: move right → 135° */
+  {bubble:"cut",   btn:"cut"},     /* step 1: cut at 135° */
+  {bubble:"right", btn:"right"},   /* step 2: move right → 90° */
+  {bubble:"cut",   btn:"cut"},     /* step 3: cut at 90° */
+  {bubble:"left",  btn:"left"},    /* step 4: move left → 225° */
+  {bubble:"cut",   btn:"cut"},     /* step 5: cut at 225° */
+  {bubble:"left",  btn:"left"},    /* step 6: move left → 270° */
+  {bubble:"cut",   btn:"cut"}      /* step 7: cut at 270° — last, advance to play */
 ];
 
 function setupTutorial(){
@@ -1752,34 +1834,39 @@ function tutSetStep(n){
 }
 
 function tutHandleRight(){
-  if(!state.tutActive || state.tutStep !== 0 || state.locked){ return; }
+  var step = state.tutStep;
+  if(!state.tutActive || state.locked){ return; }
+  if(step < 0 || step >= TUT.length || TUT[step].btn !== "right"){ return; }
   pressButton(els.hitRight);
   sndRotate();
   [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){ el.classList.add("fade"); });
-  state.angle = TUTORIAL_RIGHT_CUT_ANGLE;
+  state.angle = TUTORIAL_STEP_ANGLES[step >> 1];
   updateLaser(); /* smooth orbital rotation — NO beam */
   els.hitLeft.disabled = true;
   els.hitRight.disabled = true;
   els.hitCut.disabled = true;
-  later(function(){ tutSetStep(1); }, 520);
+  later(function(){ tutSetStep(step + 1); }, 520);
 }
 
 function tutHandleLeft(){
-  if(!state.tutActive || state.tutStep !== 2 || state.locked){ return; }
+  var step = state.tutStep;
+  if(!state.tutActive || state.locked){ return; }
+  if(step < 0 || step >= TUT.length || TUT[step].btn !== "left"){ return; }
   pressButton(els.hitLeft);
   sndRotate();
   [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){ el.classList.add("fade"); });
-  state.angle = TUTORIAL_LEFT_CUT_ANGLE;
+  state.angle = TUTORIAL_STEP_ANGLES[step >> 1];
   updateLaser(); /* smooth orbital rotation — NO beam */
   els.hitLeft.disabled = true;
   els.hitRight.disabled = true;
   els.hitCut.disabled = true;
-  later(function(){ tutSetStep(3); }, 520);
+  later(function(){ tutSetStep(step + 1); }, 520);
 }
 
 function tutHandleCut(){
-  if(!state.tutActive || (state.tutStep !== 1 && state.tutStep !== 3) || state.locked){ return; }
-  var cutStep = state.tutStep;
+  var step = state.tutStep;
+  if(!state.tutActive || state.locked){ return; }
+  if(step < 0 || step >= TUT.length || TUT[step].btn !== "cut"){ return; }
   state.locked = true;
   pressButton(els.hitCut);
   sndCut();
@@ -1794,10 +1881,10 @@ function tutHandleCut(){
     splitMachineBlock(state.angle);
   }, 950);
   later(function(){
-    if(cutStep === 1){
-      resetTutorialCut(TUTORIAL_START_ANGLE);
+    if(step < TUT.length - 1){
+      resetTutorialCut();
       state.locked = false;
-      tutSetStep(2);
+      tutSetStep(step + 1);
     } else {
       state.tutActive = false;
       nextStep();
@@ -1805,14 +1892,12 @@ function tutHandleCut(){
   }, 1900);
 }
 
-function resetTutorialCut(angle){
+function resetTutorialCut(){
   var r = currentRound();
   hideBeam();
   els.cutLine.classList.remove("show");
   els.machineBlock.innerHTML = "";
   els.machineBlock.appendChild(makeBlock(r, r.blockW, r.blockH));
-  state.angle = angle;
-  snapLaser(angle);
   showLaserHead();
 }
 
@@ -1822,6 +1907,7 @@ function setupLaser(){
   setupBots("layout-laser");
   state.angle = r.startAngle;
   state.locked = false;
+  state.wrongAttempts = 0;
   /* Gameplay: no tutorial overlay */
   els.tutorialOverlay.classList.remove("show");
   els.machineBlock.innerHTML = "";
@@ -2090,7 +2176,8 @@ function fillSlotWithPiece(fill, r, index, angle){
   var home = cutPieceHome(r.blockW, r.blockH, angle, index, 0, 0);
   var scale = slotScaleForPiece({width:w,height:h}, home);
   fill.innerHTML = "";
-  piece.style.transform = "scale(" + scale + ")";
+  var dyOffset = r.name === "rectangle" ? "-8px" : "0px";
+  piece.style.transform = "translateY(" + dyOffset + ") scale(" + scale + ")";
   piece.style.transformOrigin = "center center";
   piece.style.filter = "none";
   fill.appendChild(piece);
@@ -2121,7 +2208,8 @@ function flyHalvesToSlots(r, angle, onDone){
 
     var scale = slotScaleForPiece(targets[slotIdx], home);
     var dx = targets[slotIdx].x - home.centerX;
-    var dy = targets[slotIdx].y - home.centerY;
+    var dyOffset = r.name === "rectangle" ? 8 : 0;
+    var dy = targets[slotIdx].y - home.centerY - dyOffset;
     requestAnimationFrame(function(){ requestAnimationFrame(function(){
       fly.style.transform = "translate("+dx+"px,"+dy+"px) scale("+scale+")";
     });});
@@ -2153,20 +2241,54 @@ function showSuccess(){
   later(function(){
     hide(els.teachStage);
     setupBots("layout-laser");
-    setInstruction("Great cut! The halves will power the bots!");
+    setInstruction("");
     flyHalvesToSlots(r, cutAngle, function(){
       els.flightLayer.innerHTML = "";
       fillSlotWithPiece(els.leftFill, r, pieceIndexForSlot(r,0), cutAngle);
       fillSlotWithPiece(els.rightFill, r, pieceIndexForSlot(r,1), cutAngle);
       els.leftBot.src = r.happyBot;
       els.rightBot.src = r.happyBot;
-      var hw = (r.happyBotW || r.botWReady) + "px";
+      var hw = r.botWIntro + "px";
       els.leftBot.style.width = hw;
       els.rightBot.style.width = hw;
       els.leftBot.classList.add("happy","jump");
       els.rightBot.classList.add("happy","jump");
       els.leftPod.classList.add("glow");
       els.rightPod.classList.add("glow");
+
+      /* Move pods and target-fills up to match the larger bots' new head height */
+      var newBotTop = 720 - r.botWIntro * (r.botAspect || 1.2);
+      var podW = r.podW || 132;
+      var aspectL = r.podAspectLeft || 2.3;
+      var aspectR = r.podAspectRight || r.podAspectLeft || 2.3;
+      var newTopL = newBotTop - podW * aspectL + (r.chargerOverlap || 14);
+      var newTopR = newBotTop - podW * aspectR + (r.chargerOverlap || 14);
+      
+      els.leftPod.classList.add("jump");
+      els.rightPod.classList.add("jump");
+      els.leftFill.classList.add("jump");
+      els.rightFill.classList.add("jump");
+      
+      els.leftPod.style.transition = "top 0.4s ease";
+      els.rightPod.style.transition = "top 0.4s ease";
+      els.leftFill.style.transition = "top 0.4s ease";
+      els.rightFill.style.transition = "top 0.4s ease";
+
+      var slotOffset = 0;
+      els.leftPod.style.top = newTopL + "px";
+      els.rightPod.style.top = newTopR + "px";
+      els.leftFill.style.top = (newTopL + slotOffset) + "px";
+      els.rightFill.style.top = (newTopR + slotOffset) + "px";
+      
+      function addPulse(slotEl){
+        var pulse = document.createElement("div");
+        pulse.className = "electric-pulse";
+        slotEl.appendChild(pulse);
+        setTimeout(function(){ if(pulse.parentNode) pulse.parentNode.removeChild(pulse); }, 1200);
+      }
+      addPulse(document.querySelector(".left-bot"));
+      addPulse(document.querySelector(".right-bot"));
+
       var tgts = slotTargetsFromFills();
       burstCelebration(tgts[0].x, tgts[0].y);
       burstCelebration(tgts[1].x, tgts[1].y);
@@ -2175,7 +2297,7 @@ function showSuccess(){
 
   /* Show Next button — child taps to advance manually */
   later(function(){
-    setInstruction("You did it! Tap Next for the next shape!");
+    setInstruction("");
     show(els.nextButton);
   }, 8500);
 }
@@ -2220,6 +2342,7 @@ function splitMachineBlock(angle){
   row.className = "halves-row";
   row.style.gap = "0";
   row.style.flexDirection = orientation === "vertical" ? "row" : "column";
+  if(orientation === "horizontal"){ h0.style.marginBottom = "-1px"; }
   row.appendChild(h0);
   row.appendChild(h1);
   els.machineBlock.appendChild(row);
@@ -2239,10 +2362,8 @@ function splitMachineBlock(angle){
 function showFail(){
   var r = currentRound();
   var cutAngle = state.lastCutAngle || state.angle;
-  sndTurr();
-  els.machineBlock.classList.remove("vibrate");
-  void els.machineBlock.offsetWidth;
-  els.machineBlock.classList.add("vibrate");
+  state.wrongAttempts = (state.wrongAttempts || 0) + 1;
+  
   els.wrongSlash.classList.add("show");
   splitMachineBlock(cutAngle);
   setInstruction("Let’s look at the parts you made.");
@@ -2257,6 +2378,8 @@ function showFail(){
     hide(els.teachStage);
     setupBots("layout-laser");
     setInstruction("Make sure both parts fit into the slots.");
+    els.leftPod.classList.add("glow");
+    els.rightPod.classList.add("glow");
     flyWrongToSlots(r, cutAngle);
   }, 4300);
 }
@@ -2267,8 +2390,8 @@ function flyWrongToSlots(r, angle){
   var center = machineCenterInGame();
   var targets = slotTargetsFromFills();
 
-  /* Use canonical (correct-cut) piece dimensions for uniform scale across both slots.
-     This ensures wrong-cut pieces land at the same visual size regardless of cut angle. */
+  /* Use canonical piece size to maintain consistent physical scaling of the block,
+     ensuring the height is matched vertically as requested. */
   var canonAngle = canonicalCutAngle(r);
   var canonG = pieceGeometry(r.blockW, r.blockH, canonAngle, 0);
   var uniformScale = slotScaleForPiece(targets[0], {width:canonG.width, height:canonG.height});
@@ -2286,7 +2409,7 @@ function flyWrongToSlots(r, angle){
     fly.style.transition = "transform 0.72s cubic-bezier(.4,0,.2,1),box-shadow .28s ease,filter .28s ease";
     layer.appendChild(fly);
 
-    var scale = uniformScale;
+    var scale = uniformScale; /* perfectly match hole size */
     var dx = targets[slotIdx].x - home.centerX;
     var dy = targets[slotIdx].y - home.centerY;
     requestAnimationFrame(function(){ requestAnimationFrame(function(){
@@ -2296,10 +2419,9 @@ function flyWrongToSlots(r, angle){
 
   /* Rejection flash after landing */
   later(function(){
-    sndTurr();
+    sndWrong();
     for(var i=0; i<layer.children.length; i++){
-      layer.children[i].style.boxShadow = "0 0 0 4px #ff4040, 0 0 28px rgba(255,50,50,.85)";
-      layer.children[i].style.filter = "brightness(1.2) saturate(1.6)";
+      layer.children[i].style.filter = "url(#alpha-glow-wrong)";
     }
     later(function(){ show(els.tryAgain); }, 700);
   }, 850);
@@ -2321,6 +2443,10 @@ function tryAgain(){
   els.wrongSlash.classList.remove("show");
   hide(els.tryAgain);
   setInstruction("Move the laser to the center, then tap the blue button to cut.");
+  
+  if(state.wrongAttempts >= 2){
+    showCutLine(r.targetAngle);
+  }
 }
 
 function nextRound(){
@@ -2390,5 +2516,69 @@ els.finishButton.addEventListener("click", function(){ sndTap(); finishGame(); }
 
 renderStep();
 </script>
+
+<svg width="0" height="0" style="position:absolute;z-index:-1;pointer-events:none;">
+  <defs>
+    <!-- Teaching Yellow Glow Shader -->
+    <filter id="alpha-glow-teach" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="blur" />
+      <feComponentTransfer in="blur" result="boost">
+        <feFuncA type="linear" slope="3" />
+      </feComponentTransfer>
+      <feFlood flood-color="#ffff00" result="color" />
+      <feComposite in="color" in2="boost" operator="in" result="glow" />
+      <feMerge>
+        <feMergeNode in="glow" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Try Again Red Glow Shader -->
+    <filter id="alpha-glow-wrong" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="blur" />
+      <feComponentTransfer in="blur" result="boost">
+        <feFuncA type="linear" slope="3" />
+      </feComponentTransfer>
+      <feFlood flood-color="#ff3333" result="redGlow" />
+      <feComposite in="redGlow" in2="boost" operator="in" result="glow" />
+      
+      <!-- Red tint for the piece itself -->
+      <feColorMatrix in="SourceGraphic" type="matrix" values="
+        1.2 0 0 0 0.3
+        0 0.6 0 0 0
+        0 0.6 0 0 0
+        0 0 0 1 0" result="tinted" />
+      
+      <feMerge>
+        <feMergeNode in="glow" />
+        <feMergeNode in="tinted" />
+      </feMerge>
+    </filter>
+  </defs>
+</svg>
+
 </body>
 </html>
+<style>
+@keyframes btnPulseHint {
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.15); filter: brightness(1.3); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+@keyframes handBounceHint {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-10px) scale(1.1); }
+}
+.pulse-hint {
+  animation: btnPulseHint 1.2s infinite;
+  position: relative;
+}
+.pulse-hint::after {
+  content: "👆";
+  position: absolute;
+  font-size: 40px;
+  bottom: -15px;
+  right: -15px;
+  animation: handBounceHint 1.2s infinite;
+}
+</style>
