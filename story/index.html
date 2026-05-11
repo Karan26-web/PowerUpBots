@@ -1271,7 +1271,11 @@ function setupTargetSlots(r, layout){
   var height = isCircle ?  74 : 116;
   /* slotOffset: pixels from the pod image top to the top edge of the fill div.
      Reverted to exact calibration to perfectly fit the hollows. */
-  var slotOffset = isCircle ? 8 : 6;
+  var slotOffset = isCircle ? 8 : 25;
+  var hShiftL = isTriangle ? -8 : 0;
+  var hShiftR = isTriangle ? 8 : 0;
+  els.leftPod.style.marginLeft = hShiftL + "px";
+  els.rightPod.style.marginLeft = hShiftR + "px";
 
   [
     {fill:els.leftFill, top:podTopLeft + slotOffset},
@@ -1285,10 +1289,10 @@ function setupTargetSlots(r, layout){
     /* Adjust for visual mass alignment of the square's diagonal cut */
     if (isTriangle) {
       if (idx === 0) {
-        fill.style.marginLeft = "0px";
+        fill.style.marginLeft = (hShiftL - 27) + "px";
         fill.style.marginTop = "0px";
       } else {
-        fill.style.marginLeft = "0px";
+        fill.style.marginLeft = (hShiftR + 27) + "px";
         fill.style.marginTop = "0px";
       }
     } else {
@@ -1432,6 +1436,9 @@ function pieceGeometry(width, height, angle, index){
     var y = (p.y / height * 100).toFixed(3).replace(/\.?0+$/,"");
     return x + "% " + y + "%";
   }).join(",");
+  var absPolygon = polygon.map(function(p){
+    return p.x + "," + p.y;
+  }).join(" ");
 
   return {
     minX:minX,
@@ -1439,6 +1446,7 @@ function pieceGeometry(width, height, angle, index){
     width:boxW,
     height:boxH,
     clip:"polygon(" + clip + ")",
+    absPolygon:absPolygon,
     clipInner:"polygon(" + clipInner + ")",
     orientation:orientation
   };
@@ -1485,18 +1493,42 @@ function makeCutPiece(r, index, width, height, angle){
   wrap.style.height = g.height + "px";
   /* Remove clipPath from wrap so drop-shadow works correctly on its children */
 
-  var inner = makeBlock(r, width, height);
-  inner.classList.add("half-inner");
-  inner.style.filter = "none";
-  if (r.name === "circle") {
-    inner.style.borderRadius = "50%";
+  if (r.blockSrc) {
+    /* Bypass CSS clip-path Chromium bugs by rendering the clipped image as a true SVG */
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("width", width);
+    svg.setAttribute("height", height);
+    svg.style.position = "absolute";
+    svg.style.left = (-g.minX) + "px";
+    svg.style.top = (-g.minY) + "px";
+    svg.style.overflow = "visible";
+    svg.classList.add("half-inner");
+
+    var clipId = "clip-" + Math.random().toString(36).substr(2,9);
+    var defs = "<defs><clipPath id=\""+clipId+"\"><polygon points=\""+g.absPolygon+"\" /></clipPath>";
+    var gNode = "<g>";
+    
+    if (r.name === "circle") {
+      var circleClipId = "circleClip-" + Math.random().toString(36).substr(2,9);
+      defs += "<clipPath id=\""+circleClipId+"\"><circle cx=\""+(width/2)+"\" cy=\""+(height/2)+"\" r=\""+(width/2)+"\" /></clipPath>";
+      gNode = "<g clip-path=\"url(#"+circleClipId+")\">";
+    }
+    defs += "</defs>";
+    
+    var imgNode = "<image href=\""+r.blockSrc+"\" width=\""+width+"\" height=\""+height+"\" clip-path=\"url(#"+clipId+")\" preserveAspectRatio=\"none\" />";
+    svg.innerHTML = defs + gNode + imgNode + "</g>";
+    wrap.appendChild(svg);
   } else {
+    /* Fallback for css-square which has no blockSrc */
+    var inner = makeBlock(r, width, height);
+    inner.classList.add("half-inner");
+    inner.style.filter = "none";
     inner.style.borderRadius = "0";
+    inner.style.left = (-g.minX) + "px";
+    inner.style.top = (-g.minY) + "px";
+    inner.style.clipPath = g.clipInner;
+    wrap.appendChild(inner);
   }
-  inner.style.left = (-g.minX) + "px";
-  inner.style.top = (-g.minY) + "px";
-  inner.style.clipPath = g.clipInner; /* Apply clipPath directly to the inner content */
-  wrap.appendChild(inner);
   return wrap;
 }
 
@@ -1717,7 +1749,7 @@ function renderStep(){
   if(step.scene === "whole" || step.scene === "needs" || step.scene === "halves"){
     setInstruction(text);
     setupBots("layout-ready");
-    renderWhole(true);
+    renderWhole(step.scene === "whole");
   }
 
   if(step.scene === "play"){
@@ -2274,7 +2306,7 @@ function showSuccess(){
       els.leftFill.style.transition = "top 0.4s ease";
       els.rightFill.style.transition = "top 0.4s ease";
 
-      var slotOffset = 0;
+      var slotOffset = r.name === "circle" ? 8 : 25;
       els.leftPod.style.top = newTopL + "px";
       els.rightPod.style.top = newTopR + "px";
       els.leftFill.style.top = (newTopL + slotOffset) + "px";
