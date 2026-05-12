@@ -2260,6 +2260,18 @@
       var r = currentRound();
       var step = FLOW[state.step];
       var text = step.text ? step.text.replace("{shape}", r.name) : "";
+      if (state.round > 0) {
+        if (step.scene === "intro" || step.scene === "needs" || step.scene === "halves") {
+          nextStep();
+          return;
+        }
+        if (step.scene === "ready") {
+          text = "Let us charge these bots now.";
+        }
+        if (step.scene === "whole") {
+          text = "Cut the block into two equal parts.";
+        }
+      }
 
       if (step.scene === "intro") {
         setInstruction(text);
