@@ -311,7 +311,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
+      overflow: visible;
       opacity: 0;
       transform: translateX(-50%);
       pointer-events: none;
@@ -1557,10 +1557,10 @@
         botAspect: 784 / 742,
         podAspectLeft: 1054 / 469,
         podAspectRight: 1089 / 444,
-        chargerOverlap: 34,
-        botWIntro: 205,
-        botWReady: 170,
-        happyBotW: 163
+        chargerOverlap: 85,
+        botWIntro: 220,
+        botWReady: 185,
+        happyBotW: 180
       },
       {
         name: "circle",
@@ -1801,47 +1801,70 @@
       return botTop - podW * podAspect + (r.chargerOverlap || 14);
     }
 
+    function targetSlotSizeForRound(r) {
+      if (r.name === "circle") {
+        return { width: 142, height: 68 };
+      }
+      if (r.name === "square") {
+        return { width: 116, height: 116 };
+      }
+      return { width: 100, height: 100 };
+    }
+
+    function targetSlotOffsetForRound(r, side) {
+      if (r.name === "circle") {
+        return side === "right" ? 20 : 17;
+      }
+      if (r.name === "square") {
+        return side === "right" ? 17 : 0;
+      }
+      return 6;
+    }
+
+    function targetSlotXOffsetForRound(r, side) {
+      if (r.name === "square") {
+        return side === "right" ? -8 : 3;
+      }
+      return 0;
+    }
+
+    function visualFitScaleForRound(r) {
+      if (r.name === "circle") {
+        return 0.88;
+      }
+      if (r.name === "square") {
+        return 0.84;
+      }
+      return 0.92;
+    }
+
     function setupTargetSlots(r, layout) {
       var podTopLeft = podTopForRound(r, layout, "left");
       var podTopRight = podTopForRound(r, layout, "right");
-      var isCircle = r.name === "circle";
-      var isTriangle = r.name === "square";
+      var slotSize = targetSlotSizeForRound(r);
       /* Slot dimensions calibrated to the visual hollow in each pod image.
-         Circle pod (160px wide): inner hollow ≈92% of width = 148px; semicircle height = 74px.
-         Triangle pod (142px wide): hollow bounding box ≈91% = 130px × 130px.
-         Rectangle pod (132px wide): square hollow ≈88% = 116px × 116px. */
-      var width = isCircle ? 148 : 116;
-      var height = isCircle ? 74 : 116;
-      /* slotOffset: pixels from the pod image top to the top edge of the fill div.
-         Reverted to exact calibration to perfectly fit the hollows. */
-      var slotOffset = isCircle ? 8 : 25;
-      var hShiftL = isTriangle ? -8 : 0;
-      var hShiftR = isTriangle ? 8 : 0;
-      els.leftPod.style.marginLeft = hShiftL + "px";
-      els.rightPod.style.marginLeft = hShiftR + "px";
+         Circle pod (160px wide): inset semicircle slot = 142px x 68px.
+         Triangle round uses a centered 116px box plus a tighter fitted-piece inset.
+         Rectangle round uses a smaller centered slot to stay inside the dark hollow art. */
+      var width = slotSize.width;
+      var height = slotSize.height;
+      els.leftPod.style.marginLeft = "0px";
+      els.rightPod.style.marginLeft = "0px";
 
       [
-        { fill: els.leftFill, top: podTopLeft + slotOffset },
-        { fill: els.rightFill, top: podTopRight + slotOffset }
-      ].forEach(function (item, idx) {
+        { fill: els.leftFill, side: "left", top: podTopLeft + targetSlotOffsetForRound(r, "left") },
+        { fill: els.rightFill, side: "right", top: podTopRight + targetSlotOffsetForRound(r, "right") }
+      ].forEach(function (item) {
         var fill = item.fill;
         fill.style.top = item.top + "px";
         fill.style.width = width + "px";
         fill.style.height = height + "px";
 
-        /* Adjust for visual mass alignment of the square's diagonal cut */
-        if (isTriangle) {
-          if (idx === 0) {
-            fill.style.marginLeft = (hShiftL - 27) + "px";
-            fill.style.marginTop = "0px";
-          } else {
-            fill.style.marginLeft = (hShiftR + 27) + "px";
-            fill.style.marginTop = "0px";
-          }
-        } else {
-          fill.style.marginLeft = "0px";
-          fill.style.marginTop = "0px";
-        }
+        /* Keep the fill centered; the fitted piece applies the round-specific visual inset. */
+        fill.style.left = "50%";
+        fill.style.transform = "translateX(-50%)";
+        fill.style.marginLeft = targetSlotXOffsetForRound(r, item.side) + "px";
+        fill.style.marginTop = "0px";
 
         /* No clip-path or border-radius on the fill container — the piece inside has its own
            clip-path from pieceGeometry, and circle images use natural transparency for the arc shape. */
@@ -2759,11 +2782,13 @@
       var leftH = parseFloat(els.leftFill.style.height || "0");
       var rightW = parseFloat(els.rightFill.style.width || "0");
       var rightH = parseFloat(els.rightFill.style.height || "0");
+      var leftX = 150 + parseFloat(els.leftFill.style.marginLeft || "0");
+      var rightX = 1130 + parseFloat(els.rightFill.style.marginLeft || "0");
       var leftY = parseFloat(els.leftFill.style.top || "0") + leftH / 2;
       var rightY = parseFloat(els.rightFill.style.top || "0") + rightH / 2;
       return [
-        { x: 150, y: leftY, width: leftW, height: leftH },
-        { x: 1130, y: rightY, width: rightW, height: rightH }
+        { x: leftX, y: leftY, width: leftW, height: leftH },
+        { x: rightX, y: rightY, width: rightW, height: rightH }
       ];
     }
 
@@ -2803,11 +2828,12 @@
       var h = parseFloat(fill.style.height || "0");
       var piece = makeCutPiece(r, index, r.blockW, r.blockH, angle);
       var home = cutPieceHome(r.blockW, r.blockH, angle, index, 0, 0);
-      var scale = slotScaleForPiece({ width: w, height: h }, home);
+      var scale = slotScaleForPiece({ width: w, height: h }, home) * visualFitScaleForRound(r);
       fill.innerHTML = "";
       var dyOffset = r.name === "rectangle" ? "-8px" : "0px";
-      piece.style.transform = "translateY(" + dyOffset + ") scale(" + scale + ")";
+      piece.classList.add("fit-piece");
       piece.style.transformOrigin = "center center";
+      piece.style.transform = "translateZ(0) translateY(" + dyOffset + ") scale(" + scale + ")";
       piece.style.filter = "none";
       fill.appendChild(piece);
       fill.classList.add("filled");
@@ -2835,7 +2861,7 @@
 
         layer.appendChild(fly);
 
-        var scale = slotScaleForPiece(targets[slotIdx], home);
+        var scale = slotScaleForPiece(targets[slotIdx], home) * visualFitScaleForRound(r);
         var dx = targets[slotIdx].x - home.centerX;
         var dyOffset = r.name === "rectangle" ? 8 : 0;
         var dy = targets[slotIdx].y - home.centerY - dyOffset;
@@ -2905,11 +2931,10 @@
           els.leftFill.style.transition = "top 0.4s ease";
           els.rightFill.style.transition = "top 0.4s ease";
 
-          var slotOffset = r.name === "circle" ? 8 : 25;
           els.leftPod.style.top = newTopL + "px";
           els.rightPod.style.top = newTopR + "px";
-          els.leftFill.style.top = (newTopL + slotOffset) + "px";
-          els.rightFill.style.top = (newTopR + slotOffset) + "px";
+          els.leftFill.style.top = (newTopL + targetSlotOffsetForRound(r, "left")) + "px";
+          els.rightFill.style.top = (newTopR + targetSlotOffsetForRound(r, "right")) + "px";
 
           function addPulse(slotEl) {
             var pulse = document.createElement("div");
@@ -3027,7 +3052,7 @@
          ensuring the height is matched vertically as requested. */
       var canonAngle = canonicalCutAngle(r);
       var canonG = pieceGeometry(r.blockW, r.blockH, canonAngle, 0);
-      var uniformScale = slotScaleForPiece(targets[0], { width: canonG.width, height: canonG.height });
+      var uniformScale = slotScaleForPiece(targets[0], { width: canonG.width, height: canonG.height }) * visualFitScaleForRound(r);
 
       [0, 1].forEach(function (slotIdx) {
         var pieceIdx = pieceIndexForSlot(r, slotIdx);
