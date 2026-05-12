@@ -1,2765 +1,3186 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PowerUp Bots </title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&display=swap');
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%;height:100%;overflow:hidden;background:#d5e5ff}
-body{display:flex;align-items:center;justify-content:center}
-button{font:inherit}
-
-#game{
-  position:absolute;
-  width:1280px;
-  height:720px;
-  overflow:hidden;
-  transform-origin:top left;
-  font-family:"Trebuchet MS","Arial Rounded MT Bold",Arial,sans-serif;
-  color:#154aa5;
-  user-select:none;
-}
-
-.bg{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  z-index:0;
-}
-
-.hidden{opacity:0;pointer-events:none}
-
-#instruction{
-  position:absolute;
-  top:8px;
-  left:32px;
-  width:1120px;
-  height:150px;
-  z-index:40;
-  transition:opacity .28s ease,transform .28s ease;
-}
-
-#instruction.hidden{transform:translateY(-8px)}
-
-#instruction img{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:contain;
-}
-
-#instructionText{
-  position:absolute;
-  left:154px;
-  right:14px;
-  top:42px;
-  min-height:58px;
-  display:flex;
-  align-items:center;
-  color:#154aa5;
-  font-size:26px;
-  line-height:1.14;
-  font-weight:900;
-  letter-spacing:0;
-}
-
-#scene{
-  position:absolute;
-  inset:0;
-  z-index:5;
-}
-
-.bot-slot{
-  position:absolute;
-  width:260px;
-  height:520px;
-  transform-origin:bottom center;
-}
-
-.bot-img{
-  position:absolute;
-  left:50%;
-  bottom:0;
-  max-width:none;
-  object-fit:contain;
-  transform:translateX(-50%);
-  transition:filter .35s ease,transform .45s cubic-bezier(.18,.89,.35,1.18);
-}
-
-.bot-img.happy{
-  filter:drop-shadow(0 0 16px rgba(116,219,255,.95));
-}
-
-.bot-img.jump{
-  animation:botJump .82s ease-in-out 2;
-}
-
-.electric-pulse {
-  position: absolute;
-  left: 50%;
-  top: 150px;
-  width: 4px;
-  height: 40px;
-  background: #fff;
-  border-radius: 4px;
-  box-shadow: 0 0 16px 6px #74dbff;
-  transform: translateX(-50%);
-  animation: pulseDown 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  z-index: 10;
-}
-@keyframes pulseDown {
-  0% { transform: translate(-50%, 0); opacity: 1; }
-  80% { transform: translate(-50%, 380px); opacity: 1; }
-  100% { transform: translate(-50%, 380px); opacity: 0; }
-}
-
-@keyframes botJump{
-  0%,100%{transform:translateX(-50%) translateY(0)}
-  42%{transform:translateX(-50%) translateY(-28px)}
-}
-
-.pod-img{
-  position:absolute;
-  left:50%;
-  top:0;
-  width:134px;
-  height:auto;
-  transform:translateX(-50%);
-  object-fit:contain;
-  opacity:0;
-  transition:opacity .35s ease,filter .35s ease;
-}
-
-.pod-img.visible{opacity:1}
-.pod-img.glow{animation:podGlow 1s ease-in-out 2}
-
-@keyframes podGlow{
-  0%,100%{filter:brightness(1)}
-  50%{filter:brightness(1.55) saturate(1.75) drop-shadow(0 0 16px rgba(76,222,255,.9))}
-}
-
-.layout-intro .left-bot{left:360px;bottom:0}
-.layout-intro .right-bot{right:360px;bottom:0}
-.layout-intro .bot-img{width:205px}
-.layout-intro .pod-img{display:none}
-
-.layout-ready .left-bot{left:110px;bottom:0}
-.layout-ready .right-bot{right:110px;bottom:0}
-.layout-ready .bot-slot{top:0;bottom:auto;height:720px}
-.layout-ready .left-bot,.layout-ready .right-bot{bottom:auto}
-.layout-ready .bot-img{width:235px}
-.layout-ready .bot-img{bottom:0}
-.layout-ready .pod-img{display:block;top:156px;width:160px}
-.layout-ready .pod-img.visible{
-  opacity:1;
-  animation: dropPod 0.7s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
-}
-
-@keyframes dropPod {
-  0% { transform: translateX(-50%) translateY(-150px); opacity: 0; }
-  100% { transform: translateX(-50%) translateY(0); opacity: 1; }
-}
-
-.layout-laser .bot-slot{top:0;height:720px}
-.layout-laser .left-bot{left:20px}
-.layout-laser .right-bot{right:20px}
-.layout-laser .bot-img{width:148px;bottom:0}
-.layout-laser .pod-img{display:block;top:180px;width:132px}
-.layout-laser .pod-img.visible{opacity:1}
-
-.layout-clear .bot-slot{display:none}
-
-.target-fill{
-  position:absolute;
-  left:50%;
-  top:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  overflow:hidden;
-  opacity:0;
-  transform:translateX(-50%);
-  pointer-events:none;
-  z-index:3;
-  transition:opacity .25s ease,filter .35s ease;
-}
-
-.target-fill.filled{opacity:1}
-.target-fill.glow{animation:targetGlow .9s ease-in-out 2}
-
-@keyframes targetGlow{
-  0%,100%{filter:brightness(1)}
-  50%{filter:brightness(1.35) drop-shadow(0 0 12px rgba(88,225,255,.9))}
-}
-
-#shapeStage{
-  position:absolute;
-  left:50%;
-  top:360px;
-  width:520px;
-  min-height:220px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  transform:translate(-50%,-50%);
-  z-index:12;
-  transition:opacity .28s ease,transform .28s ease;
-}
-
-#shapeStage.hidden{transform:translate(-50%,-47%)}
-
-.whole-block,.half-inner{
-  display:block;
-  max-width:none;
-  filter:drop-shadow(0 12px 14px rgba(58,88,139,.2));
-}
-
-.css-square{
-  background:#9B5FD9;
-  border:0;
-  border-radius:0;
-  box-shadow:none;
-}
-
-.css-square.whole-block,
-.css-square.half-inner{
-  filter:none;
-}
-.css-square.teach-shape-glow{
-  animation:teachGlowPulse 1.4s ease-in-out infinite!important;
-  filter:none;
-}
-.css-square.teach-shape-glow .half-inner{
-  filter:none!important;
-}
-
-.halves-row{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:18px;
-}
-
-.half-wrap{
-  position:relative;
-  /* overflow:hidden removed to allow drop-shadow to trace child clip-path accurately */
-  flex:0 0 auto;
-  filter:drop-shadow(0 12px 14px rgba(58,88,139,.18));
-  transform:translateZ(0);
-  background:transparent;
-}
-.half-wrap.teach-shape-glow{
-  filter:none;
-  animation:teachGlowPulse 1.4s ease-in-out infinite!important;
-}
-
-.half-wrap .half-inner{
-  position:absolute;
-  left:0;
-  top:0;
-}
-
-#teachStage{
-  position:absolute;
-  left:50%;
-  top:430px;
-  width:840px;
-  height:503px;
-  transform:translate(-50%,-50%);
-  z-index:18;
-  transition:opacity .35s ease,transform .55s cubic-bezier(.34,1.4,.64,1);
-}
-
-#teachStage.hidden{transform:translate(-50%,-47%)}
-
-#teachStage>img{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:contain;
-}
-
-#teachContent{
-  position:absolute;
-  inset:60px 58px 58px 58px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:0;
-  color:#fff;
-  font-weight:900;
-}
-
-/* ── Teaching shape styles ── */
-@keyframes teachGlowPulse{
-  0%,100%{filter:url(#alpha-glow-teach) brightness(1) saturate(1.1);}
-  50%{filter:url(#alpha-glow-teach) brightness(1.3) saturate(1.3);}
-}
-.teach-shape-glow{
-  filter:none;
-  animation:teachGlowPulse 1.4s ease-in-out infinite;
-}
-.teach-content-row{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:38px;
-  width:100%;
-}
-.teach-content-col{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:22px;
-  width:100%;
-}
-.teach-big-label,
-.teach-equal-label {
-  font-family: 'Fredoka', 'Arial Rounded MT Bold', sans-serif;
-  color: #fff;
-  font-size: 42px;
-  line-height: 1.1;
-  font-weight: 700;
-  -webkit-text-stroke: 6px #0E60BD;
-  paint-order: stroke fill;
-  text-shadow: 0 0 14px rgba(0,160,249,0.8), 0 0 20px rgba(0,160,249,0.6);
-  white-space: nowrap;
-}
-.teach-equal-label {
-  text-align: center;
-}
-.teach-halves-box{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:2px;
-}
-.teach-half-tags{
-  display:flex;
-  justify-content:space-around;
-  margin-top:5px;
-}
-.teach-half-tag{
-  color:#fff;
-  font-size:18px;
-  font-weight:900;
-  text-shadow:0 2px 6px rgba(0,0,0,.3),0 0 5px rgba(77,202,255,.8);
-}
-.teach-piece-row{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:18px;
-}
-.teach-piece-stack{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:12px;
-}
-.teach-label-row{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:62px;
-  width:100%;
-}
-.static-glow{
-  filter:url(#alpha-glow-teach) brightness(1.15) saturate(1.15) !important;
-}
-.teach-horizontal-wrap{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:8px;
-}
-.teach-horizontal-pieces{
-  display:flex;
-  align-items:flex-end;
-  justify-content:center;
-  gap:18px;
-}
-.teach-horizontal-tags{
-  display:flex;
-  justify-content:center;
-  gap:60px;
-}
-.teach-horizontal-tags span{
-  min-width:80px;
-  text-align:center;
-}
-/* kept for any remaining references */
-.teach-title{color:#fff;font-size:28px;line-height:1.16;text-shadow:0 3px 9px rgba(0,0,0,.35);}
-.teach-title .yellow{color:#ffe766}
-.teach-row{display:flex;align-items:center;justify-content:center;gap:18px;}
-.teach-op{color:#fff;font-size:38px;font-weight:900;text-shadow:0 3px 9px rgba(0,0,0,.35);}
-.teach-label{margin-top:10px;color:#ffe766;font-size:21px;line-height:1.1;font-weight:900;text-shadow:0 3px 9px rgba(0,0,0,.35);}
-
-#playStage{
-  position:absolute;
-  left:50%;
-  top:422px;
-  width:720px;
-  height:431px;
-  transform:translate(-50%,-50%);
-  z-index:18;
-  border:0;
-  background:transparent;
-  cursor:pointer;
-  transition:opacity .28s ease,transform .28s ease;
-  -webkit-tap-highlight-color:transparent;
-}
-
-#playStage.hidden{transform:translate(-50%,-47%)}
-
-#playStage img{
-  width:100%;
-  height:100%;
-  object-fit:contain;
-}
-
-#machineStage{
-  --ring-size:500px;
-  --ring-center-y:250px;
-  position:absolute;
-  left:50%;
-  top:50%;
-  width:900px;
-  height:618px;
-  transform:translate(-50%,-50%) scale(0.9);
-  z-index:50;
-  transition:opacity .28s ease,transform .28s ease;
-}
-
-#machineStage.hidden{transform:translate(-50%,-47%) scale(0.9)}
-
-#machineImg{
-  position:absolute;
-  left:50%;
-  top:0;
-  width:var(--ring-size);
-  height:var(--ring-size);
-  transform:translateX(-50%);
-  object-fit:contain;
-  pointer-events:none;
-}
-
-/* ── LaserMachine.png overlay (tutorial guide lines, same ring center) ── */
-#tutorialOverlay{
-  position:absolute;
-  left:50%;
-  top:0;
-  width:var(--ring-size);
-  height:var(--ring-size);
-  transform:translateX(-50%);
-  object-fit:contain;
-  pointer-events:none;
-  z-index:1;
-  opacity:0;
-  transition:opacity .2s ease;
-}
-#tutorialOverlay.show{opacity:1}
-
-/* ── Laser.png — rotating sprite (Laser.png: 258×172, nozzle on the right) ── */
-#laserImg{
-  position:absolute;
-  width:96px;
-  height:64px;
-  object-fit:contain;
-  pointer-events:none;
-  z-index:7;
-  display:none;
-}
-
-/* ── Beam.svg — only shown on CUT ── */
-#beamImg{
-  position:absolute;
-  width:308px;
-  height:308px;
-  object-fit:contain;
-  pointer-events:none;
-  z-index:6;
-  transform-origin:14.47% 14.47%;
-  display:none;
-  transition:opacity .18s ease;
-}
-
-#machineBlock{
-  position:absolute;
-  left:50%;
-  top:var(--ring-center-y);
-  transform:translate(-50%,-50%);
-  z-index:4;
-  transition:transform .55s cubic-bezier(.18,.89,.35,1.18);
-}
-
-#blockCover{
-  position:absolute;
-  left:50%;
-  top:var(--ring-center-y);
-  width:290px;
-  height:140px;
-  transform:translate(-50%,-50%);
-  background:transparent;
-  border-radius:18px;
-  z-index:3;
-}
-
-@keyframes blockVibrate{
-  0%,100%{transform:translate(-50%,-50%)}
-  10%{transform:translate(calc(-50% + 7px),-50%)}
-  25%{transform:translate(calc(-50% - 7px),-50%)}
-  40%{transform:translate(calc(-50% + 5px),-50%)}
-  55%{transform:translate(calc(-50% - 5px),-50%)}
-  70%{transform:translate(calc(-50% + 3px),-50%)}
-  85%{transform:translate(calc(-50% - 3px),-50%)}
-}
-
-#machineBlock.vibrate{
-  animation:blockVibrate 0.48s ease-in-out;
-}
-
-
-#laserBurst{
-  position:absolute;
-  left:50%;
-  top:var(--ring-center-y);
-  width:220px;
-  height:220px;
-  transform:translate(-50%,-50%);
-  object-fit:contain;
-  opacity:0;
-  z-index:9;
-  pointer-events:none;
-  display:none;
-}
-
-#laserBurst.show{animation:burst .75s ease-out forwards}
-
-@keyframes burst{
-  0%{opacity:0;transform:translate(-50%,-50%) scale(.35)}
-  30%{opacity:.9}
-  100%{opacity:0;transform:translate(-50%,-50%) scale(1.25)}
-}
-
-#wrongSlash{
-  --cut-angle:-38deg;
-  position:absolute;
-  left:50%;
-  top:var(--ring-center-y);
-  width:270px;
-  height:170px;
-  transform:translate(-50%,-50%);
-  border-radius:12px;
-  overflow:hidden;
-  opacity:0;
-  z-index:10;
-  pointer-events:none;
-}
-
-#wrongSlash::before{
-  content:"";
-  position:absolute;
-  left:-16%;
-  top:50%;
-  width:132%;
-  height:4px;
-  border-radius:999px;
-  background:#e9fbff;
-  box-shadow:0 0 0 1px rgba(255,255,255,.8),0 0 9px rgba(1,185,254,.7);
-  transform:translateY(-50%) rotate(var(--cut-angle));
-}
-
-#wrongSlash.show{opacity:1}
-
-#cutLine{
-  --cut-angle:135deg;
-  position:absolute;
-  left:50%;
-  top:var(--ring-center-y);
-  width:242px;
-  height:136px;
-  transform:translate(-50%,-50%);
-  overflow:hidden;
-  opacity:0;
-  z-index:8;
-  pointer-events:none;
-}
-
-#cutLine::before{
-  content:"";
-  position:absolute;
-  left:-16%;
-  top:50%;
-  width:132%;
-  height:4px;
-  border-radius:999px;
-  background:#c6f7fb;
-  box-shadow:0 0 0 1px rgba(255,255,255,.72),0 0 10px rgba(1,185,254,.78),0 0 20px rgba(1,185,254,.36);
-  transform:translateY(-50%) rotate(var(--cut-angle));
-}
-
-#cutLine.show{opacity:1}
-
-#wrongSlash::before,
-#cutLine::before{
-  display:none;
-}
-
-.machine-hit{
-  position:absolute;
-  border:0;
-  background:transparent;
-  cursor:pointer;
-  z-index:30;
-  border-radius:22px;
-  -webkit-tap-highlight-color:transparent;
-}
-
-.machine-hit:focus-visible{
-  outline:4px solid rgba(255,255,255,.9);
-  outline-offset:2px;
-}
-
-#hitLeft{left:44px;top:208px;width:116px;height:84px}
-#hitRight{right:44px;top:208px;width:116px;height:84px}
-#hitCut{left:50%;top:550px;width:136px;height:100px;transform:translateX(-50%);border-radius:999px}
-
-/* ── Visible button images (idle state; src swaps on press) ── */
-#btnLeft{
-  position:absolute;
-  left:44px;
-  top:208px;
-  width:116px;
-  height:84px;
-  object-fit:contain;
-  pointer-events:none;
-  z-index:25;
-}
-#btnRight{
-  position:absolute;
-  right:44px;
-  top:208px;
-  width:116px;
-  height:84px;
-  object-fit:contain;
-  pointer-events:none;
-  z-index:25;
-}
-#btnCut{
-  position:absolute;
-  left:50%;
-  top:550px;
-  width:136px;
-  height:auto;
-  transform:translateX(-50%);
-  object-fit:contain;
-  pointer-events:none;
-  z-index:26;
-}
-
-/* ── TappedCutButton.png tutorial highlight ── */
-#cutOverlay{
-  position:absolute;
-  left:50%;
-  top:550px;
-  width:136px;
-  height:auto;
-  transform:translateX(-50%);
-  object-fit:contain;
-  pointer-events:none;
-  z-index:27;
-  opacity:0;
-}
-#cutOverlay.show{opacity:1}
-#cutOverlay.flash{animation:cutFlash .32s ease-out forwards}
-@keyframes cutFlash{0%{opacity:1}100%{opacity:0}}
-
-
-.machine-hit.pressed{animation:hitPress .18s ease}
-
-.hand-gesture {
-  position: absolute;
-  width: 70px;
-  height: auto;
-  z-index: 45;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
-}
-
-.hand-gesture.show {
-  opacity: 1;
-}
-
-.hand-gesture.point-right {
-  left: 755px;
-  top: 240px;
-  animation: handTapRight 0.8s infinite alternate;
-}
-
-.hand-gesture.point-left {
-  left: 75px;
-  top: 240px;
-  animation: handTapLeft 0.8s infinite alternate;
-}
-
-.hand-gesture.point-cut {
-  left: 450px;
-  top: 575px;
-  transform: translateX(-50%);
-  animation: handTapCut 0.8s infinite alternate;
-}
-
-@keyframes handTapRight {
-  0% { transform: scale(1) translate(0, 0); }
-  100% { transform: scale(0.85) translate(-10px, 10px); }
-}
-@keyframes handTapLeft {
-  0% { transform: scale(1) translate(0, 0); }
-  100% { transform: scale(0.85) translate(10px, 10px); }
-}
-@keyframes handTapCut {
-  0% { transform: translateX(-50%) scale(1) translateY(0); }
-  100% { transform: translateX(-50%) scale(0.85) translateY(10px); }
-}
-
-@keyframes hitPress{
-  0%,100%{transform:scale(1)}
-  50%{transform:scale(.92)}
-}
-
-@keyframes tutHighlightGlow {
-  0%, 100% { filter: drop-shadow(0 0 4px rgba(255,255,255,0.5)); transform: scale(1); }
-  50% { filter: drop-shadow(0 0 12px rgba(255,255,255,1)); transform: scale(1.05); }
-}
-@keyframes tutHighlightGlowCenter {
-  0%, 100% { filter: drop-shadow(0 0 4px rgba(255,255,255,0.5)); transform: translateX(-50%) scale(1); }
-  50% { filter: drop-shadow(0 0 12px rgba(255,255,255,1)); transform: translateX(-50%) scale(1.05); }
-}
-#btnLeft.tut-highlight, #btnRight.tut-highlight {
-  animation: tutHighlightGlow 1.2s infinite;
-  z-index: 40;
-}
-#btnCut.tut-highlight {
-  animation: tutHighlightGlowCenter 1.2s infinite;
-  z-index: 40;
-}
-
-.tutorial-bubble{
-  position:absolute;
-  z-index:31;
-  object-fit:contain;
-  filter:drop-shadow(0 8px 12px rgba(44,92,139,.22));
-  transition:opacity .3s ease,transform .3s ease;
-  pointer-events:none;
-}
-
-/* bubbles below left/right buttons; cut bubble above cut button */
-#bubbleLeft{width:300px;left:-108px;top:300px}
-#bubbleRight{width:300px;left:708px;top:300px}
-#bubbleCut{width:330px;left:560px;top:560px}
-
-.tutorial-bubble.fade{opacity:0;transform:translateY(8px)}
-
-#flightLayer{
-  position:absolute;
-  inset:0;
-  z-index:55;
-  pointer-events:none;
-}
-
-.flying-half{
-  position:absolute;
-  left:0;
-  top:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  transition:transform .9s cubic-bezier(.18,.89,.32,1.08),opacity .9s ease;
-  will-change:transform,opacity;
-}
-
-.fit-piece{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  transform-origin:center center;
-}
-
-#tryAgain,#nextButton{
-  position:absolute;
-  left:50%;
-  bottom:4px;
-  width:168px;
-  height:auto;
-  transform:translateX(-50%);
-  border:0;
-  background:transparent;
-  z-index:45;
-  cursor:pointer;
-  transition:opacity .22s ease,transform .12s ease;
-  -webkit-tap-highlight-color:transparent;
-}
-
-#tryAgain img,#nextButton img{display:block;width:100%;height:auto}
-#tryAgain:active{transform:translateX(-50%) scale(.96)}
-#nextButton:active{opacity:.82}
-
-#finishButton{
-  width:180px;
-  border:0;
-  background:transparent;
-  cursor:pointer;
-  transition:transform .12s ease;
-  -webkit-tap-highlight-color:transparent;
-}
-
-#finishButton img{display:block;width:100%;height:auto}
-#finishButton:active{transform:scale(.96)}
-
-#completeStage{
-  position:absolute;
-  inset:0;
-  z-index:60;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-direction:column;
-  gap:22px;
-  background:rgba(215,231,255,.48);
-  backdrop-filter:blur(1px);
-  transition:opacity .35s ease;
-}
-
-.complete-board{
-  position:relative;
-  width:760px;
-  height:456px;
-}
-
-.complete-board>img{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:contain;
-}
-
-.complete-copy{
-  position:absolute;
-  inset:96px 92px 82px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:18px;
-  text-align:center;
-  color:#fff;
-  font-weight:900;
-  text-shadow:0 3px 9px rgba(0,0,0,.35);
-}
-
-.complete-title{font-size:48px;line-height:1.05}
-.complete-sub{font-size:27px;line-height:1.18;color:#ffe766}
-
-/* ── Interactive kid-game animations ── */
-@keyframes piecePopIn{
-  0%  {opacity:0;transform:scale(.45) rotate(-10deg)}
-  65% {transform:scale(1.15) rotate(4deg)}
-  100%{opacity:1;transform:scale(1) rotate(0)}
-}
-.teach-pop{animation:piecePopIn .4s cubic-bezier(.34,1.5,.64,1) both}
-.teach-pop-d1{animation-delay:.16s}
-
-@keyframes sparkDot{
-  0%  {opacity:1;transform:translate(0,0) scale(1)}
-  100%{opacity:0;transform:translate(var(--sx),var(--sy)) scale(0)}
-}
-.spark-dot{
-  position:absolute;
-  border-radius:50%;
-  pointer-events:none;
-  animation:sparkDot .75s ease-out both;
-}
-
-@keyframes nextBtnPop{
-  0%  {opacity:0;transform:translateX(-50%) scale(.2) rotate(-15deg)}
-  60% {transform:translateX(-50%) scale(1.2) rotate(5deg)}
-  80% {transform:translateX(-50%) scale(.94) rotate(-1deg)}
-  100%{opacity:1;transform:translateX(-50%) scale(1) rotate(0)}
-}
-@keyframes nextBtnGlow{
-  0%,100%{filter:none}
-  50%    {filter:drop-shadow(0 0 14px rgba(116,219,255,.95)) brightness(1.12)}
-}
-#nextButton:not(.hidden){
-  animation:nextBtnPop .5s cubic-bezier(.34,1.3,.64,1) both,
-            nextBtnGlow 1.4s ease-in-out .52s infinite;
-}
-
-@keyframes idleHintPulse {
-  0%, 100% { filter: drop-shadow(0 0 4px rgba(255,255,255,.3)); transform: translateX(-50%) scale(1); }
-  50% { filter: drop-shadow(0 0 22px rgba(116,219,255,.95)); transform: translateX(-50%) scale(1.14); }
-}
-#btnCut.idle-hint {
-  animation: idleHintPulse 1.4s ease-in-out infinite;
-  z-index: 26;
-}
-
-@media (prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PowerUp Bots </title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&display=swap');
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #d5e5ff
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    button {
+      font: inherit
+    }
+
+    #game {
+      position: absolute;
+      width: 1280px;
+      height: 720px;
+      overflow: hidden;
+      transform-origin: top left;
+      font-family: "Trebuchet MS", "Arial Rounded MT Bold", Arial, sans-serif;
+      color: #154aa5;
+      user-select: none;
+    }
+
+    .bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+    }
+
+    .hidden {
+      opacity: 0;
+      pointer-events: none
+    }
+
+    #instruction {
+      position: absolute;
+      top: 8px;
+      left: 32px;
+      width: 1120px;
+      height: 150px;
+      z-index: 40;
+      transition: opacity .28s ease, transform .28s ease;
+    }
+
+    #instruction.hidden {
+      transform: translateY(-8px)
+    }
+
+    #instruction img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    #instructionText {
+      position: absolute;
+      left: 154px;
+      right: 14px;
+      top: 42px;
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      color: #154aa5;
+      font-size: 26px;
+      line-height: 1.14;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    #scene {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+    }
+
+    .bot-slot {
+      position: absolute;
+      width: 260px;
+      height: 520px;
+      transform-origin: bottom center;
+    }
+
+    .bot-img {
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      max-width: none;
+      object-fit: contain;
+      transform: translateX(-50%);
+      transition: filter .35s ease, transform .45s cubic-bezier(.18, .89, .35, 1.18);
+    }
+
+    .bot-img.happy {
+      filter: drop-shadow(0 0 16px rgba(116, 219, 255, .95));
+    }
+
+    .bot-img.jump {
+      animation: botJump .82s ease-in-out 2;
+    }
+
+    .electric-pulse {
+      position: absolute;
+      left: 50%;
+      top: 150px;
+      width: 4px;
+      height: 40px;
+      background: #fff;
+      border-radius: 4px;
+      box-shadow: 0 0 16px 6px #74dbff;
+      transform: translateX(-50%);
+      animation: pulseDown 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      z-index: 10;
+    }
+
+    @keyframes pulseDown {
+      0% {
+        transform: translate(-50%, 0);
+        opacity: 1;
+      }
+
+      80% {
+        transform: translate(-50%, 380px);
+        opacity: 1;
+      }
+
+      100% {
+        transform: translate(-50%, 380px);
+        opacity: 0;
+      }
+    }
+
+    @keyframes botJump {
+
+      0%,
+      100% {
+        transform: translateX(-50%) translateY(0)
+      }
+
+      42% {
+        transform: translateX(-50%) translateY(-28px)
+      }
+    }
+
+    .pod-img {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 134px;
+      height: auto;
+      transform: translateX(-50%);
+      object-fit: contain;
+      opacity: 0;
+      transition: opacity .35s ease, filter .35s ease;
+    }
+
+    .pod-img.visible {
+      opacity: 1
+    }
+
+    .pod-img.glow {
+      animation: podGlow 1s ease-in-out 2
+    }
+
+    @keyframes podGlow {
+
+      0%,
+      100% {
+        filter: brightness(1)
+      }
+
+      50% {
+        filter: brightness(1.55) saturate(1.75) drop-shadow(0 0 16px rgba(76, 222, 255, .9))
+      }
+    }
+
+    .layout-intro .left-bot {
+      left: 360px;
+      bottom: 0
+    }
+
+    .layout-intro .right-bot {
+      right: 360px;
+      bottom: 0
+    }
+
+    .layout-intro .bot-img {
+      width: 205px
+    }
+
+    .layout-intro .pod-img {
+      display: none
+    }
+
+    .layout-ready .left-bot {
+      left: 80px;
+      bottom: 0
+    }
+
+    .layout-ready .right-bot {
+      right: 80px;
+      bottom: 0
+    }
+
+    .layout-ready .bot-slot {
+      top: 0;
+      bottom: auto;
+      height: 720px
+    }
+
+    .layout-ready .left-bot,
+    .layout-ready .right-bot {
+      bottom: auto
+    }
+
+    .layout-ready .bot-img {
+      width: 235px
+    }
+
+    .layout-ready .bot-img {
+      bottom: 0
+    }
+
+    .layout-ready .pod-img {
+      display: block;
+      top: 156px;
+      width: 160px
+    }
+
+    .layout-ready .pod-img.visible {
+      opacity: 1;
+      animation: dropPod 0.7s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+    }
+
+    @keyframes dropPod {
+      0% {
+        transform: translateX(-50%) translateY(-150px);
+        opacity: 0;
+      }
+
+      100% {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .layout-laser .bot-slot {
+      top: 0;
+      height: 720px
+    }
+
+    .layout-laser .left-bot {
+      left: 20px
+    }
+
+    .layout-laser .right-bot {
+      right: 20px
+    }
+
+    .layout-laser .bot-img {
+      width: 148px;
+      bottom: 0
+    }
+
+    .layout-laser .pod-img {
+      display: block;
+      top: 180px;
+      width: 132px
+    }
+
+    .layout-laser .pod-img.visible {
+      opacity: 1
+    }
+
+    .layout-clear .bot-slot {
+      display: none
+    }
+
+    .target-fill {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateX(-50%);
+      pointer-events: none;
+      z-index: 3;
+      transition: opacity .25s ease, filter .35s ease;
+    }
+
+    .target-fill.filled {
+      opacity: 1
+    }
+
+    .target-fill.glow {
+      animation: targetGlow .9s ease-in-out 2
+    }
+
+    @keyframes targetGlow {
+
+      0%,
+      100% {
+        filter: brightness(1)
+      }
+
+      50% {
+        filter: brightness(1.35) drop-shadow(0 0 12px rgba(88, 225, 255, .9))
+      }
+    }
+
+    #shapeStage {
+      position: absolute;
+      left: 50%;
+      top: 360px;
+      width: 520px;
+      min-height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform: translate(-50%, -50%);
+      z-index: 12;
+      transition: opacity .28s ease, transform .28s ease;
+    }
+
+    #shapeStage.hidden {
+      transform: translate(-50%, -47%)
+    }
+
+    .whole-block,
+    .half-inner {
+      display: block;
+      max-width: none;
+      filter: drop-shadow(0 12px 14px rgba(58, 88, 139, .2));
+    }
+
+    .css-square {
+      background: #9B5FD9;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    .css-square.whole-block,
+    .css-square.half-inner {
+      filter: none;
+    }
+
+    .css-square.teach-shape-glow {
+      animation: teachGlowPulse 1.4s ease-in-out infinite !important;
+      filter: none;
+    }
+
+    .css-square.teach-shape-glow .half-inner {
+      filter: none !important;
+    }
+
+    .halves-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+    }
+
+    .half-wrap {
+      position: relative;
+      /* overflow:hidden removed to allow drop-shadow to trace child clip-path accurately */
+      flex: 0 0 auto;
+      filter: drop-shadow(0 12px 14px rgba(58, 88, 139, .18));
+      transform: translateZ(0);
+      background: transparent;
+    }
+
+    .half-wrap.teach-shape-glow {
+      filter: none;
+      animation: teachGlowPulse 1.4s ease-in-out infinite !important;
+    }
+
+    .half-wrap .half-inner {
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+
+    #teachStage {
+      position: absolute;
+      left: 50%;
+      top: 430px;
+      width: 840px;
+      height: 503px;
+      transform: translate(-50%, -50%);
+      z-index: 18;
+      transition: opacity .35s ease, transform .55s cubic-bezier(.34, 1.4, .64, 1);
+    }
+
+    #teachStage.hidden {
+      transform: translate(-50%, -47%)
+    }
+
+    #teachStage>img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    #teachContent {
+      position: absolute;
+      inset: 60px 58px 58px 58px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      color: #fff;
+      font-weight: 900;
+    }
+
+    /* ── Teaching shape styles ── */
+    @keyframes teachGlowPulse {
+
+      0%,
+      100% {
+        filter: url(#alpha-glow-teach) brightness(1) saturate(1.1);
+      }
+
+      50% {
+        filter: url(#alpha-glow-teach) brightness(1.3) saturate(1.3);
+      }
+    }
+
+    .teach-shape-glow {
+      filter: none;
+      animation: teachGlowPulse 1.4s ease-in-out infinite;
+    }
+
+    .teach-content-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 38px;
+      width: 100%;
+    }
+
+    .teach-content-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 22px;
+      width: 100%;
+    }
+
+    .teach-big-label,
+    .teach-equal-label {
+      font-family: 'Fredoka', 'Arial Rounded MT Bold', sans-serif;
+      color: #fff;
+      font-size: 42px;
+      line-height: 1.1;
+      font-weight: 700;
+      -webkit-text-stroke: 6px #0E60BD;
+      paint-order: stroke fill;
+      text-shadow: 0 0 14px rgba(0, 160, 249, 0.8), 0 0 20px rgba(0, 160, 249, 0.6);
+      white-space: nowrap;
+    }
+
+    .teach-equal-label {
+      text-align: center;
+    }
+
+    .teach-halves-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .teach-half-tags {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 5px;
+    }
+
+    .teach-half-tag {
+      color: #fff;
+      font-size: 18px;
+      font-weight: 900;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, .3), 0 0 5px rgba(77, 202, 255, .8);
+    }
+
+    .teach-piece-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+    }
+
+    .teach-piece-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .teach-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 62px;
+      width: 100%;
+    }
+
+    .static-glow {
+      filter: url(#alpha-glow-teach) brightness(1.15) saturate(1.15) !important;
+    }
+
+    .teach-horizontal-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .teach-horizontal-pieces {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 18px;
+    }
+
+    .teach-horizontal-tags {
+      display: flex;
+      justify-content: center;
+      gap: 60px;
+    }
+
+    .teach-horizontal-tags span {
+      min-width: 80px;
+      text-align: center;
+    }
+
+    /* kept for any remaining references */
+    .teach-title {
+      color: #fff;
+      font-size: 28px;
+      line-height: 1.16;
+      text-shadow: 0 3px 9px rgba(0, 0, 0, .35);
+    }
+
+    .teach-title .yellow {
+      color: #ffe766
+    }
+
+    .teach-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+    }
+
+    .teach-op {
+      color: #fff;
+      font-size: 38px;
+      font-weight: 900;
+      text-shadow: 0 3px 9px rgba(0, 0, 0, .35);
+    }
+
+    .teach-label {
+      margin-top: 10px;
+      color: #ffe766;
+      font-size: 21px;
+      line-height: 1.1;
+      font-weight: 900;
+      text-shadow: 0 3px 9px rgba(0, 0, 0, .35);
+    }
+
+    #playStage {
+      position: absolute;
+      left: 50%;
+      top: 422px;
+      width: 720px;
+      height: 431px;
+      transform: translate(-50%, -50%);
+      z-index: 18;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      transition: opacity .28s ease, transform .28s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #playStage.hidden {
+      transform: translate(-50%, -47%)
+    }
+
+    #playStage img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    #machineStage {
+      --ring-size: 500px;
+      --ring-center-y: 250px;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 900px;
+      height: 618px;
+      transform: translate(-50%, -50%) scale(0.9);
+      z-index: 50;
+      transition: opacity .28s ease, transform .28s ease;
+    }
+
+    #machineStage.hidden {
+      transform: translate(-50%, -47%) scale(0.9)
+    }
+
+    #machineImg {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: var(--ring-size);
+      height: var(--ring-size);
+      transform: translateX(-50%);
+      object-fit: contain;
+      pointer-events: none;
+    }
+
+    /* ── LaserMachine.png overlay (tutorial guide lines, same ring center) ── */
+    #tutorialOverlay {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: var(--ring-size);
+      height: var(--ring-size);
+      transform: translateX(-50%);
+      object-fit: contain;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity .2s ease;
+    }
+
+    #tutorialOverlay.show {
+      opacity: 1
+    }
+
+    /* ── Laser.png — rotating sprite (Laser.png: 258×172, nozzle on the right) ── */
+    #laserImg {
+      position: absolute;
+      width: 96px;
+      height: 64px;
+      object-fit: contain;
+      pointer-events: none;
+      z-index: 7;
+      display: none;
+    }
+
+    /* ── Beam.svg — only shown on CUT ── */
+    #beamImg {
+      position: absolute;
+      width: 308px;
+      height: 308px;
+      object-fit: contain;
+      pointer-events: none;
+      z-index: 6;
+      transform-origin: 14.47% 14.47%;
+      display: none;
+      transition: opacity .18s ease;
+    }
+
+    #machineBlock {
+      position: absolute;
+      left: 50%;
+      top: var(--ring-center-y);
+      transform: translate(-50%, -50%);
+      z-index: 4;
+      transition: transform .55s cubic-bezier(.18, .89, .35, 1.18);
+    }
+
+    #blockCover {
+      position: absolute;
+      left: 50%;
+      top: var(--ring-center-y);
+      width: 290px;
+      height: 140px;
+      transform: translate(-50%, -50%);
+      background: transparent;
+      border-radius: 18px;
+      z-index: 3;
+    }
+
+    @keyframes blockVibrate {
+
+      0%,
+      100% {
+        transform: translate(-50%, -50%)
+      }
+
+      10% {
+        transform: translate(calc(-50% + 7px), -50%)
+      }
+
+      25% {
+        transform: translate(calc(-50% - 7px), -50%)
+      }
+
+      40% {
+        transform: translate(calc(-50% + 5px), -50%)
+      }
+
+      55% {
+        transform: translate(calc(-50% - 5px), -50%)
+      }
+
+      70% {
+        transform: translate(calc(-50% + 3px), -50%)
+      }
+
+      85% {
+        transform: translate(calc(-50% - 3px), -50%)
+      }
+    }
+
+    #machineBlock.vibrate {
+      animation: blockVibrate 0.48s ease-in-out;
+    }
+
+
+    #laserBurst {
+      position: absolute;
+      left: 50%;
+      top: var(--ring-center-y);
+      width: 220px;
+      height: 220px;
+      transform: translate(-50%, -50%);
+      object-fit: contain;
+      opacity: 0;
+      z-index: 9;
+      pointer-events: none;
+      display: none;
+    }
+
+    #laserBurst.show {
+      animation: burst .75s ease-out forwards
+    }
+
+    @keyframes burst {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(.35)
+      }
+
+      30% {
+        opacity: .9
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1.25)
+      }
+    }
+
+    #wrongSlash {
+      --cut-angle: -38deg;
+      position: absolute;
+      left: 50%;
+      top: var(--ring-center-y);
+      width: 270px;
+      height: 170px;
+      transform: translate(-50%, -50%);
+      border-radius: 12px;
+      overflow: hidden;
+      opacity: 0;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    #wrongSlash::before {
+      content: "";
+      position: absolute;
+      left: -16%;
+      top: 50%;
+      width: 132%;
+      height: 4px;
+      border-radius: 999px;
+      background: #e9fbff;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, .8), 0 0 9px rgba(1, 185, 254, .7);
+      transform: translateY(-50%) rotate(var(--cut-angle));
+    }
+
+    #wrongSlash.show {
+      opacity: 1
+    }
+
+    #cutLine {
+      --cut-angle: 135deg;
+      position: absolute;
+      left: 50%;
+      top: var(--ring-center-y);
+      width: 242px;
+      height: 136px;
+      transform: translate(-50%, -50%);
+      overflow: hidden;
+      opacity: 0;
+      z-index: 8;
+      pointer-events: none;
+    }
+
+    #cutLine::before {
+      content: "";
+      position: absolute;
+      left: -16%;
+      top: 50%;
+      width: 132%;
+      height: 4px;
+      border-radius: 999px;
+      background: #c6f7fb;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, .72), 0 0 10px rgba(1, 185, 254, .78), 0 0 20px rgba(1, 185, 254, .36);
+      transform: translateY(-50%) rotate(var(--cut-angle));
+    }
+
+    #cutLine.show {
+      opacity: 1
+    }
+
+    #wrongSlash::before,
+    #cutLine::before {
+      display: none;
+    }
+
+    .machine-hit {
+      position: absolute;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      z-index: 30;
+      border-radius: 22px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .machine-hit:focus-visible {
+      outline: 4px solid rgba(255, 255, 255, .9);
+      outline-offset: 2px;
+    }
+
+    #hitLeft {
+      left: 44px;
+      top: 208px;
+      width: 116px;
+      height: 84px
+    }
+
+    #hitRight {
+      right: 44px;
+      top: 208px;
+      width: 116px;
+      height: 84px
+    }
+
+    #hitCut {
+      left: 50%;
+      top: 550px;
+      width: 136px;
+      height: 100px;
+      transform: translateX(-50%);
+      border-radius: 999px
+    }
+
+    /* ── Visible button images (idle state; src swaps on press) ── */
+    #btnLeft {
+      position: absolute;
+      left: 44px;
+      top: 208px;
+      width: 116px;
+      height: 84px;
+      object-fit: contain;
+      pointer-events: none;
+      z-index: 25;
+    }
+
+    #btnRight {
+      position: absolute;
+      right: 44px;
+      top: 208px;
+      width: 116px;
+      height: 84px;
+      object-fit: contain;
+      pointer-events: none;
+      z-index: 25;
+    }
+
+    #btnCut {
+      position: absolute;
+      left: 50%;
+      top: 550px;
+      width: 136px;
+      height: auto;
+      transform: translateX(-50%);
+      object-fit: contain;
+      pointer-events: none;
+      z-index: 26;
+    }
+
+    /* ── TappedCutButton.png tutorial highlight ── */
+    #cutOverlay {
+      position: absolute;
+      left: 50%;
+      top: 550px;
+      width: 136px;
+      height: auto;
+      transform: translateX(-50%);
+      object-fit: contain;
+      pointer-events: none;
+      z-index: 27;
+      opacity: 0;
+    }
+
+    #cutOverlay.show {
+      opacity: 1
+    }
+
+    #cutOverlay.flash {
+      animation: cutFlash .32s ease-out forwards
+    }
+
+    @keyframes cutFlash {
+      0% {
+        opacity: 1
+      }
+
+      100% {
+        opacity: 0
+      }
+    }
+
+
+    .machine-hit.pressed {
+      animation: hitPress .18s ease
+    }
+
+    .hand-gesture {
+      position: absolute;
+      width: 70px;
+      height: auto;
+      z-index: 45;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+    }
+
+    .hand-gesture.show {
+      opacity: 1;
+    }
+
+    .hand-gesture.point-right {
+      left: 755px;
+      top: 240px;
+      animation: handTapRight 0.8s infinite alternate;
+    }
+
+    .hand-gesture.point-left {
+      left: 75px;
+      top: 240px;
+      animation: handTapLeft 0.8s infinite alternate;
+    }
+
+    .hand-gesture.point-cut {
+      left: 450px;
+      top: 575px;
+      transform: translateX(-50%);
+      animation: handTapCut 0.8s infinite alternate;
+    }
+
+    @keyframes handTapRight {
+      0% {
+        transform: scale(1) translate(0, 0);
+      }
+
+      100% {
+        transform: scale(0.85) translate(-10px, 10px);
+      }
+    }
+
+    @keyframes handTapLeft {
+      0% {
+        transform: scale(1) translate(0, 0);
+      }
+
+      100% {
+        transform: scale(0.85) translate(10px, 10px);
+      }
+    }
+
+    @keyframes handTapCut {
+      0% {
+        transform: translateX(-50%) scale(1) translateY(0);
+      }
+
+      100% {
+        transform: translateX(-50%) scale(0.85) translateY(10px);
+      }
+    }
+
+    @keyframes hitPress {
+
+      0%,
+      100% {
+        transform: scale(1)
+      }
+
+      50% {
+        transform: scale(.92)
+      }
+    }
+
+    @keyframes tutHighlightGlow {
+
+      0%,
+      100% {
+        filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5));
+        transform: scale(1);
+      }
+
+      50% {
+        filter: drop-shadow(0 0 12px rgba(255, 255, 255, 1));
+        transform: scale(1.05);
+      }
+    }
+
+    @keyframes tutHighlightGlowCenter {
+
+      0%,
+      100% {
+        filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5));
+        transform: translateX(-50%) scale(1);
+      }
+
+      50% {
+        filter: drop-shadow(0 0 12px rgba(255, 255, 255, 1));
+        transform: translateX(-50%) scale(1.05);
+      }
+    }
+
+    #btnLeft.tut-highlight,
+    #btnRight.tut-highlight {
+      animation: tutHighlightGlow 1.2s infinite;
+      z-index: 40;
+    }
+
+    #btnCut.tut-highlight {
+      animation: tutHighlightGlowCenter 1.2s infinite;
+      z-index: 40;
+    }
+
+    .tutorial-bubble {
+      position: absolute;
+      z-index: 31;
+      object-fit: contain;
+      filter: drop-shadow(0 8px 12px rgba(44, 92, 139, .22));
+      transition: opacity .3s ease, transform .3s ease;
+      pointer-events: none;
+    }
+
+    /* bubbles below left/right buttons; cut bubble above cut button */
+    #bubbleLeft {
+      width: 300px;
+      left: -108px;
+      top: 300px
+    }
+
+    #bubbleRight {
+      width: 300px;
+      left: 708px;
+      top: 300px
+    }
+
+    #bubbleCut {
+      width: 330px;
+      left: 560px;
+      top: 560px
+    }
+
+    .tutorial-bubble.fade {
+      opacity: 0;
+      transform: translateY(8px)
+    }
+
+    #flightLayer {
+      position: absolute;
+      inset: 0;
+      z-index: 55;
+      pointer-events: none;
+    }
+
+    .flying-half {
+      position: absolute;
+      left: 0;
+      top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform .9s cubic-bezier(.18, .89, .32, 1.08), opacity .9s ease;
+      will-change: transform, opacity;
+    }
+
+    .fit-piece {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-origin: center center;
+    }
+
+    #tryAgain,
+    #nextButton {
+      position: absolute;
+      left: 50%;
+      bottom: 4px;
+      width: 168px;
+      height: auto;
+      transform: translateX(-50%);
+      border: 0;
+      background: transparent;
+      z-index: 45;
+      cursor: pointer;
+      transition: opacity .22s ease, transform .12s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #tryAgain img,
+    #nextButton img {
+      display: block;
+      width: 100%;
+      height: auto
+    }
+
+    #tryAgain:active {
+      transform: translateX(-50%) scale(.96)
+    }
+
+    #nextButton:active {
+      opacity: .82
+    }
+
+    #finishButton {
+      width: 180px;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      transition: transform .12s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #finishButton img {
+      display: block;
+      width: 100%;
+      height: auto
+    }
+
+    #finishButton:active {
+      transform: scale(.96)
+    }
+
+    #completeStage {
+      position: absolute;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 22px;
+      background: rgba(215, 231, 255, .48);
+      backdrop-filter: blur(1px);
+      transition: opacity .35s ease;
+    }
+
+    .complete-board {
+      position: relative;
+      width: 760px;
+      height: 456px;
+    }
+
+    .complete-board>img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .complete-copy {
+      position: absolute;
+      inset: 96px 92px 82px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      text-align: center;
+      color: #fff;
+      font-weight: 900;
+      text-shadow: 0 3px 9px rgba(0, 0, 0, .35);
+    }
+
+    .complete-title {
+      font-size: 48px;
+      line-height: 1.05
+    }
+
+    .complete-sub {
+      font-size: 27px;
+      line-height: 1.18;
+      color: #ffe766
+    }
+
+    /* ── Interactive kid-game animations ── */
+    @keyframes piecePopIn {
+      0% {
+        opacity: 0;
+        transform: scale(.45) rotate(-10deg)
+      }
+
+      65% {
+        transform: scale(1.15) rotate(4deg)
+      }
+
+      100% {
+        opacity: 1;
+        transform: scale(1) rotate(0)
+      }
+    }
+
+    .teach-pop {
+      animation: piecePopIn .4s cubic-bezier(.34, 1.5, .64, 1) both
+    }
+
+    .teach-pop-d1 {
+      animation-delay: .16s
+    }
+
+    @keyframes sparkDot {
+      0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1)
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(var(--sx), var(--sy)) scale(0)
+      }
+    }
+
+    .spark-dot {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: sparkDot .75s ease-out both;
+    }
+
+    @keyframes nextBtnPop {
+      0% {
+        opacity: 0;
+        transform: translateX(-50%) scale(.2) rotate(-15deg)
+      }
+
+      60% {
+        transform: translateX(-50%) scale(1.2) rotate(5deg)
+      }
+
+      80% {
+        transform: translateX(-50%) scale(.94) rotate(-1deg)
+      }
+
+      100% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1) rotate(0)
+      }
+    }
+
+    @keyframes nextBtnGlow {
+
+      0%,
+      100% {
+        filter: none
+      }
+
+      50% {
+        filter: drop-shadow(0 0 14px rgba(116, 219, 255, .95)) brightness(1.12)
+      }
+    }
+
+    #nextButton:not(.hidden) {
+      animation: nextBtnPop .5s cubic-bezier(.34, 1.3, .64, 1) both,
+        nextBtnGlow 1.4s ease-in-out .52s infinite;
+    }
+
+    @keyframes idleHintPulse {
+
+      0%,
+      100% {
+        filter: drop-shadow(0 0 4px rgba(255, 255, 255, .3));
+        transform: translateX(-50%) scale(1);
+      }
+
+      50% {
+        filter: drop-shadow(0 0 22px rgba(116, 219, 255, .95));
+        transform: translateX(-50%) scale(1.14);
+      }
+    }
+
+    #btnCut.idle-hint {
+      animation: idleHintPulse 1.4s ease-in-out infinite;
+      z-index: 26;
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important
+      }
+    }
+  </style>
 </head>
+
 <body>
-<main id="game" aria-label="PowerUp Bots halves game">
-  <img class="bg" src="assets/Mainbg.png" alt="">
+  <main id="game" aria-label="PowerUp Bots halves game">
+    <img class="bg" src="assets/Mainbg.png" alt="">
 
-  <section id="instruction" class="hidden" aria-live="polite">
-    <img src="assets/instructionPannel.png" alt="">
-    <div id="instructionText"></div>
-  </section>
+    <section id="instruction" class="hidden" aria-live="polite">
+      <img src="assets/instructionPannel.png" alt="">
+      <div id="instructionText"></div>
+    </section>
 
-  <section id="scene">
-    <div id="bots" class="layout-intro">
-      <div class="bot-slot left-bot">
-        <div class="target-fill" id="leftFill"></div>
-        <img class="pod-img" id="leftPod" src="assets/SquareHollow.png" alt="">
-        <img class="bot-img" id="leftBot" src="assets/SquareBotSadState.png" alt="">
+    <section id="scene">
+      <div id="bots" class="layout-intro">
+        <div class="bot-slot left-bot">
+          <div class="target-fill" id="leftFill"></div>
+          <img class="pod-img" id="leftPod" src="assets/SquareHollow.png" alt="">
+          <img class="bot-img" id="leftBot" src="assets/SquareBotSadState.png" alt="">
+        </div>
+        <div class="bot-slot right-bot">
+          <div class="target-fill" id="rightFill"></div>
+          <img class="pod-img" id="rightPod" src="assets/SquareHollow.png" alt="">
+          <img class="bot-img" id="rightBot" src="assets/SquareBotSadState.png" alt="">
+        </div>
       </div>
-      <div class="bot-slot right-bot">
-        <div class="target-fill" id="rightFill"></div>
-        <img class="pod-img" id="rightPod" src="assets/SquareHollow.png" alt="">
-        <img class="bot-img" id="rightBot" src="assets/SquareBotSadState.png" alt="">
+
+      <div id="shapeStage" class="hidden" aria-hidden="true"></div>
+
+      <div id="teachStage" class="hidden" aria-hidden="true">
+        <img src="assets/TeachingScreen.png" alt="">
+        <div id="teachContent"></div>
       </div>
-    </div>
 
-    <div id="shapeStage" class="hidden" aria-hidden="true"></div>
+      <button id="playStage" class="hidden" type="button" aria-label="Start the laser game">
+        <img src="assets/TutorialAfterScreen.png" alt="">
+      </button>
 
-    <div id="teachStage" class="hidden" aria-hidden="true">
-      <img src="assets/TeachingScreen.png" alt="">
-      <div id="teachContent"></div>
-    </div>
-
-    <button id="playStage" class="hidden" type="button" aria-label="Start the laser game">
-      <img src="assets/TutorialAfterScreen.png" alt="">
-    </button>
-
-    <div id="machineStage" class="hidden" aria-hidden="true">
-      <!-- base machine (always LaserMachineWithoutLines) -->
-      <img id="machineImg" src="assets/LaserMachineWithoutLines.png" alt="">
-      <!-- LaserMachine.png overlay — tutorial guide lines only -->
-      <img id="tutorialOverlay" src="assets/LaserMachine.png" alt="" aria-hidden="true">
-      <!-- Beam.svg — hidden by default, only shown on CUT -->
-      <img id="beamImg" src="assets/Beam.svg" alt="" aria-hidden="true">
-      <!-- Laser.png rotating sprite -->
-      <img id="laserImg" src="assets/Laser.png" alt="" aria-hidden="true">
-      <div id="blockCover"></div>
-      <div id="machineBlock"></div>
-      <img id="laserBurst" src="assets/laserlight.png" alt="">
-      <div id="cutLine"></div>
-      <div id="wrongSlash"></div>
-      <!-- Tutorial instruction bubbles (below left/right buttons; above cut button) -->
-      <img id="bubbleLeft"  class="tutorial-bubble" src="assets/InstruictionTutorialLeft.png" alt="">
-      <img id="bubbleRight" class="tutorial-bubble" src="assets/InstructionTutorialRight.png" alt="">
-      <img id="bubbleCut"   class="tutorial-bubble" src="assets/InstructionTutorialCutButton.png" alt="">
-      <!-- Visible button images (src swaps on press) -->
-      <img id="btnLeft"  src="assets/LeftButton.png"  alt="" aria-hidden="true">
-      <img id="btnRight" src="assets/RightButton.png" alt="" aria-hidden="true">
-      <img id="btnCut"   src="assets/CutButton.png"   alt="" aria-hidden="true">
-      <!-- TappedCutButton.png tutorial highlight -->
-      <img id="cutOverlay" src="assets/TappedCutButton.png" alt="" aria-hidden="true">
-      <img id="handGesture" class="hand-gesture hidden" src="assets/hand.svg" alt="" aria-hidden="true">
-      <!-- Invisible hit areas -->
-      <button id="hitLeft"  class="machine-hit" type="button" aria-label="Move laser left"></button>
-      <button id="hitRight" class="machine-hit" type="button" aria-label="Move laser right"></button>
-      <button id="hitCut"   class="machine-hit" type="button" aria-label="Cut the block"></button>
-    </div>
-
-    <div id="flightLayer" aria-hidden="true"></div>
-
-    <button id="tryAgain" class="hidden" type="button" aria-label="Try again">
-      <img src="assets/TryAgainButton.png" alt="">
-    </button>
-
-    <button id="nextButton" class="hidden" type="button" aria-label="Next">
-      <img src="assets/nextButton.png" alt="">
-    </button>
-  </section>
-
-  <section id="completeStage" class="hidden" aria-live="polite">
-    <div class="complete-board">
-      <img src="assets/TeachingScreen.png" alt="">
-      <div class="complete-copy">
-        <div class="complete-title">Amazing!</div>
-        <div class="complete-sub">You made halves from rectangles, circles, and squares.</div>
+      <div id="machineStage" class="hidden" aria-hidden="true">
+        <!-- base machine (always LaserMachineWithoutLines) -->
+        <img id="machineImg" src="assets/LaserMachineWithoutLines.png" alt="">
+        <!-- LaserMachine.png overlay — tutorial guide lines only -->
+        <img id="tutorialOverlay" src="assets/LaserMachine.png" alt="" aria-hidden="true">
+        <!-- Beam.svg — hidden by default, only shown on CUT -->
+        <img id="beamImg" src="assets/Beam.svg" alt="" aria-hidden="true">
+        <!-- Laser.png rotating sprite -->
+        <img id="laserImg" src="assets/Laser.png" alt="" aria-hidden="true">
+        <div id="blockCover"></div>
+        <div id="machineBlock"></div>
+        <img id="laserBurst" src="assets/laserlight.png" alt="">
+        <div id="cutLine"></div>
+        <div id="wrongSlash"></div>
+        <!-- Tutorial instruction bubbles (below left/right buttons; above cut button) -->
+        <img id="bubbleLeft" class="tutorial-bubble" src="assets/InstruictionTutorialLeft.png" alt="">
+        <img id="bubbleRight" class="tutorial-bubble" src="assets/InstructionTutorialRight.png" alt="">
+        <img id="bubbleCut" class="tutorial-bubble" src="assets/InstructionTutorialCutButton.png" alt="">
+        <!-- Visible button images (src swaps on press) -->
+        <img id="btnLeft" src="assets/LeftButton.png" alt="" aria-hidden="true">
+        <img id="btnRight" src="assets/RightButton.png" alt="" aria-hidden="true">
+        <img id="btnCut" src="assets/CutButton.png" alt="" aria-hidden="true">
+        <!-- TappedCutButton.png tutorial highlight -->
+        <img id="cutOverlay" src="assets/TappedCutButton.png" alt="" aria-hidden="true">
+        <img id="handGesture" class="hand-gesture hidden" src="assets/hand.svg" alt="" aria-hidden="true">
+        <!-- Invisible hit areas -->
+        <button id="hitLeft" class="machine-hit" type="button" aria-label="Move laser left"></button>
+        <button id="hitRight" class="machine-hit" type="button" aria-label="Move laser right"></button>
+        <button id="hitCut" class="machine-hit" type="button" aria-label="Cut the block"></button>
       </div>
-    </div>
-    <button id="finishButton" type="button" aria-label="Finish">
-      <img src="assets/nextButton.png" alt="">
-    </button>
-  </section>
-</main>
 
-<script>
-(function(){
-  var game = document.getElementById("game");
+      <div id="flightLayer" aria-hidden="true"></div>
 
-  function resize(){
-    var scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
-    game.style.transform = "scale(" + scale + ")";
-    game.style.left = ((window.innerWidth - 1280 * scale) / 2) + "px";
-    game.style.top = ((window.innerHeight - 720 * scale) / 2) + "px";
-  }
+      <button id="tryAgain" class="hidden" type="button" aria-label="Try again">
+        <img src="assets/TryAgainButton.png" alt="">
+      </button>
 
-  window.addEventListener("resize", resize);
-  resize();
-})();
+      <button id="nextButton" class="hidden" type="button" aria-label="Next">
+        <img src="assets/nextButton.png" alt="">
+      </button>
+    </section>
 
-var ASSETS = "assets/";
+    <section id="completeStage" class="hidden" aria-live="polite">
+      <div class="complete-board">
+        <img src="assets/TeachingScreen.png" alt="">
+        <div class="complete-copy">
+          <div class="complete-title">Amazing!</div>
+          <div class="complete-sub">You made halves from rectangles, circles, and squares.</div>
+        </div>
+      </div>
+      <button id="finishButton" type="button" aria-label="Finish">
+        <img src="assets/nextButton.png" alt="">
+      </button>
+    </section>
+  </main>
 
-/* ── Web Audio sounds ── */
-var _ac = null;
-function _ctx(){ if(!_ac){ var AC=window.AudioContext||window.webkitAudioContext; if(AC) _ac=new AC(); } return _ac; }
-function _beep(type,freq,dur,vol,freqEnd){
-  var ctx=_ctx(); if(!ctx) return;
-  try{
-    var o=ctx.createOscillator(), g=ctx.createGain();
-    o.connect(g); g.connect(ctx.destination);
-    o.type=type||'sine'; o.frequency.setValueAtTime(freq,ctx.currentTime);
-    if(freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd,ctx.currentTime+dur);
-    g.gain.setValueAtTime(vol||0.22,ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
-    o.start(ctx.currentTime); o.stop(ctx.currentTime+dur+0.01);
-  }catch(e){}
-}
-function sndTap(){ _beep('sine',520,0.07,0.18); }
-function sndRotate(){ _beep('sine',440,0.09,0.15); _beep('sine',580,0.07,0.1); }
-function sndCut(){
-  _beep('sawtooth',900,0.05,0.25,900);
-  setTimeout(function(){ _beep('sawtooth',700,0.35,0.2,80); },50);
-}
-function sndSuccess(){ _beep('sine',660,0.12,0.2); setTimeout(function(){ _beep('sine',880,0.18,0.22); },130); }
-function sndWrong(){ _beep('sawtooth',200,0.25,0.18,120); }
-function sndTurr(){
-  var ctx=_ctx(); if(!ctx) return;
-  try{
-    var o=ctx.createOscillator(),g=ctx.createGain();
-    o.connect(g); g.connect(ctx.destination);
-    o.type='sawtooth';
-    o.frequency.setValueAtTime(210,ctx.currentTime);
-    o.frequency.exponentialRampToValueAtTime(105,ctx.currentTime+0.13);
-    g.gain.setValueAtTime(0.32,ctx.currentTime);
-    g.gain.setValueAtTime(0.28,ctx.currentTime+0.13);
-    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.38);
-    o.start(ctx.currentTime); o.stop(ctx.currentTime+0.39);
-    var o2=ctx.createOscillator(),g2=ctx.createGain();
-    o2.connect(g2); g2.connect(ctx.destination);
-    o2.type='square';
-    o2.frequency.setValueAtTime(105,ctx.currentTime);
-    o2.frequency.exponentialRampToValueAtTime(52,ctx.currentTime+0.38);
-    g2.gain.setValueAtTime(0.14,ctx.currentTime);
-    g2.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.38);
-    o2.start(ctx.currentTime); o2.stop(ctx.currentTime+0.39);
-  }catch(e){}
-}
+  <script>
+    (function () {
+      var game = document.getElementById("game");
 
-var ROUNDS = [
-  {
-    name:"rectangle",
-    label:"Rectangle",
-    blockSrc:ASSETS + "RectangleBlock.png",
-    blockW:220,
-    blockH:110,
-    cut:"vertical",
-    startAngle:45,
-    targetAngle:90,
-    targetAngle2:270,
-    sadBot:ASSETS + "SquareBotSadState.png",
-    happyBot:ASSETS + "happyPinkBot.png",
-    pod:ASSETS + "SquareHollow.png",
-    podLeft:ASSETS + "SquareHollow.png",
-    podRight:ASSETS + "SquareHollow.png",
-    podW:132,
-    botAspect:894 / 606,
-    podAspectLeft:1056 / 444,
-    podAspectRight:1056 / 444,
-    chargerOverlap:68,
-    botWIntro:205,
-    botWReady:150,
-    happyBotW:163
-  },
-  {
-    name:"circle",
-    label:"Circle",
-    blockSrc:ASSETS + "CircleBlock.png",
-    blockW:220,
-    blockH:220,
-    cut:"horizontal",
-    startAngle:45,
-    targetAngle:0,
-    targetAngle2:180,
-    sadBot:ASSETS + "CircleBot.png",
-    happyBot:ASSETS + "HappyCircleBot.png",
-    pod:ASSETS + "SemiCircleHollowleft.png",
-    podLeft:ASSETS + "SemiCircleHollowleft.png",
-    podRight:ASSETS + "SemiCircleHollowright.png",
-    podW:160,
-    botAspect:893 / 896,
-    podAspectLeft:1098 / 520,
-    podAspectRight:1098 / 520,
-    chargerOverlap:60,
-    botWIntro:220,
-    botWReady:180,
-    happyBotW:163
-  },
-  {
-    name:"square",
-    label:"Square",
-    blockSrc:"",
-    blockW:190,
-    blockH:190,
-    cut:"diagonal",
-    startAngle:90,
-    targetAngle:45,
-    targetAngle2:225,
-    sadBot:ASSETS + "SquareBOt.png",
-    happyBot:ASSETS + "HappyTriangleBot.png",
-    pod:ASSETS + "TriangularHollowLeft.png",
-    podLeft:ASSETS + "TriangularHollowLeft.png",
-    podRight:ASSETS + "TriangularHollowRight.png",
-    podW:142,
-    botAspect:784 / 742,
-    podAspectLeft:1054 / 469,
-    podAspectRight:1089 / 444,
-    chargerOverlap:34,
-    botWIntro:205,
-    botWReady:150,
-    happyBotW:141
-  }
-];
-
-var FLOW = [
-  {scene:"intro", text:"Let us charge the bots.", duration:2100},
-  {scene:"ready", text:"The bots are ready to get charged!", duration:2300},
-  {scene:"whole", text:"Here is one whole energy block.", duration:2200},
-  {scene:"needs", text:"Each bot needs a part of the energy block.", duration:2300},
-  {scene:"halves", text:"We need to cut the block into two equal parts.", duration:2300},
-  {scene:"tutorial"},
-  {scene:"play", duration:1500},
-  {scene:"preplay", text:"Move and line up the laser.", duration:2500},
-  {scene:"laser"}
-];
-
-var state = {
-  round:0,
-  step:0,
-  angle:0,
-  lastCutAngle:0,
-  locked:false,
-  timers:[],
-  tutorialTimer:null,
-  tutActive:false,
-  tutStep:0,
-  orbitCurrent:0,
-  orbitTarget:0,
-  orbitRaf:null,
-  orbitActive:false,
-  idleHintTimer:null
-};
-
-var els = {
-  instruction:document.getElementById("instruction"),
-  instructionText:document.getElementById("instructionText"),
-  bots:document.getElementById("bots"),
-  leftBot:document.getElementById("leftBot"),
-  rightBot:document.getElementById("rightBot"),
-  leftPod:document.getElementById("leftPod"),
-  rightPod:document.getElementById("rightPod"),
-  leftFill:document.getElementById("leftFill"),
-  rightFill:document.getElementById("rightFill"),
-  shapeStage:document.getElementById("shapeStage"),
-  teachStage:document.getElementById("teachStage"),
-  teachContent:document.getElementById("teachContent"),
-  playStage:document.getElementById("playStage"),
-  machineStage:document.getElementById("machineStage"),
-  machineImg:document.getElementById("machineImg"),
-  tutorialOverlay:document.getElementById("tutorialOverlay"),
-  laserImg:document.getElementById("laserImg"),
-  beamImg:document.getElementById("beamImg"),
-  machineBlock:document.getElementById("machineBlock"),
-  blockCover:document.getElementById("blockCover"),
-  laserBurst:document.getElementById("laserBurst"),
-  cutLine:document.getElementById("cutLine"),
-  wrongSlash:document.getElementById("wrongSlash"),
-  bubbleLeft:document.getElementById("bubbleLeft"),
-  bubbleRight:document.getElementById("bubbleRight"),
-  bubbleCut:document.getElementById("bubbleCut"),
-  btnLeft:document.getElementById("btnLeft"),
-  btnRight:document.getElementById("btnRight"),
-  btnCut:document.getElementById("btnCut"),
-  cutOverlay:document.getElementById("cutOverlay"),
-  handGesture:document.getElementById("handGesture"),
-  hitLeft:document.getElementById("hitLeft"),
-  hitRight:document.getElementById("hitRight"),
-  hitCut:document.getElementById("hitCut"),
-  flightLayer:document.getElementById("flightLayer"),
-  tryAgain:document.getElementById("tryAgain"),
-  nextButton:document.getElementById("nextButton"),
-  completeStage:document.getElementById("completeStage"),
-  finishButton:document.getElementById("finishButton")
-};
-
-function show(el){ el.classList.remove("hidden"); }
-function hide(el){ el.classList.add("hidden"); }
-
-function clearTimers(){
-  state.timers.forEach(function(id){ clearTimeout(id); });
-  state.timers = [];
-  if(state.tutorialTimer){
-    clearTimeout(state.tutorialTimer);
-    state.tutorialTimer = null;
-  }
-}
-
-function stopIdleHint(){
-  if(state.idleHintTimer){ clearTimeout(state.idleHintTimer); state.idleHintTimer = null; }
-  els.btnCut.classList.remove("idle-hint");
-}
-
-function startIdleHint(){
-  stopIdleHint();
-  if(state.tutActive){ return; }
-  state.idleHintTimer = setTimeout(function(){
-    if(!state.tutActive && !state.locked){
-      els.btnCut.classList.add("idle-hint");
-    }
-  }, 3000);
-}
-
-function later(fn, delay){
-  var id = setTimeout(fn, delay);
-  state.timers.push(id);
-}
-
-function currentRound(){
-  return ROUNDS[state.round];
-}
-
-function setInstruction(text){
-  if(!text){
-    hide(els.instruction);
-    els.instructionText.textContent = "";
-    return;
-  }
-  els.instructionText.textContent = text;
-  show(els.instruction);
-}
-
-function resetScene(){
-  hide(els.shapeStage);
-  hide(els.teachStage);
-  hide(els.playStage);
-  hide(els.machineStage);
-  hide(els.tryAgain);
-  hide(els.nextButton);
-  hide(els.completeStage);
-  els.shapeStage.innerHTML = "";
-  els.teachContent.innerHTML = "";
-  els.machineBlock.classList.remove("vibrate");
-  els.machineBlock.innerHTML = "";
-  els.flightLayer.innerHTML = "";
-  clearTargetFills();
-  els.cutLine.classList.remove("show");
-  els.wrongSlash.classList.remove("show");
-  if(state.orbitRaf){ cancelAnimationFrame(state.orbitRaf); state.orbitRaf = null; }
-  state.orbitActive = false;
-  els.laserImg.style.display = "none";
-  els.beamImg.style.display  = "none";
-  els.tutorialOverlay.classList.remove("show");
-  els.laserBurst.classList.remove("show");
-  [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){
-    el.classList.remove("fade");
-  });
-  els.cutOverlay.classList.remove("show");
-  els.cutOverlay.classList.remove("flash");
-  els.btnLeft.src  = ASSETS + "LeftButton.png";
-  els.btnRight.src = ASSETS + "RightButton.png";
-  els.btnCut.src   = ASSETS + "CutButton.png";
-  els.btnLeft.classList.remove("tut-highlight");
-  els.btnRight.classList.remove("tut-highlight");
-  els.btnCut.classList.remove("tut-highlight");
-  els.btnCut.classList.remove("idle-hint");
-  stopIdleHint();
-  els.hitLeft.disabled = false;
-  els.hitRight.disabled = false;
-  els.hitCut.disabled = false;
-  state.locked = false;
-  state.tutActive = false;
-  state.tutStep = 0;
-}
-
-function setupBots(layout){
-  var r = currentRound();
-  els.bots.className = layout;
-  els.leftBot.src = r.sadBot;
-  els.rightBot.src = r.sadBot;
-  els.leftPod.src  = r.podLeft  || r.pod;
-  els.rightPod.src = r.podRight || r.pod;
-  els.leftBot.style.width = (layout === "layout-intro" ? r.botWIntro : r.botWReady) + "px";
-  els.rightBot.style.width = (layout === "layout-intro" ? r.botWIntro : r.botWReady) + "px";
-  var podTopLeft = podTopForRound(r, layout, "left");
-  var podTopRight = podTopForRound(r, layout, "right");
-  var podW = r.podW || 132;
-  els.leftPod.style.top = podTopLeft + "px";
-  els.rightPod.style.top = podTopRight + "px";
-  els.leftPod.style.width = podW + "px";
-  els.rightPod.style.width = podW + "px";
-  els.leftBot.className = "bot-img";
-  els.rightBot.className = "bot-img";
-  els.leftPod.className = "pod-img";
-  els.rightPod.className = "pod-img";
-  clearTargetFills();
-  setupTargetSlots(r, layout);
-  if(layout === "layout-ready"){
-    els.leftPod.classList.add("visible");
-    els.rightPod.classList.add("visible");
-  }
-  if(layout === "layout-laser"){
-    els.leftPod.classList.add("visible");
-    els.rightPod.classList.add("visible");
-  }
-}
-
-function clearTargetFills(){
-  [els.leftFill,els.rightFill].forEach(function(fill){
-    if(!fill){ return; }
-    fill.innerHTML = "";
-    fill.className = "target-fill";
-    fill.style.clipPath = "";
-    fill.style.borderRadius = "";
-  });
-}
-
-function podTopForRound(r, layout, side){
-  if(layout !== "layout-laser" && layout !== "layout-ready"){
-    return 0;
-  }
-  var botW = r.botWReady;
-  var botTop = 720 - botW * (r.botAspect || 1.2);
-  var podW = r.podW || 132;
-  var podAspect = side === "right" ? (r.podAspectRight || r.podAspectLeft || 2.3) : (r.podAspectLeft || 2.3);
-  return botTop - podW * podAspect + (r.chargerOverlap || 14);
-}
-
-function setupTargetSlots(r, layout){
-  var podTopLeft = podTopForRound(r, layout, "left");
-  var podTopRight = podTopForRound(r, layout, "right");
-  var isCircle = r.name === "circle";
-  var isTriangle = r.name === "square";
-  /* Slot dimensions calibrated to the visual hollow in each pod image.
-     Circle pod (160px wide): inner hollow ≈92% of width = 148px; semicircle height = 74px.
-     Triangle pod (142px wide): hollow bounding box ≈91% = 130px × 130px.
-     Rectangle pod (132px wide): square hollow ≈88% = 116px × 116px. */
-  var width  = isCircle ? 148 : 116;
-  var height = isCircle ?  74 : 116;
-  /* slotOffset: pixels from the pod image top to the top edge of the fill div.
-     Reverted to exact calibration to perfectly fit the hollows. */
-  var slotOffset = isCircle ? 8 : 25;
-  var hShiftL = isTriangle ? -8 : 0;
-  var hShiftR = isTriangle ? 8 : 0;
-  els.leftPod.style.marginLeft = hShiftL + "px";
-  els.rightPod.style.marginLeft = hShiftR + "px";
-
-  [
-    {fill:els.leftFill, top:podTopLeft + slotOffset},
-    {fill:els.rightFill, top:podTopRight + slotOffset}
-  ].forEach(function(item, idx){
-    var fill = item.fill;
-    fill.style.top = item.top + "px";
-    fill.style.width = width + "px";
-    fill.style.height = height + "px";
-    
-    /* Adjust for visual mass alignment of the square's diagonal cut */
-    if (isTriangle) {
-      if (idx === 0) {
-        fill.style.marginLeft = (hShiftL - 27) + "px";
-        fill.style.marginTop = "0px";
-      } else {
-        fill.style.marginLeft = (hShiftR + 27) + "px";
-        fill.style.marginTop = "0px";
+      function resize() {
+        var scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+        game.style.transform = "scale(" + scale + ")";
+        game.style.left = ((window.innerWidth - 1280 * scale) / 2) + "px";
+        game.style.top = ((window.innerHeight - 720 * scale) / 2) + "px";
       }
-    } else {
-      fill.style.marginLeft = "0px";
-      fill.style.marginTop = "0px";
+
+      window.addEventListener("resize", resize);
+      resize();
+    })();
+
+    var ASSETS = "assets/";
+
+    /* ── Web Audio sounds ── */
+    var _ac = null;
+    function _ctx() { if (!_ac) { var AC = window.AudioContext || window.webkitAudioContext; if (AC) _ac = new AC(); } return _ac; }
+    function _beep(type, freq, dur, vol, freqEnd) {
+      var ctx = _ctx(); if (!ctx) return;
+      try {
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = type || 'sine'; o.frequency.setValueAtTime(freq, ctx.currentTime);
+        if (freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, ctx.currentTime + dur);
+        g.gain.setValueAtTime(vol || 0.22, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+        o.start(ctx.currentTime); o.stop(ctx.currentTime + dur + 0.01);
+      } catch (e) { }
+    }
+    function sndTap() { _beep('sine', 520, 0.07, 0.18); }
+    function sndRotate() { _beep('sine', 440, 0.09, 0.15); _beep('sine', 580, 0.07, 0.1); }
+    function sndCut() {
+      _beep('sawtooth', 900, 0.05, 0.25, 900);
+      setTimeout(function () { _beep('sawtooth', 700, 0.35, 0.2, 80); }, 50);
+    }
+    function sndSuccess() { _beep('sine', 660, 0.12, 0.2); setTimeout(function () { _beep('sine', 880, 0.18, 0.22); }, 130); }
+    function sndWrong() { _beep('sawtooth', 200, 0.25, 0.18, 120); }
+    function sndTurr() {
+      var ctx = _ctx(); if (!ctx) return;
+      try {
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(210, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(105, ctx.currentTime + 0.13);
+        g.gain.setValueAtTime(0.32, ctx.currentTime);
+        g.gain.setValueAtTime(0.28, ctx.currentTime + 0.13);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.38);
+        o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.39);
+        var o2 = ctx.createOscillator(), g2 = ctx.createGain();
+        o2.connect(g2); g2.connect(ctx.destination);
+        o2.type = 'square';
+        o2.frequency.setValueAtTime(105, ctx.currentTime);
+        o2.frequency.exponentialRampToValueAtTime(52, ctx.currentTime + 0.38);
+        g2.gain.setValueAtTime(0.14, ctx.currentTime);
+        g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.38);
+        o2.start(ctx.currentTime); o2.stop(ctx.currentTime + 0.39);
+      } catch (e) { }
     }
 
-    /* No clip-path or border-radius on the fill container — the piece inside has its own
-       clip-path from pieceGeometry, and circle images use natural transparency for the arc shape. */
-    fill.style.borderRadius = "";
-    fill.style.clipPath = "";
-  });
-}
+    var ROUNDS = [
+      {
+        name: "rectangle",
+        label: "Rectangle",
+        blockSrc: ASSETS + "RectangleBlock.png",
+        blockW: 220,
+        blockH: 110,
+        cut: "vertical",
+        startAngle: 45,
+        targetAngle: 90,
+        targetAngle2: 270,
+        sadBot: ASSETS + "SquareBotSadState.png",
+        happyBot: ASSETS + "happyPinkBot.png",
+        pod: ASSETS + "SquareHollow.png",
+        podLeft: ASSETS + "SquareHollow.png",
+        podRight: ASSETS + "SquareHollow.png",
+        podW: 132,
+        botAspect: 894 / 606,
+        podAspectLeft: 1056 / 444,
+        podAspectRight: 1056 / 444,
+        chargerOverlap: 68,
+        botWIntro: 205,
+        botWReady: 150,
+        happyBotW: 163
+      },
+      {
+        name: "square",
+        label: "Square",
+        blockSrc: "",
+        blockW: 155,
+        blockH: 155,
+        cut: "diagonal",
+        startAngle: 90,
+        targetAngle: 45,
+        targetAngle2: 225,
+        sadBot: ASSETS + "SquareBOt.png",
+        happyBot: ASSETS + "HappyTriangleBot.png",
+        pod: ASSETS + "TriangularHollowLeft.png",
+        podLeft: ASSETS + "TriangularHollowLeft.png",
+        podRight: ASSETS + "TriangularHollowRight.png",
+        podW: 142,
+        botAspect: 784 / 742,
+        podAspectLeft: 1054 / 469,
+        podAspectRight: 1089 / 444,
+        chargerOverlap: 34,
+        botWIntro: 205,
+        botWReady: 170,
+        happyBotW: 163
+      },
+      {
+        name: "circle",
+        label: "Circle",
+        blockSrc: ASSETS + "CircleBlock.png",
+        blockW: 220,
+        blockH: 220,
+        cut: "horizontal",
+        startAngle: 45,
+        targetAngle: 0,
+        targetAngle2: 180,
+        sadBot: ASSETS + "CircleBot.png",
+        happyBot: ASSETS + "HappyCircleBot.png",
+        pod: ASSETS + "SemiCircleHollowleft.png",
+        podLeft: ASSETS + "SemiCircleHollowleft.png",
+        podRight: ASSETS + "SemiCircleHollowright.png",
+        podW: 160,
+        botAspect: 893 / 896,
+        podAspectLeft: 1098 / 520,
+        podAspectRight: 1098 / 520,
+        chargerOverlap: 60,
+        botWIntro: 220,
+        botWReady: 180,
+        happyBotW: 163
+      }
+    ];
 
-function makeBlock(r, width, height){
-  if(r.blockSrc){
-    var img = document.createElement("img");
-    img.src = r.blockSrc;
-    img.className = "whole-block";
-    img.style.width = width + "px";
-    img.style.height = height + "px";
-    if(r.name === "circle"){
-      img.style.borderRadius = "50%";
-    }
-    return img;
-  }
-  var square = document.createElement("div");
-  square.className = "whole-block css-square";
-  square.style.width = width + "px";
-  square.style.height = height + "px";
-  return square;
-}
+    var FLOW = [
+      { scene: "intro", text: "Let us charge the bots.", duration: 2100 },
+      { scene: "ready", text: "The bots are ready to get charged!", duration: 2300 },
+      { scene: "whole", text: "Here is one whole energy block.", duration: 2200 },
+      { scene: "needs", text: "Each bot needs a part of the energy block.", duration: 2300 },
+      { scene: "halves", text: "We need to cut the block into two equal parts.", duration: 2300 },
+      { scene: "tutorial" },
+      { scene: "play", duration: 1500 },
+      { scene: "preplay", text: "Move and line up the laser.", duration: 2500 },
+      { scene: "laser" }
+    ];
 
-function normalizedAngle(angle){
-  return ((angle % 360) + 360) % 360;
-}
-
-function lineAngleDegrees(angle){
-  var snap = Math.round((normalizedAngle(angle) % 180) / 45) * 45;
-  return snap === 180 ? 0 : snap;
-}
-
-function canonicalCutAngle(r){
-  if(r.cut === "horizontal"){ return 0; }
-  if(r.cut === "diagonal"){ return 45; }
-  return 90;
-}
-
-function cutOrientation(angle){
-  var snap = lineAngleDegrees(angle);
-  if(snap === 0){ return "horizontal"; }
-  if(snap === 90){ return "vertical"; }
-  if(snap === 45){ return "backslash"; }
-  return "slash";
-}
-
-function lineSideForPiece(orientation, index){
-  if(orientation === "horizontal"){
-    return index === 0 ? 1 : -1;
-  }
-  if(orientation === "backslash"){
-    return index === 0 ? 1 : -1;
-  }
-  return index === 0 ? -1 : 1;
-}
-
-function clipPolygon(points, width, height, angle, keepSign){
-  var rad = lineAngleDegrees(angle) * Math.PI / 180;
-  var dx = Math.cos(rad);
-  var dy = Math.sin(rad);
-  var cx = width / 2;
-  var cy = height / 2;
-  var eps = 0.001;
-
-  function side(p){
-    return (p.x - cx) * dy - (p.y - cy) * dx;
-  }
-  function inside(s){
-    return keepSign > 0 ? s >= -eps : s <= eps;
-  }
-  function intersect(a, b, sa, sb){
-    var t = sa / (sa - sb);
-    return {
-      x:a.x + (b.x - a.x) * t,
-      y:a.y + (b.y - a.y) * t
+    var state = {
+      round: 0,
+      step: 0,
+      angle: 0,
+      lastCutAngle: 0,
+      locked: false,
+      timers: [],
+      tutorialTimer: null,
+      tutActive: false,
+      tutStep: 0,
+      orbitCurrent: 0,
+      orbitTarget: 0,
+      orbitRaf: null,
+      orbitActive: false,
+      idleHintTimer: null
     };
-  }
 
-  var output = [];
-  for(var i=0; i<points.length; i++){
-    var current = points[i];
-    var prev = points[(i + points.length - 1) % points.length];
-    var currentSide = side(current);
-    var prevSide = side(prev);
-    var currentInside = inside(currentSide);
-    var prevInside = inside(prevSide);
+    var els = {
+      instruction: document.getElementById("instruction"),
+      instructionText: document.getElementById("instructionText"),
+      bots: document.getElementById("bots"),
+      leftBot: document.getElementById("leftBot"),
+      rightBot: document.getElementById("rightBot"),
+      leftPod: document.getElementById("leftPod"),
+      rightPod: document.getElementById("rightPod"),
+      leftFill: document.getElementById("leftFill"),
+      rightFill: document.getElementById("rightFill"),
+      shapeStage: document.getElementById("shapeStage"),
+      teachStage: document.getElementById("teachStage"),
+      teachContent: document.getElementById("teachContent"),
+      playStage: document.getElementById("playStage"),
+      machineStage: document.getElementById("machineStage"),
+      machineImg: document.getElementById("machineImg"),
+      tutorialOverlay: document.getElementById("tutorialOverlay"),
+      laserImg: document.getElementById("laserImg"),
+      beamImg: document.getElementById("beamImg"),
+      machineBlock: document.getElementById("machineBlock"),
+      blockCover: document.getElementById("blockCover"),
+      laserBurst: document.getElementById("laserBurst"),
+      cutLine: document.getElementById("cutLine"),
+      wrongSlash: document.getElementById("wrongSlash"),
+      bubbleLeft: document.getElementById("bubbleLeft"),
+      bubbleRight: document.getElementById("bubbleRight"),
+      bubbleCut: document.getElementById("bubbleCut"),
+      btnLeft: document.getElementById("btnLeft"),
+      btnRight: document.getElementById("btnRight"),
+      btnCut: document.getElementById("btnCut"),
+      cutOverlay: document.getElementById("cutOverlay"),
+      handGesture: document.getElementById("handGesture"),
+      hitLeft: document.getElementById("hitLeft"),
+      hitRight: document.getElementById("hitRight"),
+      hitCut: document.getElementById("hitCut"),
+      flightLayer: document.getElementById("flightLayer"),
+      tryAgain: document.getElementById("tryAgain"),
+      nextButton: document.getElementById("nextButton"),
+      completeStage: document.getElementById("completeStage"),
+      finishButton: document.getElementById("finishButton")
+    };
 
-    if(currentInside){
-      if(!prevInside){
-        output.push(intersect(prev, current, prevSide, currentSide));
+    function show(el) { el.classList.remove("hidden"); }
+    function hide(el) { el.classList.add("hidden"); }
+
+    function clearTimers() {
+      state.timers.forEach(function (id) { clearTimeout(id); });
+      state.timers = [];
+      if (state.tutorialTimer) {
+        clearTimeout(state.tutorialTimer);
+        state.tutorialTimer = null;
       }
-      output.push(current);
-    } else if(prevInside){
-      output.push(intersect(prev, current, prevSide, currentSide));
     }
-  }
 
-  return output.filter(function(p, index, arr){
-    var prev = arr[(index + arr.length - 1) % arr.length];
-    return Math.abs(p.x - prev.x) > eps || Math.abs(p.y - prev.y) > eps;
-  });
-}
-
-function pieceGeometry(width, height, angle, index){
-  var orientation = cutOrientation(angle);
-  var rect = [
-    {x:0,y:0},
-    {x:width,y:0},
-    {x:width,y:height},
-    {x:0,y:height}
-  ];
-  var polygon = clipPolygon(rect, width, height, angle, lineSideForPiece(orientation, index));
-
-  if(polygon.length < 3){
-    polygon = rect;
-  }
-
-  var minX = Math.min.apply(null, polygon.map(function(p){ return p.x; }));
-  var minY = Math.min.apply(null, polygon.map(function(p){ return p.y; }));
-  var maxX = Math.max.apply(null, polygon.map(function(p){ return p.x; }));
-  var maxY = Math.max.apply(null, polygon.map(function(p){ return p.y; }));
-  var boxW = Math.max(1, maxX - minX);
-  var boxH = Math.max(1, maxY - minY);
-  var clip = polygon.map(function(p){
-    var x = ((p.x - minX) / boxW * 100).toFixed(3).replace(/\.?0+$/,"");
-    var y = ((p.y - minY) / boxH * 100).toFixed(3).replace(/\.?0+$/,"");
-    return x + "% " + y + "%";
-  }).join(",");
-  var clipInner = polygon.map(function(p){
-    var x = (p.x / width * 100).toFixed(3).replace(/\.?0+$/,"");
-    var y = (p.y / height * 100).toFixed(3).replace(/\.?0+$/,"");
-    return x + "% " + y + "%";
-  }).join(",");
-  var absPolygon = polygon.map(function(p){
-    return p.x + "," + p.y;
-  }).join(" ");
-
-  return {
-    minX:minX,
-    minY:minY,
-    width:boxW,
-    height:boxH,
-    clip:"polygon(" + clip + ")",
-    absPolygon:absPolygon,
-    clipInner:"polygon(" + clipInner + ")",
-    orientation:orientation
-  };
-}
-
-function cutPieceSize(width, height, angle, index){
-  var g = pieceGeometry(width, height, angle, index || 0);
-  return {width:g.width, height:g.height};
-}
-
-function cutPieceHome(width, height, angle, index, centerX, centerY){
-  var g = pieceGeometry(width, height, angle, index);
-  var left = centerX - width / 2 + g.minX;
-  var top = centerY - height / 2 + g.minY;
-  return {
-    left:left,
-    top:top,
-    centerX:left + g.width / 2,
-    centerY:top + g.height / 2,
-    width:g.width,
-    height:g.height
-  };
-}
-
-/* Maps slot index (0=left, 1=right) to the correct piece index for that round.
-   Circle: piece 0=top-half(dome) goes to right pod, piece 1=bottom-half(bowl) goes to left pod.
-   Square: piece 0=upper-right goes to right pod, piece 1=lower-left goes to left pod (45° cut).
-   Rectangle: piece index matches slot index directly. */
-function pieceIndexForSlot(r, slotIndex){
-  if(r.name === "circle"){
-    return slotIndex === 0 ? 1 : 0;
-  }
-  if(r.name === "square"){
-    return slotIndex === 0 ? 1 : 0;
-  }
-  return slotIndex;
-}
-
-function makeCutPiece(r, index, width, height, angle){
-  var g = pieceGeometry(width, height, angle, index);
-  var wrap = document.createElement("div");
-  wrap.className = "half-wrap";
-  wrap.style.width = g.width + "px";
-  wrap.style.height = g.height + "px";
-  /* Remove clipPath from wrap so drop-shadow works correctly on its children */
-
-  if (r.blockSrc) {
-    /* Bypass CSS clip-path Chromium bugs by rendering the clipped image as a true SVG */
-    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("width", width);
-    svg.setAttribute("height", height);
-    svg.style.position = "absolute";
-    svg.style.left = (-g.minX) + "px";
-    svg.style.top = (-g.minY) + "px";
-    svg.style.overflow = "visible";
-    svg.classList.add("half-inner");
-
-    var clipId = "clip-" + Math.random().toString(36).substr(2,9);
-    var defs = "<defs><clipPath id=\""+clipId+"\"><polygon points=\""+g.absPolygon+"\" /></clipPath>";
-    var gNode = "<g>";
-    
-    if (r.name === "circle") {
-      var circleClipId = "circleClip-" + Math.random().toString(36).substr(2,9);
-      defs += "<clipPath id=\""+circleClipId+"\"><circle cx=\""+(width/2)+"\" cy=\""+(height/2)+"\" r=\""+(width/2)+"\" /></clipPath>";
-      gNode = "<g clip-path=\"url(#"+circleClipId+")\">";
+    function stopIdleHint() {
+      if (state.idleHintTimer) { clearTimeout(state.idleHintTimer); state.idleHintTimer = null; }
+      els.btnCut.classList.remove("idle-hint");
     }
-    defs += "</defs>";
-    
-    var imgNode = "<image href=\""+r.blockSrc+"\" width=\""+width+"\" height=\""+height+"\" clip-path=\"url(#"+clipId+")\" preserveAspectRatio=\"none\" />";
-    svg.innerHTML = defs + gNode + imgNode + "</g>";
-    wrap.appendChild(svg);
-  } else {
-    /* Fallback for css-square which has no blockSrc */
-    var inner = makeBlock(r, width, height);
-    inner.classList.add("half-inner");
-    inner.style.filter = "none";
-    inner.style.borderRadius = "0";
-    inner.style.left = (-g.minX) + "px";
-    inner.style.top = (-g.minY) + "px";
-    inner.style.clipPath = g.clipInner;
-    wrap.appendChild(inner);
-  }
-  return wrap;
-}
 
-function makeHalf(r, index, width, height){
-  return makeCutPiece(r, index, width, height, canonicalCutAngle(r));
-}
-
-function renderWhole(glow){
-  var r = currentRound();
-  els.shapeStage.innerHTML = "";
-  var block = makeBlock(r, r.blockW, r.blockH);
-  if (glow) block.classList.add("static-glow");
-  els.shapeStage.appendChild(block);
-  show(els.shapeStage);
-}
-
-function renderHalves(target, size){
-  var r = currentRound();
-  var width = size && size.width ? size.width : r.blockW;
-  var height = size && size.height ? size.height : r.blockH;
-  var row = document.createElement("div");
-  row.className = "halves-row";
-  row.appendChild(makeHalf(r,0,width,height));
-  row.appendChild(makeHalf(r,1,width,height));
-  target.innerHTML = "";
-  target.appendChild(row);
-}
-
-function makeTeachingPieces(r, angle, width, height){
-  var orientation = cutOrientation(angle);
-  var box = document.createElement("div");
-  box.className = "teach-halves-box";
-  box.style.position = "relative";
-  box.style.marginBottom = "35px";
-  
-  var container = document.createElement("div");
-  container.style.position = "relative";
-  container.style.width = width + "px";
-  container.style.height = height + "px";
-
-  var h0 = makeCutPiece(r, 0, width, height, angle);
-  var h1 = makeCutPiece(r, 1, width, height, angle);
-  h0.classList.add("teach-shape-glow","teach-pop");
-  h1.classList.add("teach-shape-glow","teach-pop","teach-pop-d1");
-  
-  var g0 = pieceGeometry(width, height, angle, 0);
-  var g1 = pieceGeometry(width, height, angle, 1);
-  
-  h0.style.position = "absolute"; h0.style.left = g0.minX + "px"; h0.style.top = g0.minY + "px";
-  h1.style.position = "absolute"; h1.style.left = g1.minX + "px"; h1.style.top = g1.minY + "px";
-  
-  var gap = 18;
-  if(orientation === "slash"){
-    h0.style.transform = "translate(-"+gap+"px,-"+gap+"px)";
-    h1.style.transform = "translate("+gap+"px,"+gap+"px)";
-  } else if(orientation === "backslash"){
-    h0.style.transform = "translate("+gap+"px,-"+gap+"px)";
-    h1.style.transform = "translate(-"+gap+"px,"+gap+"px)";
-  } else if(orientation === "vertical"){
-    h0.style.transform = "translateX(-"+gap+"px)";
-    h1.style.transform = "translateX("+gap+"px)";
-  } else if(orientation === "horizontal"){
-    h0.style.transform = "translateY(-"+gap+"px)";
-    h1.style.transform = "translateY("+gap+"px)";
-  }
-  
-  container.appendChild(h0);
-  container.appendChild(h1);
-
-  var t0 = document.createElement("div");
-  var t1 = document.createElement("div");
-  var labelStyle = "position:absolute; color:#fff; font-size:20px; font-weight:900; text-shadow:0 2px 6px rgba(0,0,0,.3),0 0 5px rgba(77,202,255,.8); text-align:center; transform:translateX(-50%); width:80px;";
-  t0.style.cssText = labelStyle;
-  t1.style.cssText = labelStyle;
-  t0.textContent = "Half";
-  t1.textContent = "Half";
-  
-  t0.style.left = g0.centerX + "px";
-  t0.style.top = (g0.maxY + 8) + "px";
-  t1.style.left = g1.centerX + "px";
-  t1.style.top = (g1.maxY + 8) + "px";
-
-  if(orientation === "slash"){
-    t0.style.transform = "translate(calc(-50% - "+gap+"px), -"+gap+"px)";
-    t1.style.transform = "translate(calc(-50% + "+gap+"px), "+gap+"px)";
-  } else if(orientation === "backslash"){
-    t0.style.transform = "translate(calc(-50% + "+gap+"px), -"+gap+"px)";
-    t1.style.transform = "translate(calc(-50% - "+gap+"px), "+gap+"px)";
-  } else if(orientation === "vertical"){
-    t0.style.transform = "translate(calc(-50% - "+gap+"px), 0)";
-    t1.style.transform = "translate(calc(-50% + "+gap+"px), 0)";
-  } else if(orientation === "horizontal"){
-    t0.style.transform = "translate(-50%, -"+gap+"px)";
-    t1.style.transform = "translate(-50%, "+gap+"px)";
-  }
-
-  container.appendChild(t0);
-  container.appendChild(t1);
-  box.appendChild(container);
-  
-  return box;
-}
-
-function renderTeaching(kind, angle, equal){
-  var r = currentRound();
-  var cutAngle = angle === undefined ? canonicalCutAngle(r) : angle;
-  var w = r.name === "rectangle" ? 170 : r.name === "circle" ? 145 : 130;
-  var h = Math.round(w * r.blockH / r.blockW);
-  els.teachContent.innerHTML = "";
-
-  if(kind === "teach-one"){
-    setInstruction("When an object is divided into two equal parts.");
-    
-    var grid = document.createElement("div");
-    grid.style.display = "grid";
-    grid.style.gridTemplateColumns = "auto auto";
-    grid.style.gap = "40px 40px";
-    grid.style.alignItems = "center";
-    grid.style.justifyContent = "center";
-
-    var topBlkWrap = document.createElement("div");
-    topBlkWrap.style.display = "flex";
-    topBlkWrap.style.justifyContent = "center";
-    var blk = makeBlock(r, w, h);
-    blk.classList.add("teach-shape-glow");
-    topBlkWrap.appendChild(blk);
-
-    var topLblWrap = document.createElement("div");
-    topLblWrap.style.display = "flex";
-    topLblWrap.style.justifyContent = "flex-start";
-    var lbl = document.createElement("div");
-    lbl.className = "teach-big-label";
-    lbl.textContent = "1 Whole";
-    topLblWrap.appendChild(lbl);
-
-    grid.appendChild(topBlkWrap);
-    grid.appendChild(topLblWrap);
-    
-    els.teachContent.appendChild(grid);
-
-  } else {
-    setInstruction(equal === false ? "These parts are not equal halves." : "Each part is called a half.");
-    
-    var grid = document.createElement("div");
-    grid.style.display = "grid";
-    grid.style.gridTemplateColumns = "auto auto";
-    grid.style.gap = "40px 40px";
-    grid.style.alignItems = "center";
-    grid.style.justifyContent = "center";
-
-    var topBlkWrap = document.createElement("div");
-    topBlkWrap.style.display = "flex";
-    topBlkWrap.style.justifyContent = "center";
-    var topBlk = makeBlock(r, w, h);
-    /* Whole block glows first to highlight it, halves glow after a brief delay */
-    topBlk.classList.add("teach-shape-glow");
-    topBlkWrap.appendChild(topBlk);
-
-    var topLblWrap = document.createElement("div");
-    topLblWrap.style.display = "flex";
-    topLblWrap.style.justifyContent = "flex-start";
-    var topLbl = document.createElement("div");
-    topLbl.className = "teach-big-label";
-    topLbl.textContent = "1 Whole";
-    topLblWrap.appendChild(topLbl);
-
-    var halvesWrap = document.createElement("div");
-    halvesWrap.style.display = "flex";
-    halvesWrap.style.justifyContent = "center";
-    var halvesBox = makeTeachingPieces(r, cutAngle, w, h);
-    
-    /* Remove glow from halves initially; whole block glows first for 1.3 s,
-       then halves take over the glow. */
-    halvesBox.querySelectorAll(".teach-shape-glow").forEach(function(el){
-      el.classList.remove("teach-shape-glow");
-    });
-    setTimeout(function(){
-      topBlk.classList.remove("teach-shape-glow");
-      halvesBox.querySelectorAll(".half-wrap").forEach(function(el){
-        el.classList.add("teach-shape-glow");
-      });
-      /* For CSS-square whole blocks, also glow via the css-square rule */
-      var cssSquarePieces = halvesBox.querySelectorAll(".css-square.whole-block");
-      cssSquarePieces.forEach(function(el){ el.classList.add("teach-shape-glow"); });
-    }, 1300);
-    
-    halvesWrap.appendChild(halvesBox);
-
-    var botLblWrap = document.createElement("div");
-    botLblWrap.style.display = "flex";
-    botLblWrap.style.justifyContent = "flex-start";
-    var botLbl = document.createElement("div");
-    botLbl.className = "teach-equal-label";
-    botLbl.textContent = equal === false ? "2 Equal Parts" : "2 Equal Parts";
-    botLblWrap.appendChild(botLbl);
-
-    grid.appendChild(topBlkWrap);
-    grid.appendChild(topLblWrap);
-    grid.appendChild(halvesWrap);
-    grid.appendChild(botLblWrap);
-    
-    els.teachContent.appendChild(grid);
-  }
-  show(els.teachStage);
-}
-
-function renderStep(){
-  clearTimers();
-  resetScene();
-
-  var r = currentRound();
-  var step = FLOW[state.step];
-  var text = step.text ? step.text.replace("{shape}", r.name) : "";
-
-  if(step.scene === "intro"){
-    setInstruction(text);
-    setupBots("layout-intro");
-  }
-
-  if(step.scene === "ready"){
-    setInstruction(text);
-    setupBots("layout-ready");
-  }
-
-  if(step.scene === "whole" || step.scene === "needs" || step.scene === "halves"){
-    setInstruction(text);
-    setupBots("layout-ready");
-    renderWhole(step.scene === "whole");
-  }
-
-  if(step.scene === "play"){
-    if(state.round > 0){ nextStep(); return; }
-    setInstruction("");
-    setupBots("layout-clear");
-    show(els.playStage);
-  }
-
-  if(step.scene === "tutorial"){
-    if(state.round > 0){
-      nextStep();
-      return;
+    function startIdleHint() {
+      stopIdleHint();
+      if (state.tutActive) { return; }
+      state.idleHintTimer = setTimeout(function () {
+        if (!state.tutActive && !state.locked) {
+          els.btnCut.classList.add("idle-hint");
+        }
+      }, 3000);
     }
-    setupTutorial();
-    return;
-  }
 
-  if(step.scene === "preplay"){
-    setupPreplay(text);
-  }
-
-  if(step.scene === "laser"){
-    setupLaser();
-    return;
-  }
-
-  if(step.duration){
-    later(nextStep, step.duration);
-  }
-}
-
-function nextStep(){
-  state.step++;
-  if(state.step >= FLOW.length){
-    state.step = FLOW.length - 1;
-  }
-  renderStep();
-}
-
-/* ── Tutorial guided sequence (4 moves × 4 cuts demo) ── */
-var TUTORIAL_START_ANGLE = 180;
-/* Angles the laser moves to at each movement step (steps 0,2,4,6) */
-var TUTORIAL_STEP_ANGLES = [135, 90, 225, 270];
-var TUT = [
-  {bubble:"right", btn:"right"},   /* step 0: move right → 135° */
-  {bubble:"cut",   btn:"cut"},     /* step 1: cut at 135° */
-  {bubble:"right", btn:"right"},   /* step 2: move right → 90° */
-  {bubble:"cut",   btn:"cut"},     /* step 3: cut at 90° */
-  {bubble:"left",  btn:"left"},    /* step 4: move left → 225° */
-  {bubble:"cut",   btn:"cut"},     /* step 5: cut at 225° */
-  {bubble:"left",  btn:"left"},    /* step 6: move left → 270° */
-  {bubble:"cut",   btn:"cut"}      /* step 7: cut at 270° — last, advance to play */
-];
-
-function setupTutorial(){
-  var r = currentRound();
-  state.tutActive = true;
-  state.tutStep = -1;
-  state.locked = false;
-  state.angle = TUTORIAL_START_ANGLE;
-  setupBots("layout-laser");
-  setInstruction("");
-  /* LaserMachine.png as tutorial overlay; LaserMachineWithoutLines stays as base */
-  els.tutorialOverlay.classList.add("show");
-  els.machineBlock.innerHTML = "";
-  els.machineBlock.appendChild(makeBlock(r, r.blockW, r.blockH));
-  els.blockCover.style.width = (r.blockW + 22) + "px";
-  els.blockCover.style.height = (r.blockH + 22) + "px";
-  els.blockCover.style.borderRadius = (r.name === "circle" ? "50%" : "18px");
-  els.blockCover.style.opacity = "1";
-  els.cutLine.style.width = r.blockW + "px";
-  els.cutLine.style.height = r.blockH + "px";
-  els.cutLine.style.borderRadius = (r.name === "circle" ? "50%" : "0");
-  els.cutLine.classList.remove("show");
-  els.wrongSlash.style.width = els.blockCover.style.width;
-  els.wrongSlash.style.height = els.blockCover.style.height;
-  els.wrongSlash.style.borderRadius = els.blockCover.style.borderRadius;
-  state.orbitActive = true;
-  snapLaser(TUTORIAL_START_ANGLE);
-  showLaserHead();
-  /* Hide all bubbles; tutSetStep reveals the right one */
-  [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){
-    el.classList.add("fade");
-  });
-  if(els.handGesture) els.handGesture.className = "hand-gesture hidden";
-  els.cutOverlay.classList.remove("show");
-  els.hitLeft.disabled = true;
-  els.hitRight.disabled = true;
-  els.hitCut.disabled = true;
-  show(els.machineStage);
-  later(function(){
-    if(state.tutActive && state.tutStep === -1){
-      tutSetStep(0);
+    function later(fn, delay) {
+      var id = setTimeout(fn, delay);
+      state.timers.push(id);
     }
-  }, 900);
-}
 
-function tutSetStep(n){
-  state.tutStep = n;
-  var t = TUT[n];
-  setInstruction("");
-  els.bots.className = "layout-clear";
-  els.bubbleLeft.classList.add("fade");
-  els.bubbleRight.classList.add("fade");
-  els.bubbleCut.classList.add("fade");
-  if(els.handGesture) els.handGesture.className = "hand-gesture hidden";
-  
-  els.btnLeft.classList.remove("tut-highlight");
-  els.btnRight.classList.remove("tut-highlight");
-  els.btnCut.classList.remove("tut-highlight");
-  
-  if(t.bubble === "left") {
-    els.bubbleLeft.classList.remove("fade");
-    if(els.handGesture) els.handGesture.className = "hand-gesture point-left show";
-    els.btnLeft.classList.add("tut-highlight");
-  }
-  if(t.bubble === "right") {
-    els.bubbleRight.classList.remove("fade");
-    if(els.handGesture) els.handGesture.className = "hand-gesture point-right show";
-    els.btnRight.classList.add("tut-highlight");
-  }
-  if(t.bubble === "cut"){
-    els.bubbleCut.classList.remove("fade");
-    /* TappedCutButton.png highlights the cut button as a prompt */
-    els.cutOverlay.classList.add("show");
-    if(els.handGesture) els.handGesture.className = "hand-gesture point-cut show";
-    els.btnCut.classList.add("tut-highlight");
-  } else {
-    els.cutOverlay.classList.remove("show");
-  }
-  els.hitLeft.disabled  = (t.btn !== "left");
-  els.hitRight.disabled = (t.btn !== "right");
-  els.hitCut.disabled   = (t.btn !== "cut");
-}
-
-function tutHandleRight(){
-  var step = state.tutStep;
-  if(!state.tutActive || state.locked){ return; }
-  if(step < 0 || step >= TUT.length || TUT[step].btn !== "right"){ return; }
-  pressButton(els.hitRight);
-  sndRotate();
-  [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){ el.classList.add("fade"); });
-  if(els.handGesture) els.handGesture.className = "hand-gesture hidden";
-  state.angle = normalizedAngle(state.angle - 45);
-  updateLaser(); /* smooth orbital rotation — NO beam */
-  els.hitLeft.disabled = true;
-  els.hitRight.disabled = true;
-  els.hitCut.disabled = true;
-  later(function(){ tutSetStep(step + 1); }, 520);
-}
-
-function tutHandleLeft(){
-  var step = state.tutStep;
-  if(!state.tutActive || state.locked){ return; }
-  if(step < 0 || step >= TUT.length || TUT[step].btn !== "left"){ return; }
-  pressButton(els.hitLeft);
-  sndRotate();
-  [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){ el.classList.add("fade"); });
-  if(els.handGesture) els.handGesture.className = "hand-gesture hidden";
-  state.angle = normalizedAngle(state.angle + 45);
-  updateLaser(); /* smooth orbital rotation — NO beam */
-  els.hitLeft.disabled = true;
-  els.hitRight.disabled = true;
-  els.hitCut.disabled = true;
-  later(function(){ tutSetStep(step + 1); }, 520);
-}
-
-function tutHandleCut(){
-  var step = state.tutStep;
-  if(!state.tutActive || state.locked){ return; }
-  if(step < 0 || step >= TUT.length || TUT[step].btn !== "cut"){ return; }
-  state.locked = true;
-  pressButton(els.hitCut);
-  sndCut();
-  [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){ el.classList.add("fade"); });
-  if(els.handGesture) els.handGesture.className = "hand-gesture hidden";
-  els.cutOverlay.classList.remove("show");
-  els.hitLeft.disabled = true;
-  els.hitRight.disabled = true;
-  els.hitCut.disabled = true;
-  showBeam(state.angle); /* Beam.svg fires on CUT */
-  later(function(){
-    hideBeam();
-    splitMachineBlock(state.angle);
-  }, 950);
-  later(function(){
-    if(step < TUT.length - 1){
-      resetTutorialCut();
-      state.locked = false;
-      tutSetStep(step + 1);
-    } else {
-      state.tutActive = false;
-      nextStep();
+    function currentRound() {
+      return ROUNDS[state.round];
     }
-  }, 1900);
-}
 
-function resetTutorialCut(){
-  var r = currentRound();
-  hideBeam();
-  els.cutLine.classList.remove("show");
-  els.machineBlock.innerHTML = "";
-  els.machineBlock.appendChild(makeBlock(r, r.blockW, r.blockH));
-  showLaserHead();
-}
-
-function setupPreplay(text){
-  var r = currentRound();
-  setInstruction(text);
-  setupBots("layout-laser");
-  state.angle = r.startAngle;
-  state.locked = true;
-  els.tutorialOverlay.classList.remove("show");
-  els.machineBlock.innerHTML = "";
-  els.machineBlock.appendChild(makeBlock(r, r.blockW, r.blockH));
-  els.blockCover.style.width = (r.blockW + 22) + "px";
-  els.blockCover.style.height = (r.blockH + 22) + "px";
-  els.blockCover.style.borderRadius = (r.name === "circle" ? "50%" : "18px");
-  els.blockCover.style.opacity = "1";
-  els.cutLine.style.width = r.blockW + "px";
-  els.cutLine.style.height = r.blockH + "px";
-  els.cutLine.style.borderRadius = (r.name === "circle" ? "50%" : "0");
-  els.cutLine.classList.remove("show");
-  els.wrongSlash.style.width = els.blockCover.style.width;
-  els.wrongSlash.style.height = els.blockCover.style.height;
-  els.wrongSlash.style.borderRadius = els.blockCover.style.borderRadius;
-  state.orbitActive = true;
-  snapLaser(r.startAngle);
-  showLaserHead();
-  [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){
-    el.classList.add("fade");
-  });
-  els.hitLeft.disabled = true;
-  els.hitRight.disabled = true;
-  els.hitCut.disabled = true;
-  show(els.machineStage);
-}
-
-function setupLaser(){
-  var r = currentRound();
-  setInstruction("");
-  setupBots("layout-laser");
-  state.angle = r.startAngle;
-  state.locked = false;
-  state.wrongAttempts = 0;
-  /* Gameplay: no tutorial overlay */
-  els.tutorialOverlay.classList.remove("show");
-  els.machineBlock.innerHTML = "";
-  els.machineBlock.appendChild(makeBlock(r,r.blockW,r.blockH));
-  els.blockCover.style.width = (r.blockW + 22) + "px";
-  els.blockCover.style.height = (r.blockH + 22) + "px";
-  els.blockCover.style.borderRadius = (r.name === "circle" ? "50%" : "18px");
-  els.blockCover.style.opacity = "1";
-  els.cutLine.style.width = r.blockW + "px";
-  els.cutLine.style.height = r.blockH + "px";
-  els.cutLine.style.borderRadius = (r.name === "circle" ? "50%" : "0");
-  els.cutLine.classList.remove("show");
-  els.wrongSlash.style.width = els.blockCover.style.width;
-  els.wrongSlash.style.height = els.blockCover.style.height;
-  els.wrongSlash.style.borderRadius = els.blockCover.style.borderRadius;
-  state.orbitActive = true;
-  snapLaser(r.startAngle);
-  showLaserHead();
-  /* Gameplay starts clean; tutorial prompts are only shown in the guided flow. */
-  [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){
-    el.classList.add("fade");
-  });
-  show(els.machineStage);
-  startIdleHint();
-}
-
-/* ── Orbital laser system — all geometry is anchored to the ring and nozzle. ── */
-var MACHINE_NATIVE_SIZE   = 1454;
-var RING_INNER_R_NATIVE   = 648;
-
-var LASER_SRC_W           = 258;
-var LASER_SRC_H           = 172;
-var LASER_W               = 96;
-var LASER_H               = 64;
-/* Source-pixel anchors in Laser.png: rear body pivot and glowing emission point. */
-var LASER_BODY_SRC_X      = 42;
-var LASER_BODY_SRC_Y      = 86;
-var LASER_NOZZLE_SRC_X    = 238;
-var LASER_NOZZLE_SRC_Y    = 86;
-
-var BEAM_NATIVE_SIZE      = 683;
-var BEAM_START_NATIVE     = 98.8398;
-var BEAM_END_NATIVE       = 583.34;
-var BEAM_START_PCT        = BEAM_START_NATIVE / BEAM_NATIVE_SIZE;
-var BEAM_LINE_PCT         = (BEAM_END_NATIVE - BEAM_START_NATIVE) / BEAM_NATIVE_SIZE;
-
-function ringGeometry(){
-  var w = els.machineStage.clientWidth || 900;
-  var styles = getComputedStyle(els.machineStage);
-  var ringSize = parseFloat(styles.getPropertyValue("--ring-size")) || 500;
-  var centerY = parseFloat(styles.getPropertyValue("--ring-center-y")) || ringSize / 2;
-  var ringScale = ringSize / MACHINE_NATIVE_SIZE;
-  return {
-    centerX:w / 2,
-    centerY:centerY,
-    radius:RING_INNER_R_NATIVE * ringScale
-  };
-}
-
-function laserAnchors(deg){
-  var g = ringGeometry();
-  var orbitRad = deg * Math.PI / 180;
-  var beamRad = orbitRad + Math.PI;
-  var laserScale = LASER_W / LASER_SRC_W;
-  var bodyLocalX = LASER_BODY_SRC_X * laserScale;
-  var bodyLocalY = LASER_BODY_SRC_Y * laserScale;
-  var nozzleLocalX = LASER_NOZZLE_SRC_X * laserScale;
-  var nozzleLocalY = LASER_NOZZLE_SRC_Y * laserScale;
-  var bodyOffset = nozzleLocalX - bodyLocalX;
-
-  var orbitX = g.centerX + g.radius * Math.cos(orbitRad);
-  var orbitY = g.centerY + g.radius * Math.sin(orbitRad);
-  var laserX = orbitX - Math.cos(beamRad) * bodyOffset;
-  var laserY = orbitY - Math.sin(beamRad) * bodyOffset;
-
-  return {
-    nozzleX:orbitX,
-    nozzleY:orbitY,
-    bodyX:laserX,
-    bodyY:laserY,
-    bodyLocalX:bodyLocalX,
-    bodyLocalY:bodyLocalY,
-    nozzleLocalX:nozzleLocalX,
-    nozzleLocalY:nozzleLocalY,
-    rotationDeg:deg + 180,
-    radius:g.radius
-  };
-}
-
-function positionLaser(deg){
-  var p = laserAnchors(deg);
-  els.laserImg.style.left = (p.bodyX - p.bodyLocalX) + "px";
-  els.laserImg.style.top = (p.bodyY - p.bodyLocalY) + "px";
-  els.laserImg.style.transformOrigin = p.bodyLocalX + "px " + p.bodyLocalY + "px";
-  els.laserImg.style.transform = "rotate(" + p.rotationDeg + "deg)";
-}
-
-function positionBeam(deg){
-  var p = laserAnchors(deg);
-  var beamSize = (Math.SQRT2 * p.radius) / BEAM_LINE_PCT;
-  var startPx = BEAM_START_PCT * beamSize;
-  els.beamImg.style.width = beamSize + "px";
-  els.beamImg.style.height = beamSize + "px";
-  els.beamImg.style.left = (p.nozzleX - startPx) + "px";
-  els.beamImg.style.top = (p.nozzleY - startPx) + "px";
-  els.beamImg.style.transformOrigin = startPx + "px " + startPx + "px";
-  /* Beam.svg points 45° by default; deg + 135° aims it from nozzle to center. */
-  els.beamImg.style.transform = "rotate(" + (deg + 135) + "deg)";
-  els.wrongSlash.style.setProperty("--cut-angle", deg + "deg");
-  els.cutLine.style.setProperty("--cut-angle", deg + "deg");
-}
-
-function showBeam(deg){
-  positionBeam(deg);
-  els.beamImg.style.display = "block";
-  els.beamImg.style.opacity = "1";
-}
-
-function showCutLine(deg){
-  els.cutLine.style.setProperty("--cut-angle", deg + "deg");
-  els.cutLine.classList.add("show");
-}
-
-function hideBeam(){
-  els.beamImg.style.opacity = "0";
-  setTimeout(function(){
-    if(els.beamImg.style.opacity === "0"){ els.beamImg.style.display = "none"; }
-  }, 220);
-}
-
-function _animateOrbit(){
-  if(!state.orbitActive){ return; }
-  var diff = state.orbitTarget - state.orbitCurrent;
-  /* shortest-arc wraparound */
-  if(diff >  180){ diff -= 360; }
-  if(diff < -180){ diff += 360; }
-  state.orbitCurrent += diff * 0.18;
-  positionLaser(state.orbitCurrent);
-  if(Math.abs(diff) > 0.3){
-    state.orbitRaf = requestAnimationFrame(_animateOrbit);
-  } else {
-    state.orbitCurrent = state.orbitTarget;
-    positionLaser(state.orbitCurrent);
-    state.orbitRaf = null;
-  }
-}
-
-function snapLaser(deg){
-  if(state.orbitRaf){ cancelAnimationFrame(state.orbitRaf); state.orbitRaf = null; }
-  state.orbitCurrent = deg;
-  state.orbitTarget  = deg;
-  positionLaser(deg);
-}
-
-function updateLaser(){
-  state.orbitTarget = state.angle;
-  if(!state.orbitActive){ return; }
-  if(state.orbitRaf){ cancelAnimationFrame(state.orbitRaf); state.orbitRaf = null; }
-  state.orbitRaf = requestAnimationFrame(_animateOrbit);
-}
-
-function showLaserHead(){
-  els.laserImg.style.display = "block";
-  /* beam stays hidden until CUT */
-  els.beamImg.style.display  = "none";
-  els.cutLine.classList.remove("show");
-}
-
-function pressButton(button){
-  button.classList.remove("pressed");
-  void button.offsetWidth;
-  button.classList.add("pressed");
-
-  if(button === els.hitLeft){
-    els.btnLeft.src = ASSETS + "LeftButtonClicked.png";
-    setTimeout(function(){ els.btnLeft.src = ASSETS + "LeftButton.png"; }, 220);
-  } else if(button === els.hitRight){
-    els.btnRight.src = ASSETS + "RightButtonClicked.png";
-    setTimeout(function(){ els.btnRight.src = ASSETS + "RightButton.png"; }, 220);
-  } else if(button === els.hitCut){
-    els.btnCut.src = ASSETS + "ClickedCutButton.png";
-    setTimeout(function(){ els.btnCut.src = ASSETS + "CutButton.png"; }, 320);
-  }
-}
-
-function rotateLaser(delta, button){
-  if(state.locked){ return; }
-  stopIdleHint();
-  pressButton(button);
-  sndRotate();
-  [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){ el.classList.add("fade"); });
-  state.angle = (state.angle + delta + 360) % 360;
-  updateLaser();
-  startIdleHint();
-}
-
-function angleDiff(a,b){
-  var diff = Math.abs(a-b) % 360;
-  return diff > 180 ? 360 - diff : diff;
-}
-
-function wrongPieceClip(angle, index){
-  var normalized = ((angle % 360) + 360) % 360;
-  var diagonalDown = (normalized > 90 && normalized < 270);
-  if(diagonalDown){
-    return index === 0 ? "polygon(0 0,100% 0,100% 100%)" : "polygon(0 0,0 100%,100% 100%)";
-  }
-  return index === 0 ? "polygon(0 0,100% 0,0 100%)" : "polygon(100% 0,100% 100%,0 100%)";
-}
-
-function machineCenterInGame(){
-  var styles = getComputedStyle(els.machineStage);
-  var top = parseFloat(styles.top) || 425;
-  var height = els.machineStage.clientHeight || 600;
-  var centerY = parseFloat(styles.getPropertyValue("--ring-center-y")) || 250;
-  return {
-    x:640,
-    y:top - height / 2 + centerY
-  };
-}
-
-function slotTargetsFromFills(){
-  var leftW = parseFloat(els.leftFill.style.width || "0");
-  var leftH = parseFloat(els.leftFill.style.height || "0");
-  var rightW = parseFloat(els.rightFill.style.width || "0");
-  var rightH = parseFloat(els.rightFill.style.height || "0");
-  var leftY = parseFloat(els.leftFill.style.top || "0") + leftH / 2;
-  var rightY = parseFloat(els.rightFill.style.top || "0") + rightH / 2;
-  return [
-    {x:150,y:leftY,width:leftW,height:leftH},
-    {x:1130,y:rightY,width:rightW,height:rightH}
-  ];
-}
-
-function cutBlock(){
-  if(state.locked){ return; }
-  stopIdleHint();
-  var r = currentRound();
-  state.locked = true;
-  state.lastCutAngle = state.angle;
-  pressButton(els.hitCut);
-  sndCut();
-  [els.bubbleLeft,els.bubbleRight,els.bubbleCut].forEach(function(el){ el.classList.add("fade"); });
-  showBeam(state.angle); /* Beam.svg fires on CUT — was hidden during alignment */
-
-  later(function(){
-    hideBeam();
-    var correct = angleDiff(state.angle,r.targetAngle) <= 8 ||
-                  (r.targetAngle2 !== undefined && angleDiff(state.angle,r.targetAngle2) <= 8);
-    if(correct){
-      state.lastCutAngle = state.angle;
-      showSuccess();
-    } else {
-      showFail();
+    function setInstruction(text) {
+      if (!text) {
+        hide(els.instruction);
+        els.instructionText.textContent = "";
+        return;
+      }
+      els.instructionText.textContent = text;
+      show(els.instruction);
     }
-  },650);
-}
 
-function slotScaleForPiece(target, piece){
-  return Math.min(
-    (target.width || piece.width) / piece.width,
-    (target.height || piece.height) / piece.height
-  );
-}
-
-function fillSlotWithPiece(fill, r, index, angle){
-  var w = parseFloat(fill.style.width || "0");
-  var h = parseFloat(fill.style.height || "0");
-  var piece = makeCutPiece(r, index, r.blockW, r.blockH, angle);
-  var home = cutPieceHome(r.blockW, r.blockH, angle, index, 0, 0);
-  var scale = slotScaleForPiece({width:w,height:h}, home);
-  fill.innerHTML = "";
-  var dyOffset = r.name === "rectangle" ? "-8px" : "0px";
-  piece.style.transform = "translateY(" + dyOffset + ") scale(" + scale + ")";
-  piece.style.transformOrigin = "center center";
-  piece.style.filter = "none";
-  fill.appendChild(piece);
-  fill.classList.add("filled");
-}
-
-/* ── fly the two half-pieces from machine center to bot charging slots ── */
-function flyHalvesToSlots(r, angle, onDone){
-  var layer = els.flightLayer;
-  layer.innerHTML = "";
-
-  var center = machineCenterInGame();
-  var targets = slotTargetsFromFills();
-
-  [0,1].forEach(function(slotIdx){
-    var pieceIdx = pieceIndexForSlot(r, slotIdx);
-    var home = cutPieceHome(r.blockW, r.blockH, angle, pieceIdx, center.x, center.y);
-    var fly = makeCutPiece(r, pieceIdx, r.blockW, r.blockH, angle);
-    fly.classList.add("flying-half");
-    fly.style.left = home.left + "px";
-    fly.style.top = home.top + "px";
-    fly.style.width = home.width + "px";
-    fly.style.height = home.height + "px";
-    fly.style.transformOrigin = "center center";
-    fly.style.transition = "transform .9s cubic-bezier(.18,.89,.32,1.08),opacity .9s ease";
-
-    layer.appendChild(fly);
-
-    var scale = slotScaleForPiece(targets[slotIdx], home);
-    var dx = targets[slotIdx].x - home.centerX;
-    var dyOffset = r.name === "rectangle" ? 8 : 0;
-    var dy = targets[slotIdx].y - home.centerY - dyOffset;
-    requestAnimationFrame(function(){ requestAnimationFrame(function(){
-      fly.style.transform = "translate("+dx+"px,"+dy+"px) scale("+scale+")";
-    });});
-  });
-
-  setTimeout(onDone, 1050);
-}
-
-function showSuccess(){
-  var r = currentRound();
-  var cutAngle = state.lastCutAngle;
-  sndSuccess();
-  splitMachineBlock(cutAngle);
-  setInstruction("");
-
-  /* 1 – teach-one: 1 Whole */
-  later(function(){
-    hide(els.machineStage);
-    setupBots("layout-clear");
-    renderTeaching("teach-one", cutAngle, true);
-  }, 1000);
-
-  /* 2 – teach-two: halves — show the exact cut the child made */
-  later(function(){
-    renderTeaching("teach-two", cutAngle, true);
-  }, 3800);
-
-  /* 3 – fly halves to bots */
-  later(function(){
-    hide(els.teachStage);
-    setupBots("layout-laser");
-    setInstruction("");
-    flyHalvesToSlots(r, cutAngle, function(){
+    function resetScene() {
+      hide(els.shapeStage);
+      hide(els.teachStage);
+      hide(els.playStage);
+      hide(els.machineStage);
+      hide(els.tryAgain);
+      hide(els.nextButton);
+      hide(els.completeStage);
+      els.shapeStage.innerHTML = "";
+      els.teachContent.innerHTML = "";
+      els.machineBlock.classList.remove("vibrate");
+      els.machineBlock.innerHTML = "";
       els.flightLayer.innerHTML = "";
-      fillSlotWithPiece(els.leftFill, r, pieceIndexForSlot(r,0), cutAngle);
-      fillSlotWithPiece(els.rightFill, r, pieceIndexForSlot(r,1), cutAngle);
-      els.leftBot.src = r.happyBot;
-      els.rightBot.src = r.happyBot;
-      var hw = r.botWIntro + "px";
-      els.leftBot.style.width = hw;
-      els.rightBot.style.width = hw;
-      els.leftBot.classList.add("happy","jump");
-      els.rightBot.classList.add("happy","jump");
-      els.leftPod.classList.add("glow");
-      els.rightPod.classList.add("glow");
+      clearTargetFills();
+      els.cutLine.classList.remove("show");
+      els.wrongSlash.classList.remove("show");
+      if (state.orbitRaf) { cancelAnimationFrame(state.orbitRaf); state.orbitRaf = null; }
+      state.orbitActive = false;
+      els.laserImg.style.display = "none";
+      els.beamImg.style.display = "none";
+      els.tutorialOverlay.classList.remove("show");
+      els.laserBurst.classList.remove("show");
+      [els.bubbleLeft, els.bubbleRight, els.bubbleCut].forEach(function (el) {
+        el.classList.remove("fade");
+      });
+      els.cutOverlay.classList.remove("show");
+      els.cutOverlay.classList.remove("flash");
+      els.btnLeft.src = ASSETS + "LeftButton.png";
+      els.btnRight.src = ASSETS + "RightButton.png";
+      els.btnCut.src = ASSETS + "CutButton.png";
+      els.btnLeft.classList.remove("tut-highlight");
+      els.btnRight.classList.remove("tut-highlight");
+      els.btnCut.classList.remove("tut-highlight");
+      els.btnCut.classList.remove("idle-hint");
+      stopIdleHint();
+      els.hitLeft.disabled = false;
+      els.hitRight.disabled = false;
+      els.hitCut.disabled = false;
+      state.locked = false;
+      state.tutActive = false;
+      state.tutStep = 0;
+    }
 
-      /* Move pods and target-fills up to match the larger bots' new head height */
-      var newBotTop = 720 - r.botWIntro * (r.botAspect || 1.2);
+    function setupBots(layout) {
+      var r = currentRound();
+      els.bots.className = layout;
+      els.leftBot.src = r.sadBot;
+      els.rightBot.src = r.sadBot;
+      els.leftPod.src = r.podLeft || r.pod;
+      els.rightPod.src = r.podRight || r.pod;
+      els.leftBot.style.width = (layout === "layout-intro" ? r.botWIntro : r.botWReady) + "px";
+      els.rightBot.style.width = (layout === "layout-intro" ? r.botWIntro : r.botWReady) + "px";
+      var podTopLeft = podTopForRound(r, layout, "left");
+      var podTopRight = podTopForRound(r, layout, "right");
       var podW = r.podW || 132;
-      var aspectL = r.podAspectLeft || 2.3;
-      var aspectR = r.podAspectRight || r.podAspectLeft || 2.3;
-      var newTopL = newBotTop - podW * aspectL + (r.chargerOverlap || 14);
-      var newTopR = newBotTop - podW * aspectR + (r.chargerOverlap || 14);
-      
-      els.leftPod.classList.add("jump");
-      els.rightPod.classList.add("jump");
-      els.leftFill.classList.add("jump");
-      els.rightFill.classList.add("jump");
-      
-      els.leftPod.style.transition = "top 0.4s ease";
-      els.rightPod.style.transition = "top 0.4s ease";
-      els.leftFill.style.transition = "top 0.4s ease";
-      els.rightFill.style.transition = "top 0.4s ease";
-
-      var slotOffset = r.name === "circle" ? 8 : 25;
-      els.leftPod.style.top = newTopL + "px";
-      els.rightPod.style.top = newTopR + "px";
-      els.leftFill.style.top = (newTopL + slotOffset) + "px";
-      els.rightFill.style.top = (newTopR + slotOffset) + "px";
-      
-      function addPulse(slotEl){
-        var pulse = document.createElement("div");
-        pulse.className = "electric-pulse";
-        slotEl.appendChild(pulse);
-        setTimeout(function(){ if(pulse.parentNode) pulse.parentNode.removeChild(pulse); }, 1200);
+      els.leftPod.style.top = podTopLeft + "px";
+      els.rightPod.style.top = podTopRight + "px";
+      els.leftPod.style.width = podW + "px";
+      els.rightPod.style.width = podW + "px";
+      els.leftBot.className = "bot-img";
+      els.rightBot.className = "bot-img";
+      els.leftPod.className = "pod-img";
+      els.rightPod.className = "pod-img";
+      clearTargetFills();
+      setupTargetSlots(r, layout);
+      if (layout === "layout-ready") {
+        els.leftPod.classList.add("visible");
+        els.rightPod.classList.add("visible");
       }
-      addPulse(document.querySelector(".left-bot"));
-      addPulse(document.querySelector(".right-bot"));
+      if (layout === "layout-laser") {
+        els.leftPod.classList.add("visible");
+        els.rightPod.classList.add("visible");
+      }
+    }
 
-      var tgts = slotTargetsFromFills();
-      burstCelebration(tgts[0].x, tgts[0].y);
-      burstCelebration(tgts[1].x, tgts[1].y);
-    });
-  }, 7000);
+    function clearTargetFills() {
+      [els.leftFill, els.rightFill].forEach(function (fill) {
+        if (!fill) { return; }
+        fill.innerHTML = "";
+        fill.className = "target-fill";
+        fill.style.clipPath = "";
+        fill.style.borderRadius = "";
+      });
+    }
 
-  /* Show Next button — child taps to advance manually */
-  later(function(){
-    setInstruction("");
-    show(els.nextButton);
-  }, 8500);
-}
+    function podTopForRound(r, layout, side) {
+      if (layout !== "layout-laser" && layout !== "layout-ready") {
+        return 0;
+      }
+      var botW = r.botWReady;
+      var botTop = 720 - botW * (r.botAspect || 1.2);
+      var podW = r.podW || 132;
+      var podAspect = side === "right" ? (r.podAspectRight || r.podAspectLeft || 2.3) : (r.podAspectLeft || 2.3);
+      return botTop - podW * podAspect + (r.chargerOverlap || 14);
+    }
 
-function splitMachineBlock(angle){
-  var r = currentRound();
-  var cutAngle = angle === undefined ? canonicalCutAngle(r) : angle;
-  var orientation = cutOrientation(cutAngle);
-  var trans = "transform 0.45s cubic-bezier(.34,1.3,.64,1)";
-  var h0 = makeCutPiece(r,0,r.blockW,r.blockH,cutAngle);
-  var h1 = makeCutPiece(r,1,r.blockW,r.blockH,cutAngle);
-  /* Remove the half-wrap drop-shadow in the machine — it looks odd for circles/triangles */
-  h0.style.filter = "none";
-  h1.style.filter = "none";
-  els.machineBlock.innerHTML = "";
+    function setupTargetSlots(r, layout) {
+      var podTopLeft = podTopForRound(r, layout, "left");
+      var podTopRight = podTopForRound(r, layout, "right");
+      var isCircle = r.name === "circle";
+      var isTriangle = r.name === "square";
+      /* Slot dimensions calibrated to the visual hollow in each pod image.
+         Circle pod (160px wide): inner hollow ≈92% of width = 148px; semicircle height = 74px.
+         Triangle pod (142px wide): hollow bounding box ≈91% = 130px × 130px.
+         Rectangle pod (132px wide): square hollow ≈88% = 116px × 116px. */
+      var width = isCircle ? 148 : 116;
+      var height = isCircle ? 74 : 116;
+      /* slotOffset: pixels from the pod image top to the top edge of the fill div.
+         Reverted to exact calibration to perfectly fit the hollows. */
+      var slotOffset = isCircle ? 8 : 25;
+      var hShiftL = isTriangle ? -8 : 0;
+      var hShiftR = isTriangle ? 8 : 0;
+      els.leftPod.style.marginLeft = hShiftL + "px";
+      els.rightPod.style.marginLeft = hShiftR + "px";
 
-  if(orientation === "slash" || orientation === "backslash"){
-    var g0 = pieceGeometry(r.blockW, r.blockH, cutAngle, 0);
-    var g1 = pieceGeometry(r.blockW, r.blockH, cutAngle, 1);
-    var container = document.createElement("div");
-    container.style.cssText = "position:relative;width:"+r.blockW+"px;height:"+r.blockH+"px;";
-    h0.style.position = "absolute"; h0.style.left = g0.minX + "px"; h0.style.top = g0.minY + "px";
-    h1.style.position = "absolute"; h1.style.left = g1.minX + "px"; h1.style.top = g1.minY + "px";
-    container.appendChild(h0);
-    container.appendChild(h1);
-    els.machineBlock.appendChild(container);
-    requestAnimationFrame(function(){ requestAnimationFrame(function(){
-      h0.style.transition = trans;
-      h1.style.transition = trans;
-      if(orientation === "slash"){
-        h0.style.transform = "translate(-12px,-12px)";
-        h1.style.transform = "translate(12px,12px)";
+      [
+        { fill: els.leftFill, top: podTopLeft + slotOffset },
+        { fill: els.rightFill, top: podTopRight + slotOffset }
+      ].forEach(function (item, idx) {
+        var fill = item.fill;
+        fill.style.top = item.top + "px";
+        fill.style.width = width + "px";
+        fill.style.height = height + "px";
+
+        /* Adjust for visual mass alignment of the square's diagonal cut */
+        if (isTriangle) {
+          if (idx === 0) {
+            fill.style.marginLeft = (hShiftL - 27) + "px";
+            fill.style.marginTop = "0px";
+          } else {
+            fill.style.marginLeft = (hShiftR + 27) + "px";
+            fill.style.marginTop = "0px";
+          }
+        } else {
+          fill.style.marginLeft = "0px";
+          fill.style.marginTop = "0px";
+        }
+
+        /* No clip-path or border-radius on the fill container — the piece inside has its own
+           clip-path from pieceGeometry, and circle images use natural transparency for the arc shape. */
+        fill.style.borderRadius = "";
+        fill.style.clipPath = "";
+      });
+    }
+
+    function makeBlock(r, width, height) {
+      if (r.blockSrc) {
+        var img = document.createElement("img");
+        img.src = r.blockSrc;
+        img.className = "whole-block";
+        img.style.width = width + "px";
+        img.style.height = height + "px";
+        if (r.name === "circle") {
+          img.style.borderRadius = "50%";
+        }
+        return img;
+      }
+      var square = document.createElement("div");
+      square.className = "whole-block css-square";
+      square.style.width = width + "px";
+      square.style.height = height + "px";
+      return square;
+    }
+
+    function normalizedAngle(angle) {
+      return ((angle % 360) + 360) % 360;
+    }
+
+    function lineAngleDegrees(angle) {
+      var snap = Math.round((normalizedAngle(angle) % 180) / 45) * 45;
+      return snap === 180 ? 0 : snap;
+    }
+
+    function canonicalCutAngle(r) {
+      if (r.cut === "horizontal") { return 0; }
+      if (r.cut === "diagonal") { return 45; }
+      return 90;
+    }
+
+    function cutOrientation(angle) {
+      var snap = lineAngleDegrees(angle);
+      if (snap === 0) { return "horizontal"; }
+      if (snap === 90) { return "vertical"; }
+      if (snap === 45) { return "backslash"; }
+      return "slash";
+    }
+
+    function lineSideForPiece(orientation, index) {
+      if (orientation === "horizontal") {
+        return index === 0 ? 1 : -1;
+      }
+      if (orientation === "backslash") {
+        return index === 0 ? 1 : -1;
+      }
+      return index === 0 ? -1 : 1;
+    }
+
+    function clipPolygon(points, width, height, angle, keepSign) {
+      var rad = lineAngleDegrees(angle) * Math.PI / 180;
+      var dx = Math.cos(rad);
+      var dy = Math.sin(rad);
+      var cx = width / 2;
+      var cy = height / 2;
+      var eps = 0.001;
+
+      function side(p) {
+        return (p.x - cx) * dy - (p.y - cy) * dx;
+      }
+      function inside(s) {
+        return keepSign > 0 ? s >= -eps : s <= eps;
+      }
+      function intersect(a, b, sa, sb) {
+        var t = sa / (sa - sb);
+        return {
+          x: a.x + (b.x - a.x) * t,
+          y: a.y + (b.y - a.y) * t
+        };
+      }
+
+      var output = [];
+      for (var i = 0; i < points.length; i++) {
+        var current = points[i];
+        var prev = points[(i + points.length - 1) % points.length];
+        var currentSide = side(current);
+        var prevSide = side(prev);
+        var currentInside = inside(currentSide);
+        var prevInside = inside(prevSide);
+
+        if (currentInside) {
+          if (!prevInside) {
+            output.push(intersect(prev, current, prevSide, currentSide));
+          }
+          output.push(current);
+        } else if (prevInside) {
+          output.push(intersect(prev, current, prevSide, currentSide));
+        }
+      }
+
+      return output.filter(function (p, index, arr) {
+        var prev = arr[(index + arr.length - 1) % arr.length];
+        return Math.abs(p.x - prev.x) > eps || Math.abs(p.y - prev.y) > eps;
+      });
+    }
+
+    function pieceGeometry(width, height, angle, index) {
+      var orientation = cutOrientation(angle);
+      var rect = [
+        { x: 0, y: 0 },
+        { x: width, y: 0 },
+        { x: width, y: height },
+        { x: 0, y: height }
+      ];
+      var polygon = clipPolygon(rect, width, height, angle, lineSideForPiece(orientation, index));
+
+      if (polygon.length < 3) {
+        polygon = rect;
+      }
+
+      var minX = Math.min.apply(null, polygon.map(function (p) { return p.x; }));
+      var minY = Math.min.apply(null, polygon.map(function (p) { return p.y; }));
+      var maxX = Math.max.apply(null, polygon.map(function (p) { return p.x; }));
+      var maxY = Math.max.apply(null, polygon.map(function (p) { return p.y; }));
+      var boxW = Math.max(1, maxX - minX);
+      var boxH = Math.max(1, maxY - minY);
+      var clip = polygon.map(function (p) {
+        var x = ((p.x - minX) / boxW * 100).toFixed(3).replace(/\.?0+$/, "");
+        var y = ((p.y - minY) / boxH * 100).toFixed(3).replace(/\.?0+$/, "");
+        return x + "% " + y + "%";
+      }).join(",");
+      var clipInner = polygon.map(function (p) {
+        var x = (p.x / width * 100).toFixed(3).replace(/\.?0+$/, "");
+        var y = (p.y / height * 100).toFixed(3).replace(/\.?0+$/, "");
+        return x + "% " + y + "%";
+      }).join(",");
+      var absPolygon = polygon.map(function (p) {
+        return p.x + "," + p.y;
+      }).join(" ");
+
+      return {
+        minX: minX,
+        minY: minY,
+        width: boxW,
+        height: boxH,
+        clip: "polygon(" + clip + ")",
+        absPolygon: absPolygon,
+        clipInner: "polygon(" + clipInner + ")",
+        orientation: orientation
+      };
+    }
+
+    function cutPieceSize(width, height, angle, index) {
+      var g = pieceGeometry(width, height, angle, index || 0);
+      return { width: g.width, height: g.height };
+    }
+
+    function cutPieceHome(width, height, angle, index, centerX, centerY) {
+      var g = pieceGeometry(width, height, angle, index);
+      var left = centerX - width / 2 + g.minX;
+      var top = centerY - height / 2 + g.minY;
+      return {
+        left: left,
+        top: top,
+        centerX: left + g.width / 2,
+        centerY: top + g.height / 2,
+        width: g.width,
+        height: g.height
+      };
+    }
+
+    /* Maps slot index (0=left, 1=right) to the correct piece index for that round.
+       Circle: piece 0=top-half(dome) goes to right pod, piece 1=bottom-half(bowl) goes to left pod.
+       Square: piece 0=upper-right goes to right pod, piece 1=lower-left goes to left pod (45° cut).
+       Rectangle: piece index matches slot index directly. */
+    function pieceIndexForSlot(r, slotIndex) {
+      if (r.name === "circle") {
+        return slotIndex === 0 ? 1 : 0;
+      }
+      if (r.name === "square") {
+        return slotIndex === 0 ? 1 : 0;
+      }
+      return slotIndex;
+    }
+
+    function makeCutPiece(r, index, width, height, angle) {
+      var g = pieceGeometry(width, height, angle, index);
+      var wrap = document.createElement("div");
+      wrap.className = "half-wrap";
+      wrap.style.width = g.width + "px";
+      wrap.style.height = g.height + "px";
+      /* Remove clipPath from wrap so drop-shadow works correctly on its children */
+
+      if (r.blockSrc) {
+        /* Bypass CSS clip-path Chromium bugs by rendering the clipped image as a true SVG */
+        var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("width", width);
+        svg.setAttribute("height", height);
+        svg.style.position = "absolute";
+        svg.style.left = (-g.minX) + "px";
+        svg.style.top = (-g.minY) + "px";
+        svg.style.overflow = "visible";
+        svg.classList.add("half-inner");
+
+        var clipId = "clip-" + Math.random().toString(36).substr(2, 9);
+        var defs = "<defs><clipPath id=\"" + clipId + "\"><polygon points=\"" + g.absPolygon + "\" /></clipPath>";
+        var gNode = "<g>";
+
+        if (r.name === "circle") {
+          var circleClipId = "circleClip-" + Math.random().toString(36).substr(2, 9);
+          defs += "<clipPath id=\"" + circleClipId + "\"><circle cx=\"" + (width / 2) + "\" cy=\"" + (height / 2) + "\" r=\"" + (width / 2) + "\" /></clipPath>";
+          gNode = "<g clip-path=\"url(#" + circleClipId + ")\">";
+        }
+        defs += "</defs>";
+
+        var imgNode = "<image href=\"" + r.blockSrc + "\" width=\"" + width + "\" height=\"" + height + "\" clip-path=\"url(#" + clipId + ")\" preserveAspectRatio=\"none\" />";
+        svg.innerHTML = defs + gNode + imgNode + "</g>";
+        wrap.appendChild(svg);
       } else {
-        h0.style.transform = "translate(12px,-12px)";
-        h1.style.transform = "translate(-12px,12px)";
+        /* Fallback for css-square which has no blockSrc */
+        var inner = makeBlock(r, width, height);
+        inner.classList.add("half-inner");
+        inner.style.filter = "none";
+        inner.style.borderRadius = "0";
+        inner.style.left = (-g.minX) + "px";
+        inner.style.top = (-g.minY) + "px";
+        inner.style.clipPath = g.clipInner;
+        wrap.appendChild(inner);
       }
-    });});
-    return;
-  }
-
-  var row = document.createElement("div");
-  row.className = "halves-row";
-  row.style.gap = "0";
-  row.style.flexDirection = orientation === "vertical" ? "row" : "column";
-  if(orientation === "horizontal"){ h0.style.marginBottom = "-1px"; }
-  row.appendChild(h0);
-  row.appendChild(h1);
-  els.machineBlock.appendChild(row);
-  requestAnimationFrame(function(){ requestAnimationFrame(function(){
-    h0.style.transition = trans;
-    h1.style.transition = trans;
-    if(orientation === "vertical"){
-      h0.style.transform = "translateX(-13px)";
-      h1.style.transform = "translateX(13px)";
-    } else {
-      h0.style.transform = "translateY(-10px)";
-      h1.style.transform = "translateY(10px)";
+      return wrap;
     }
-  });});
-}
 
-function showFail(){
-  var r = currentRound();
-  var cutAngle = state.lastCutAngle || state.angle;
-  state.wrongAttempts = (state.wrongAttempts || 0) + 1;
-  
-  els.wrongSlash.classList.add("show");
-  splitMachineBlock(cutAngle);
-  setInstruction("");
-
-  later(function(){
-    hide(els.machineStage);
-    setupBots("layout-clear");
-    renderTeaching("teach-two", cutAngle, false);
-  }, 1050);
-
-  later(function(){
-    hide(els.teachStage);
-    setupBots("layout-laser");
-    setInstruction("");
-    els.leftPod.classList.add("glow");
-    els.rightPod.classList.add("glow");
-    flyWrongToSlots(r, cutAngle);
-  }, 4300);
-}
-
-function flyWrongToSlots(r, angle){
-  var layer = els.flightLayer;
-  layer.innerHTML = "";
-  var center = machineCenterInGame();
-  var targets = slotTargetsFromFills();
-
-  /* Use canonical piece size to maintain consistent physical scaling of the block,
-     ensuring the height is matched vertically as requested. */
-  var canonAngle = canonicalCutAngle(r);
-  var canonG = pieceGeometry(r.blockW, r.blockH, canonAngle, 0);
-  var uniformScale = slotScaleForPiece(targets[0], {width:canonG.width, height:canonG.height});
-
-  [0,1].forEach(function(slotIdx){
-    var pieceIdx = pieceIndexForSlot(r, slotIdx);
-    var home = cutPieceHome(r.blockW, r.blockH, angle, pieceIdx, center.x, center.y);
-    var fly = makeCutPiece(r, pieceIdx, r.blockW, r.blockH, angle);
-    fly.style.position = "absolute";
-    fly.style.left = home.left + "px";
-    fly.style.top = home.top + "px";
-    fly.style.width = home.width + "px";
-    fly.style.height = home.height + "px";
-    fly.style.transformOrigin = "center center";
-    fly.style.transition = "transform 0.72s cubic-bezier(.4,0,.2,1),box-shadow .28s ease,filter .28s ease";
-    layer.appendChild(fly);
-
-    var scale = uniformScale; /* perfectly match hole size */
-    var dx = targets[slotIdx].x - home.centerX;
-    var dy = targets[slotIdx].y - home.centerY;
-    requestAnimationFrame(function(){ requestAnimationFrame(function(){
-      fly.style.transform = "translate("+dx+"px,"+dy+"px) scale("+scale+")";
-    });});
-  });
-
-  /* Rejection flash after landing */
-  later(function(){
-    sndWrong();
-    for(var i=0; i<layer.children.length; i++){
-      layer.children[i].style.filter = "url(#alpha-glow-wrong)";
+    function makeHalf(r, index, width, height) {
+      return makeCutPiece(r, index, width, height, canonicalCutAngle(r));
     }
-    later(function(){ show(els.tryAgain); }, 700);
-  }, 850);
-}
 
-function tryAgain(){
-  var r = currentRound();
-  state.locked = false;
-  state.angle = r.startAngle;
-  els.flightLayer.innerHTML = "";
-  show(els.machineStage);
-  setupBots("layout-laser");
-  snapLaser(r.startAngle);
-  hideBeam();
-  els.cutLine.classList.remove("show");
-  els.machineBlock.classList.remove("vibrate");
-  els.machineBlock.innerHTML = "";
-  els.machineBlock.appendChild(makeBlock(r,r.blockW,r.blockH));
-  els.wrongSlash.classList.remove("show");
-  hide(els.tryAgain);
-  setInstruction("");
+    function renderWhole(glow) {
+      var r = currentRound();
+      els.shapeStage.innerHTML = "";
+      var block = makeBlock(r, r.blockW, r.blockH);
+      if (glow) block.classList.add("static-glow");
+      els.shapeStage.appendChild(block);
+      show(els.shapeStage);
+    }
 
-  if(state.wrongAttempts >= 2){
-    showCutLine(r.targetAngle);
-  }
-  startIdleHint();
-}
+    function renderHalves(target, size) {
+      var r = currentRound();
+      var width = size && size.width ? size.width : r.blockW;
+      var height = size && size.height ? size.height : r.blockH;
+      var row = document.createElement("div");
+      row.className = "halves-row";
+      row.appendChild(makeHalf(r, 0, width, height));
+      row.appendChild(makeHalf(r, 1, width, height));
+      target.innerHTML = "";
+      target.appendChild(row);
+    }
 
-function nextRound(){
-  clearTimers();
-  state.round++;
-  state.step = 0;
-  if(state.round >= ROUNDS.length){
-    completeGame();
-    return;
-  }
-  renderStep();
-}
+    function makeTeachingPieces(r, angle, width, height) {
+      var orientation = cutOrientation(angle);
+      var box = document.createElement("div");
+      box.className = "teach-halves-box";
+      box.style.position = "relative";
+      box.style.marginBottom = "0px";
 
-function completeGame(){
-  resetScene();
-  setInstruction("");
-  show(els.completeStage);
-  try{
-    parent.postMessage({type:"activity_complete"}, "*");
-  }catch(e){}
-}
+      var gap = 18;
+      var labelHeight = 30;
 
-function finishGame(){
-  state.round = 0;
-  state.step = 0;
-  hide(els.completeStage);
-  renderStep();
-}
+      var container = document.createElement("div");
+      container.style.position = "relative";
+      container.style.width = (width + gap * 2) + "px";
+      container.style.height = (height + gap * 2 + labelHeight) + "px";
 
-function burstCelebration(cx, cy){
-  var colors = ["#FFE566","#4DCAFF","#FF6B8B","#7BFF83","#FF9D4D","#C87AFF","#FF4DA3","#56FFE0"];
-  var count = 22;
-  for(var i = 0; i < count; i++){
-    var dot = document.createElement("div");
-    dot.className = "spark-dot";
-    var angle = (i / count) * 2 * Math.PI;
-    var dist = 70 + Math.random() * 90;
-    var sx = Math.cos(angle) * dist;
-    var sy = Math.sin(angle) * dist;
-    var size = 8 + Math.random() * 8;
-    dot.style.cssText = "left:"+(cx - size/2)+"px;top:"+(cy - size/2)+"px;" +
-      "width:"+size+"px;height:"+size+"px;background:"+colors[i % colors.length]+";"+
-      "animation-delay:"+(Math.random()*0.18)+"s;";
-    dot.style.setProperty("--sx", sx.toFixed(1)+"px");
-    dot.style.setProperty("--sy", sy.toFixed(1)+"px");
-    els.flightLayer.appendChild(dot);
-    (function(el){ setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 1100); })(dot);
-  }
-}
+      var h0 = makeCutPiece(r, 0, width, height, angle);
+      var h1 = makeCutPiece(r, 1, width, height, angle);
+      h0.classList.add("teach-shape-glow", "teach-pop");
+      h1.classList.add("teach-shape-glow", "teach-pop", "teach-pop-d1");
 
-els.playStage.addEventListener("click", function(){ sndTap(); nextStep(); });
-els.hitLeft.addEventListener("click", function(){
-  if(state.tutActive){ tutHandleLeft(); return; }
-  rotateLaser(-45, els.hitLeft);
-});
-els.hitRight.addEventListener("click", function(){
-  if(state.tutActive){ tutHandleRight(); return; }
-  rotateLaser(45, els.hitRight);
-});
-els.hitCut.addEventListener("click", function(){
-  if(state.tutActive){ tutHandleCut(); return; }
-  cutBlock();
-});
-els.tryAgain.addEventListener("click", function(){ sndTap(); tryAgain(); });
-els.nextButton.addEventListener("click", function(){ sndTap(); nextRound(); });
-els.finishButton.addEventListener("click", function(){ sndTap(); finishGame(); });
+      var g0 = pieceGeometry(width, height, angle, 0);
+      var g1 = pieceGeometry(width, height, angle, 1);
 
-renderStep();
-</script>
+      h0.style.position = "absolute"; h0.style.left = (g0.minX + gap) + "px"; h0.style.top = (g0.minY + gap) + "px";
+      h1.style.position = "absolute"; h1.style.left = (g1.minX + gap) + "px"; h1.style.top = (g1.minY + gap) + "px";
 
-<svg width="0" height="0" style="position:absolute;z-index:-1;pointer-events:none;">
-  <defs>
-    <!-- Teaching Yellow Glow Shader -->
-    <filter id="alpha-glow-teach" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="blur" />
-      <feComponentTransfer in="blur" result="boost">
-        <feFuncA type="linear" slope="3" />
-      </feComponentTransfer>
-      <feFlood flood-color="#ffff00" result="color" />
-      <feComposite in="color" in2="boost" operator="in" result="glow" />
-      <feMerge>
-        <feMergeNode in="glow" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
-    </filter>
+      if (orientation === "slash") {
+        h0.style.transform = "translate(-" + gap + "px,-" + gap + "px)";
+        h1.style.transform = "translate(" + gap + "px," + gap + "px)";
+      } else if (orientation === "backslash") {
+        h0.style.transform = "translate(" + gap + "px,-" + gap + "px)";
+        h1.style.transform = "translate(-" + gap + "px," + gap + "px)";
+      } else if (orientation === "vertical") {
+        h0.style.transform = "translateX(-" + gap + "px)";
+        h1.style.transform = "translateX(" + gap + "px)";
+      } else if (orientation === "horizontal") {
+        h0.style.transform = "translateY(-" + gap + "px)";
+        h1.style.transform = "translateY(" + gap + "px)";
+      }
 
-    <!-- Try Again Red Glow Shader -->
-    <filter id="alpha-glow-wrong" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="blur" />
-      <feComponentTransfer in="blur" result="boost">
-        <feFuncA type="linear" slope="3" />
-      </feComponentTransfer>
-      <feFlood flood-color="#ff3333" result="redGlow" />
-      <feComposite in="redGlow" in2="boost" operator="in" result="glow" />
-      
-      <!-- Red tint for the piece itself -->
-      <feColorMatrix in="SourceGraphic" type="matrix" values="
+      container.appendChild(h0);
+      container.appendChild(h1);
+
+      container.appendChild(h0);
+      container.appendChild(h1);
+      box.appendChild(container);
+
+      return box;
+    }
+
+    function renderTeaching(kind, angle, equal) {
+      var r = currentRound();
+      var cutAngle = angle === undefined ? canonicalCutAngle(r) : angle;
+      var w = r.name === "rectangle" ? 170 : r.name === "circle" ? 145 : 130;
+      var h = Math.round(w * r.blockH / r.blockW);
+      els.teachContent.innerHTML = "";
+
+      if (kind === "teach-one") {
+        setInstruction("When an object is divided into two equal parts.");
+
+        var grid = document.createElement("div");
+        grid.style.display = "grid";
+        grid.style.gridTemplateColumns = "auto auto";
+        grid.style.gap = "40px 40px";
+        grid.style.alignItems = "center";
+        grid.style.justifyContent = "center";
+
+        var topBlkWrap = document.createElement("div");
+        topBlkWrap.style.display = "flex";
+        topBlkWrap.style.justifyContent = "center";
+        var blk = makeBlock(r, w, h);
+        blk.classList.add("teach-shape-glow");
+        topBlkWrap.appendChild(blk);
+
+        var topLblWrap = document.createElement("div");
+        topLblWrap.style.display = "flex";
+        topLblWrap.style.justifyContent = "flex-start";
+        var lbl = document.createElement("div");
+        lbl.className = "teach-big-label";
+        lbl.textContent = "1 Whole";
+        topLblWrap.appendChild(lbl);
+
+        grid.appendChild(topBlkWrap);
+        grid.appendChild(topLblWrap);
+
+        els.teachContent.appendChild(grid);
+
+      } else {
+        setInstruction(equal === false ? "These parts are not equal halves." : "Each part is called a half.");
+
+        var grid = document.createElement("div");
+        grid.style.display = "grid";
+        grid.style.gridTemplateColumns = "auto auto";
+        grid.style.gap = "40px 40px";
+        grid.style.alignItems = "center";
+        grid.style.justifyContent = "center";
+
+        var topBlkWrap = document.createElement("div");
+        topBlkWrap.style.display = "flex";
+        topBlkWrap.style.justifyContent = "center";
+        var topBlk = makeBlock(r, w, h);
+        /* Whole block glows first to highlight it, halves glow after a brief delay */
+        topBlk.classList.add("teach-shape-glow");
+        topBlkWrap.appendChild(topBlk);
+
+        var topLblWrap = document.createElement("div");
+        topLblWrap.style.display = "flex";
+        topLblWrap.style.justifyContent = "flex-start";
+        var topLbl = document.createElement("div");
+        topLbl.className = "teach-big-label";
+        topLbl.textContent = "1 Whole";
+        topLblWrap.appendChild(topLbl);
+
+        var halvesWrap = document.createElement("div");
+        halvesWrap.style.display = "flex";
+        halvesWrap.style.justifyContent = "center";
+        var halvesBox = makeTeachingPieces(r, cutAngle, w, h);
+
+        /* Remove glow from halves initially; whole block glows first for 1.3 s,
+           then halves take over the glow. */
+        halvesBox.querySelectorAll(".teach-shape-glow").forEach(function (el) {
+          el.classList.remove("teach-shape-glow");
+        });
+        setTimeout(function () {
+          topBlk.classList.remove("teach-shape-glow");
+          halvesBox.querySelectorAll(".half-wrap").forEach(function (el) {
+            el.classList.add("teach-shape-glow");
+          });
+          /* For CSS-square whole blocks, also glow via the css-square rule */
+          var cssSquarePieces = halvesBox.querySelectorAll(".css-square.whole-block");
+          cssSquarePieces.forEach(function (el) { el.classList.add("teach-shape-glow"); });
+        }, 1300);
+
+        halvesWrap.appendChild(halvesBox);
+
+        var botLblWrap = document.createElement("div");
+        botLblWrap.style.display = "flex";
+        botLblWrap.style.justifyContent = "flex-start";
+        var botLbl = document.createElement("div");
+        botLbl.className = "teach-equal-label";
+        botLbl.textContent = equal === false ? "2 Equal Parts" : "2 Equal Parts";
+        botLblWrap.appendChild(botLbl);
+
+        grid.appendChild(topBlkWrap);
+        grid.appendChild(topLblWrap);
+        grid.appendChild(halvesWrap);
+        grid.appendChild(botLblWrap);
+
+        els.teachContent.appendChild(grid);
+      }
+      show(els.teachStage);
+    }
+
+    function renderStep() {
+      clearTimers();
+      resetScene();
+
+      var r = currentRound();
+      var step = FLOW[state.step];
+      var text = step.text ? step.text.replace("{shape}", r.name) : "";
+
+      if (step.scene === "intro") {
+        setInstruction(text);
+        setupBots("layout-intro");
+      }
+
+      if (step.scene === "ready") {
+        setInstruction(text);
+        setupBots("layout-ready");
+      }
+
+      if (step.scene === "whole" || step.scene === "needs" || step.scene === "halves") {
+        setInstruction(text);
+        setupBots("layout-ready");
+        renderWhole(step.scene === "whole");
+      }
+
+      if (step.scene === "play") {
+        if (state.round > 0) { nextStep(); return; }
+        setInstruction("");
+        setupBots("layout-clear");
+        show(els.playStage);
+      }
+
+      if (step.scene === "tutorial") {
+        if (state.round > 0) {
+          nextStep();
+          return;
+        }
+        setupTutorial();
+        return;
+      }
+
+      if (step.scene === "preplay") {
+        setupPreplay(text);
+      }
+
+      if (step.scene === "laser") {
+        setupLaser();
+        return;
+      }
+
+      if (step.duration) {
+        later(nextStep, step.duration);
+      }
+    }
+
+    function nextStep() {
+      state.step++;
+      if (state.step >= FLOW.length) {
+        state.step = FLOW.length - 1;
+      }
+      renderStep();
+    }
+
+    /* ── Tutorial guided sequence (4 moves × 4 cuts demo) ── */
+    var TUTORIAL_START_ANGLE = 180;
+    /* Angles the laser moves to at each movement step (steps 0,2,4,6) */
+    var TUTORIAL_STEP_ANGLES = [135, 90, 225, 270];
+    var TUT = [
+      { bubble: "right", btn: "right" },   /* step 0: move right → 135° */
+      { bubble: "cut", btn: "cut" },     /* step 1: cut at 135° */
+      { bubble: "right", btn: "right" },   /* step 2: move right → 90° */
+      { bubble: "cut", btn: "cut" },     /* step 3: cut at 90° */
+      { bubble: "left", btn: "left" },    /* step 4: move left → 225° */
+      { bubble: "cut", btn: "cut" },     /* step 5: cut at 225° */
+      { bubble: "left", btn: "left" },    /* step 6: move left → 270° */
+      { bubble: "cut", btn: "cut" }      /* step 7: cut at 270° — last, advance to play */
+    ];
+
+    function setupTutorial() {
+      var r = currentRound();
+      state.tutActive = true;
+      state.tutStep = -1;
+      state.locked = false;
+      state.angle = TUTORIAL_START_ANGLE;
+      setupBots("layout-laser");
+      setInstruction("");
+      /* LaserMachine.png as tutorial overlay; LaserMachineWithoutLines stays as base */
+      els.tutorialOverlay.classList.add("show");
+      els.machineBlock.innerHTML = "";
+      els.machineBlock.appendChild(makeBlock(r, r.blockW, r.blockH));
+      els.blockCover.style.width = (r.blockW + 22) + "px";
+      els.blockCover.style.height = (r.blockH + 22) + "px";
+      els.blockCover.style.borderRadius = (r.name === "circle" ? "50%" : "18px");
+      els.blockCover.style.opacity = "1";
+      els.cutLine.style.width = r.blockW + "px";
+      els.cutLine.style.height = r.blockH + "px";
+      els.cutLine.style.borderRadius = (r.name === "circle" ? "50%" : "0");
+      els.cutLine.classList.remove("show");
+      els.wrongSlash.style.width = els.blockCover.style.width;
+      els.wrongSlash.style.height = els.blockCover.style.height;
+      els.wrongSlash.style.borderRadius = els.blockCover.style.borderRadius;
+      state.orbitActive = true;
+      snapLaser(TUTORIAL_START_ANGLE);
+      showLaserHead();
+      /* Hide all bubbles; tutSetStep reveals the right one */
+      [els.bubbleLeft, els.bubbleRight, els.bubbleCut].forEach(function (el) {
+        el.classList.add("fade");
+      });
+      if (els.handGesture) els.handGesture.className = "hand-gesture hidden";
+      els.cutOverlay.classList.remove("show");
+      els.hitLeft.disabled = true;
+      els.hitRight.disabled = true;
+      els.hitCut.disabled = true;
+      show(els.machineStage);
+      later(function () {
+        if (state.tutActive && state.tutStep === -1) {
+          tutSetStep(0);
+        }
+      }, 900);
+    }
+
+    function tutSetStep(n) {
+      state.tutStep = n;
+      var t = TUT[n];
+      setInstruction("");
+      els.bots.className = "layout-clear";
+      els.bubbleLeft.classList.add("fade");
+      els.bubbleRight.classList.add("fade");
+      els.bubbleCut.classList.add("fade");
+      if (els.handGesture) els.handGesture.className = "hand-gesture hidden";
+
+      els.btnLeft.classList.remove("tut-highlight");
+      els.btnRight.classList.remove("tut-highlight");
+      els.btnCut.classList.remove("tut-highlight");
+
+      if (t.bubble === "left") {
+        els.bubbleLeft.classList.remove("fade");
+        if (els.handGesture) els.handGesture.className = "hand-gesture point-left show";
+        els.btnLeft.classList.add("tut-highlight");
+      }
+      if (t.bubble === "right") {
+        els.bubbleRight.classList.remove("fade");
+        if (els.handGesture) els.handGesture.className = "hand-gesture point-right show";
+        els.btnRight.classList.add("tut-highlight");
+      }
+      if (t.bubble === "cut") {
+        els.bubbleCut.classList.remove("fade");
+        /* TappedCutButton.png highlights the cut button as a prompt */
+        els.cutOverlay.classList.add("show");
+        if (els.handGesture) els.handGesture.className = "hand-gesture point-cut show";
+        els.btnCut.classList.add("tut-highlight");
+      } else {
+        els.cutOverlay.classList.remove("show");
+      }
+      els.hitLeft.disabled = (t.btn !== "left");
+      els.hitRight.disabled = (t.btn !== "right");
+      els.hitCut.disabled = (t.btn !== "cut");
+    }
+
+    function tutHandleRight() {
+      var step = state.tutStep;
+      if (!state.tutActive || state.locked) { return; }
+      if (step < 0 || step >= TUT.length || TUT[step].btn !== "right") { return; }
+      pressButton(els.hitRight);
+      sndRotate();
+      [els.bubbleLeft, els.bubbleRight, els.bubbleCut].forEach(function (el) { el.classList.add("fade"); });
+      if (els.handGesture) els.handGesture.className = "hand-gesture hidden";
+      state.angle = normalizedAngle(state.angle - 45);
+      updateLaser(); /* smooth orbital rotation — NO beam */
+      els.hitLeft.disabled = true;
+      els.hitRight.disabled = true;
+      els.hitCut.disabled = true;
+      later(function () { tutSetStep(step + 1); }, 520);
+    }
+
+    function tutHandleLeft() {
+      var step = state.tutStep;
+      if (!state.tutActive || state.locked) { return; }
+      if (step < 0 || step >= TUT.length || TUT[step].btn !== "left") { return; }
+      pressButton(els.hitLeft);
+      sndRotate();
+      [els.bubbleLeft, els.bubbleRight, els.bubbleCut].forEach(function (el) { el.classList.add("fade"); });
+      if (els.handGesture) els.handGesture.className = "hand-gesture hidden";
+      state.angle = normalizedAngle(state.angle + 45);
+      updateLaser(); /* smooth orbital rotation — NO beam */
+      els.hitLeft.disabled = true;
+      els.hitRight.disabled = true;
+      els.hitCut.disabled = true;
+      later(function () { tutSetStep(step + 1); }, 520);
+    }
+
+    function tutHandleCut() {
+      var step = state.tutStep;
+      if (!state.tutActive || state.locked) { return; }
+      if (step < 0 || step >= TUT.length || TUT[step].btn !== "cut") { return; }
+      state.locked = true;
+      pressButton(els.hitCut);
+      sndCut();
+      [els.bubbleLeft, els.bubbleRight, els.bubbleCut].forEach(function (el) { el.classList.add("fade"); });
+      if (els.handGesture) els.handGesture.className = "hand-gesture hidden";
+      els.cutOverlay.classList.remove("show");
+      els.hitLeft.disabled = true;
+      els.hitRight.disabled = true;
+      els.hitCut.disabled = true;
+      showBeam(state.angle); /* Beam.svg fires on CUT */
+      later(function () {
+        hideBeam();
+        splitMachineBlock(state.angle);
+      }, 950);
+      later(function () {
+        if (step < TUT.length - 1) {
+          resetTutorialCut();
+          state.locked = false;
+          tutSetStep(step + 1);
+        } else {
+          state.tutActive = false;
+          nextStep();
+        }
+      }, 1900);
+    }
+
+    function resetTutorialCut() {
+      var r = currentRound();
+      hideBeam();
+      els.cutLine.classList.remove("show");
+      els.machineBlock.innerHTML = "";
+      els.machineBlock.appendChild(makeBlock(r, r.blockW, r.blockH));
+      showLaserHead();
+    }
+
+    function setupPreplay(text) {
+      var r = currentRound();
+      setInstruction(text);
+      setupBots("layout-laser");
+      state.angle = r.startAngle;
+      state.locked = true;
+      els.tutorialOverlay.classList.remove("show");
+      els.machineBlock.innerHTML = "";
+      els.machineBlock.appendChild(makeBlock(r, r.blockW, r.blockH));
+      els.blockCover.style.width = (r.blockW + 22) + "px";
+      els.blockCover.style.height = (r.blockH + 22) + "px";
+      els.blockCover.style.borderRadius = (r.name === "circle" ? "50%" : "18px");
+      els.blockCover.style.opacity = "1";
+      els.cutLine.style.width = r.blockW + "px";
+      els.cutLine.style.height = r.blockH + "px";
+      els.cutLine.style.borderRadius = (r.name === "circle" ? "50%" : "0");
+      els.cutLine.classList.remove("show");
+      els.wrongSlash.style.width = els.blockCover.style.width;
+      els.wrongSlash.style.height = els.blockCover.style.height;
+      els.wrongSlash.style.borderRadius = els.blockCover.style.borderRadius;
+      state.orbitActive = true;
+      snapLaser(r.startAngle);
+      showLaserHead();
+      [els.bubbleLeft, els.bubbleRight, els.bubbleCut].forEach(function (el) {
+        el.classList.add("fade");
+      });
+      els.hitLeft.disabled = true;
+      els.hitRight.disabled = true;
+      els.hitCut.disabled = true;
+      show(els.machineStage);
+    }
+
+    function setupLaser() {
+      var r = currentRound();
+      setInstruction("");
+      setupBots("layout-laser");
+      state.angle = r.startAngle;
+      state.locked = false;
+      state.wrongAttempts = 0;
+      /* Gameplay: no tutorial overlay */
+      els.tutorialOverlay.classList.remove("show");
+      els.machineBlock.innerHTML = "";
+      els.machineBlock.appendChild(makeBlock(r, r.blockW, r.blockH));
+      els.blockCover.style.width = (r.blockW + 22) + "px";
+      els.blockCover.style.height = (r.blockH + 22) + "px";
+      els.blockCover.style.borderRadius = (r.name === "circle" ? "50%" : "18px");
+      els.blockCover.style.opacity = "1";
+      els.cutLine.style.width = r.blockW + "px";
+      els.cutLine.style.height = r.blockH + "px";
+      els.cutLine.style.borderRadius = (r.name === "circle" ? "50%" : "0");
+      els.cutLine.classList.remove("show");
+      els.wrongSlash.style.width = els.blockCover.style.width;
+      els.wrongSlash.style.height = els.blockCover.style.height;
+      els.wrongSlash.style.borderRadius = els.blockCover.style.borderRadius;
+      state.orbitActive = true;
+      snapLaser(r.startAngle);
+      showLaserHead();
+      /* Gameplay starts clean; tutorial prompts are only shown in the guided flow. */
+      [els.bubbleLeft, els.bubbleRight, els.bubbleCut].forEach(function (el) {
+        el.classList.add("fade");
+      });
+      show(els.machineStage);
+      startIdleHint();
+    }
+
+    /* ── Orbital laser system — all geometry is anchored to the ring and nozzle. ── */
+    var MACHINE_NATIVE_SIZE = 1454;
+    var RING_INNER_R_NATIVE = 648;
+
+    var LASER_SRC_W = 258;
+    var LASER_SRC_H = 172;
+    var LASER_W = 96;
+    var LASER_H = 64;
+    /* Source-pixel anchors in Laser.png: rear body pivot and glowing emission point. */
+    var LASER_BODY_SRC_X = 42;
+    var LASER_BODY_SRC_Y = 86;
+    var LASER_NOZZLE_SRC_X = 238;
+    var LASER_NOZZLE_SRC_Y = 86;
+
+    var BEAM_NATIVE_SIZE = 683;
+    var BEAM_START_NATIVE = 98.8398;
+    var BEAM_END_NATIVE = 583.34;
+    var BEAM_START_PCT = BEAM_START_NATIVE / BEAM_NATIVE_SIZE;
+    var BEAM_LINE_PCT = (BEAM_END_NATIVE - BEAM_START_NATIVE) / BEAM_NATIVE_SIZE;
+
+    function ringGeometry() {
+      var w = els.machineStage.clientWidth || 900;
+      var styles = getComputedStyle(els.machineStage);
+      var ringSize = parseFloat(styles.getPropertyValue("--ring-size")) || 500;
+      var centerY = parseFloat(styles.getPropertyValue("--ring-center-y")) || ringSize / 2;
+      var ringScale = ringSize / MACHINE_NATIVE_SIZE;
+      return {
+        centerX: w / 2,
+        centerY: centerY,
+        radius: RING_INNER_R_NATIVE * ringScale
+      };
+    }
+
+    function laserAnchors(deg) {
+      var g = ringGeometry();
+      var orbitRad = deg * Math.PI / 180;
+      var beamRad = orbitRad + Math.PI;
+      var laserScale = LASER_W / LASER_SRC_W;
+      var bodyLocalX = LASER_BODY_SRC_X * laserScale;
+      var bodyLocalY = LASER_BODY_SRC_Y * laserScale;
+      var nozzleLocalX = LASER_NOZZLE_SRC_X * laserScale;
+      var nozzleLocalY = LASER_NOZZLE_SRC_Y * laserScale;
+      var bodyOffset = nozzleLocalX - bodyLocalX;
+
+      var orbitX = g.centerX + g.radius * Math.cos(orbitRad);
+      var orbitY = g.centerY + g.radius * Math.sin(orbitRad);
+      var laserX = orbitX - Math.cos(beamRad) * bodyOffset;
+      var laserY = orbitY - Math.sin(beamRad) * bodyOffset;
+
+      return {
+        nozzleX: orbitX,
+        nozzleY: orbitY,
+        bodyX: laserX,
+        bodyY: laserY,
+        bodyLocalX: bodyLocalX,
+        bodyLocalY: bodyLocalY,
+        nozzleLocalX: nozzleLocalX,
+        nozzleLocalY: nozzleLocalY,
+        rotationDeg: deg + 180,
+        radius: g.radius
+      };
+    }
+
+    function positionLaser(deg) {
+      var p = laserAnchors(deg);
+      els.laserImg.style.left = (p.bodyX - p.bodyLocalX) + "px";
+      els.laserImg.style.top = (p.bodyY - p.bodyLocalY) + "px";
+      els.laserImg.style.transformOrigin = p.bodyLocalX + "px " + p.bodyLocalY + "px";
+      els.laserImg.style.transform = "rotate(" + p.rotationDeg + "deg)";
+    }
+
+    function positionBeam(deg) {
+      var p = laserAnchors(deg);
+      var beamSize = (Math.SQRT2 * p.radius) / BEAM_LINE_PCT;
+      var startPx = BEAM_START_PCT * beamSize;
+      els.beamImg.style.width = beamSize + "px";
+      els.beamImg.style.height = beamSize + "px";
+      els.beamImg.style.left = (p.nozzleX - startPx) + "px";
+      els.beamImg.style.top = (p.nozzleY - startPx) + "px";
+      els.beamImg.style.transformOrigin = startPx + "px " + startPx + "px";
+      /* Beam.svg points 45° by default; deg + 135° aims it from nozzle to center. */
+      els.beamImg.style.transform = "rotate(" + (deg + 135) + "deg)";
+      els.wrongSlash.style.setProperty("--cut-angle", deg + "deg");
+      els.cutLine.style.setProperty("--cut-angle", deg + "deg");
+    }
+
+    function showBeam(deg) {
+      positionBeam(deg);
+      els.beamImg.style.display = "block";
+      els.beamImg.style.opacity = "1";
+    }
+
+    function showCutLine(deg) {
+      els.cutLine.style.setProperty("--cut-angle", deg + "deg");
+      els.cutLine.classList.add("show");
+    }
+
+    function hideBeam() {
+      els.beamImg.style.opacity = "0";
+      setTimeout(function () {
+        if (els.beamImg.style.opacity === "0") { els.beamImg.style.display = "none"; }
+      }, 220);
+    }
+
+    function _animateOrbit() {
+      if (!state.orbitActive) { return; }
+      var diff = state.orbitTarget - state.orbitCurrent;
+      /* shortest-arc wraparound */
+      if (diff > 180) { diff -= 360; }
+      if (diff < -180) { diff += 360; }
+      state.orbitCurrent += diff * 0.18;
+      positionLaser(state.orbitCurrent);
+      if (Math.abs(diff) > 0.3) {
+        state.orbitRaf = requestAnimationFrame(_animateOrbit);
+      } else {
+        state.orbitCurrent = state.orbitTarget;
+        positionLaser(state.orbitCurrent);
+        state.orbitRaf = null;
+      }
+    }
+
+    function snapLaser(deg) {
+      if (state.orbitRaf) { cancelAnimationFrame(state.orbitRaf); state.orbitRaf = null; }
+      state.orbitCurrent = deg;
+      state.orbitTarget = deg;
+      positionLaser(deg);
+    }
+
+    function updateLaser() {
+      state.orbitTarget = state.angle;
+      if (!state.orbitActive) { return; }
+      if (state.orbitRaf) { cancelAnimationFrame(state.orbitRaf); state.orbitRaf = null; }
+      state.orbitRaf = requestAnimationFrame(_animateOrbit);
+    }
+
+    function showLaserHead() {
+      els.laserImg.style.display = "block";
+      /* beam stays hidden until CUT */
+      els.beamImg.style.display = "none";
+      els.cutLine.classList.remove("show");
+    }
+
+    function pressButton(button) {
+      button.classList.remove("pressed");
+      void button.offsetWidth;
+      button.classList.add("pressed");
+
+      if (button === els.hitLeft) {
+        els.btnLeft.src = ASSETS + "LeftButtonClicked.png";
+        setTimeout(function () { els.btnLeft.src = ASSETS + "LeftButton.png"; }, 220);
+      } else if (button === els.hitRight) {
+        els.btnRight.src = ASSETS + "RightButtonClicked.png";
+        setTimeout(function () { els.btnRight.src = ASSETS + "RightButton.png"; }, 220);
+      } else if (button === els.hitCut) {
+        els.btnCut.src = ASSETS + "ClickedCutButton.png";
+        setTimeout(function () { els.btnCut.src = ASSETS + "CutButton.png"; }, 320);
+      }
+    }
+
+    function rotateLaser(delta, button) {
+      if (state.locked) { return; }
+      stopIdleHint();
+      pressButton(button);
+      sndRotate();
+      [els.bubbleLeft, els.bubbleRight, els.bubbleCut].forEach(function (el) { el.classList.add("fade"); });
+      state.angle = (state.angle + delta + 360) % 360;
+      updateLaser();
+      startIdleHint();
+    }
+
+    function angleDiff(a, b) {
+      var diff = Math.abs(a - b) % 360;
+      return diff > 180 ? 360 - diff : diff;
+    }
+
+    function wrongPieceClip(angle, index) {
+      var normalized = ((angle % 360) + 360) % 360;
+      var diagonalDown = (normalized > 90 && normalized < 270);
+      if (diagonalDown) {
+        return index === 0 ? "polygon(0 0,100% 0,100% 100%)" : "polygon(0 0,0 100%,100% 100%)";
+      }
+      return index === 0 ? "polygon(0 0,100% 0,0 100%)" : "polygon(100% 0,100% 100%,0 100%)";
+    }
+
+    function machineCenterInGame() {
+      var styles = getComputedStyle(els.machineStage);
+      var top = parseFloat(styles.top) || 425;
+      var height = els.machineStage.clientHeight || 600;
+      var centerY = parseFloat(styles.getPropertyValue("--ring-center-y")) || 250;
+      return {
+        x: 640,
+        y: top - height / 2 + centerY
+      };
+    }
+
+    function slotTargetsFromFills() {
+      var leftW = parseFloat(els.leftFill.style.width || "0");
+      var leftH = parseFloat(els.leftFill.style.height || "0");
+      var rightW = parseFloat(els.rightFill.style.width || "0");
+      var rightH = parseFloat(els.rightFill.style.height || "0");
+      var leftY = parseFloat(els.leftFill.style.top || "0") + leftH / 2;
+      var rightY = parseFloat(els.rightFill.style.top || "0") + rightH / 2;
+      return [
+        { x: 150, y: leftY, width: leftW, height: leftH },
+        { x: 1130, y: rightY, width: rightW, height: rightH }
+      ];
+    }
+
+    function cutBlock() {
+      if (state.locked) { return; }
+      stopIdleHint();
+      var r = currentRound();
+      state.locked = true;
+      state.lastCutAngle = state.angle;
+      pressButton(els.hitCut);
+      sndCut();
+      [els.bubbleLeft, els.bubbleRight, els.bubbleCut].forEach(function (el) { el.classList.add("fade"); });
+      showBeam(state.angle); /* Beam.svg fires on CUT — was hidden during alignment */
+
+      later(function () {
+        hideBeam();
+        var correct = angleDiff(state.angle, r.targetAngle) <= 8 ||
+          (r.targetAngle2 !== undefined && angleDiff(state.angle, r.targetAngle2) <= 8);
+        if (correct) {
+          state.lastCutAngle = state.angle;
+          showSuccess();
+        } else {
+          showFail();
+        }
+      }, 650);
+    }
+
+    function slotScaleForPiece(target, piece) {
+      return Math.min(
+        (target.width || piece.width) / piece.width,
+        (target.height || piece.height) / piece.height
+      );
+    }
+
+    function fillSlotWithPiece(fill, r, index, angle) {
+      var w = parseFloat(fill.style.width || "0");
+      var h = parseFloat(fill.style.height || "0");
+      var piece = makeCutPiece(r, index, r.blockW, r.blockH, angle);
+      var home = cutPieceHome(r.blockW, r.blockH, angle, index, 0, 0);
+      var scale = slotScaleForPiece({ width: w, height: h }, home);
+      fill.innerHTML = "";
+      var dyOffset = r.name === "rectangle" ? "-8px" : "0px";
+      piece.style.transform = "translateY(" + dyOffset + ") scale(" + scale + ")";
+      piece.style.transformOrigin = "center center";
+      piece.style.filter = "none";
+      fill.appendChild(piece);
+      fill.classList.add("filled");
+    }
+
+    /* ── fly the two half-pieces from machine center to bot charging slots ── */
+    function flyHalvesToSlots(r, angle, onDone) {
+      var layer = els.flightLayer;
+      layer.innerHTML = "";
+
+      var center = machineCenterInGame();
+      var targets = slotTargetsFromFills();
+
+      [0, 1].forEach(function (slotIdx) {
+        var pieceIdx = pieceIndexForSlot(r, slotIdx);
+        var home = cutPieceHome(r.blockW, r.blockH, angle, pieceIdx, center.x, center.y);
+        var fly = makeCutPiece(r, pieceIdx, r.blockW, r.blockH, angle);
+        fly.classList.add("flying-half");
+        fly.style.left = home.left + "px";
+        fly.style.top = home.top + "px";
+        fly.style.width = home.width + "px";
+        fly.style.height = home.height + "px";
+        fly.style.transformOrigin = "center center";
+        fly.style.transition = "transform .9s cubic-bezier(.18,.89,.32,1.08),opacity .9s ease";
+
+        layer.appendChild(fly);
+
+        var scale = slotScaleForPiece(targets[slotIdx], home);
+        var dx = targets[slotIdx].x - home.centerX;
+        var dyOffset = r.name === "rectangle" ? 8 : 0;
+        var dy = targets[slotIdx].y - home.centerY - dyOffset;
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            fly.style.transform = "translate(" + dx + "px," + dy + "px) scale(" + scale + ")";
+          });
+        });
+      });
+
+      setTimeout(onDone, 1050);
+    }
+
+    function showSuccess() {
+      var r = currentRound();
+      var cutAngle = state.lastCutAngle;
+      sndSuccess();
+      splitMachineBlock(cutAngle);
+      setInstruction("");
+
+      /* 1 – teach-one: 1 Whole */
+      later(function () {
+        hide(els.machineStage);
+        setupBots("layout-clear");
+        renderTeaching("teach-one", cutAngle, true);
+      }, 1000);
+
+      /* 2 – teach-two: halves — show the exact cut the child made */
+      later(function () {
+        renderTeaching("teach-two", cutAngle, true);
+      }, 3800);
+
+      /* 3 – fly halves to bots */
+      later(function () {
+        hide(els.teachStage);
+        setupBots("layout-laser");
+        setInstruction("");
+        flyHalvesToSlots(r, cutAngle, function () {
+          els.flightLayer.innerHTML = "";
+          fillSlotWithPiece(els.leftFill, r, pieceIndexForSlot(r, 0), cutAngle);
+          fillSlotWithPiece(els.rightFill, r, pieceIndexForSlot(r, 1), cutAngle);
+          els.leftBot.src = r.happyBot;
+          els.rightBot.src = r.happyBot;
+          var hw = r.botWIntro + "px";
+          els.leftBot.style.width = hw;
+          els.rightBot.style.width = hw;
+          els.leftBot.classList.add("happy", "jump");
+          els.rightBot.classList.add("happy", "jump");
+          els.leftPod.classList.add("glow");
+          els.rightPod.classList.add("glow");
+
+          /* Move pods and target-fills up to match the larger bots' new head height */
+          var newBotTop = 720 - r.botWIntro * (r.botAspect || 1.2);
+          var podW = r.podW || 132;
+          var aspectL = r.podAspectLeft || 2.3;
+          var aspectR = r.podAspectRight || r.podAspectLeft || 2.3;
+          var newTopL = newBotTop - podW * aspectL + (r.chargerOverlap || 14);
+          var newTopR = newBotTop - podW * aspectR + (r.chargerOverlap || 14);
+
+          els.leftPod.classList.add("jump");
+          els.rightPod.classList.add("jump");
+          els.leftFill.classList.add("jump");
+          els.rightFill.classList.add("jump");
+
+          els.leftPod.style.transition = "top 0.4s ease";
+          els.rightPod.style.transition = "top 0.4s ease";
+          els.leftFill.style.transition = "top 0.4s ease";
+          els.rightFill.style.transition = "top 0.4s ease";
+
+          var slotOffset = r.name === "circle" ? 8 : 25;
+          els.leftPod.style.top = newTopL + "px";
+          els.rightPod.style.top = newTopR + "px";
+          els.leftFill.style.top = (newTopL + slotOffset) + "px";
+          els.rightFill.style.top = (newTopR + slotOffset) + "px";
+
+          function addPulse(slotEl) {
+            var pulse = document.createElement("div");
+            pulse.className = "electric-pulse";
+            slotEl.appendChild(pulse);
+            setTimeout(function () { if (pulse.parentNode) pulse.parentNode.removeChild(pulse); }, 1200);
+          }
+          addPulse(document.querySelector(".left-bot"));
+          addPulse(document.querySelector(".right-bot"));
+
+          var tgts = slotTargetsFromFills();
+          burstCelebration(tgts[0].x, tgts[0].y);
+          burstCelebration(tgts[1].x, tgts[1].y);
+        });
+      }, 7000);
+
+      /* Show Next button — child taps to advance manually */
+      later(function () {
+        setInstruction("");
+        show(els.nextButton);
+      }, 8500);
+    }
+
+    function splitMachineBlock(angle) {
+      var r = currentRound();
+      var cutAngle = angle === undefined ? canonicalCutAngle(r) : angle;
+      var orientation = cutOrientation(cutAngle);
+      var trans = "transform 0.45s cubic-bezier(.34,1.3,.64,1)";
+      var h0 = makeCutPiece(r, 0, r.blockW, r.blockH, cutAngle);
+      var h1 = makeCutPiece(r, 1, r.blockW, r.blockH, cutAngle);
+      /* Remove the half-wrap drop-shadow in the machine — it looks odd for circles/triangles */
+      h0.style.filter = "none";
+      h1.style.filter = "none";
+      els.machineBlock.innerHTML = "";
+
+      if (orientation === "slash" || orientation === "backslash") {
+        var g0 = pieceGeometry(r.blockW, r.blockH, cutAngle, 0);
+        var g1 = pieceGeometry(r.blockW, r.blockH, cutAngle, 1);
+        var container = document.createElement("div");
+        container.style.cssText = "position:relative;width:" + r.blockW + "px;height:" + r.blockH + "px;";
+        h0.style.position = "absolute"; h0.style.left = g0.minX + "px"; h0.style.top = g0.minY + "px";
+        h1.style.position = "absolute"; h1.style.left = g1.minX + "px"; h1.style.top = g1.minY + "px";
+        container.appendChild(h0);
+        container.appendChild(h1);
+        els.machineBlock.appendChild(container);
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            h0.style.transition = trans;
+            h1.style.transition = trans;
+            if (orientation === "slash") {
+              h0.style.transform = "translate(-12px,-12px)";
+              h1.style.transform = "translate(12px,12px)";
+            } else {
+              h0.style.transform = "translate(12px,-12px)";
+              h1.style.transform = "translate(-12px,12px)";
+            }
+          });
+        });
+        return;
+      }
+
+      var row = document.createElement("div");
+      row.className = "halves-row";
+      row.style.flexDirection = orientation === "vertical" ? "row" : "column";
+      row.appendChild(h0);
+      row.appendChild(h1);
+      els.machineBlock.appendChild(row);
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          h0.style.transition = trans;
+          h1.style.transition = trans;
+          if (orientation === "vertical") {
+            h0.style.transform = "translateX(-25px)";
+            h1.style.transform = "translateX(25px)";
+          } else {
+            h0.style.transform = "translateY(-18px)";
+            h1.style.transform = "translateY(18px)";
+          }
+        });
+      });
+    }
+
+    function showFail() {
+      var r = currentRound();
+      var cutAngle = state.lastCutAngle || state.angle;
+      state.wrongAttempts = (state.wrongAttempts || 0) + 1;
+
+      els.wrongSlash.classList.add("show");
+      splitMachineBlock(cutAngle);
+      setInstruction("");
+
+      later(function () {
+        hide(els.machineStage);
+        setupBots("layout-clear");
+        renderTeaching("teach-two", cutAngle, false);
+      }, 1050);
+
+      later(function () {
+        hide(els.teachStage);
+        setupBots("layout-laser");
+        setInstruction("");
+        els.leftPod.classList.add("glow");
+        els.rightPod.classList.add("glow");
+        flyWrongToSlots(r, cutAngle);
+      }, 4300);
+    }
+
+    function flyWrongToSlots(r, angle) {
+      var layer = els.flightLayer;
+      layer.innerHTML = "";
+      var center = machineCenterInGame();
+      var targets = slotTargetsFromFills();
+
+      /* Use canonical piece size to maintain consistent physical scaling of the block,
+         ensuring the height is matched vertically as requested. */
+      var canonAngle = canonicalCutAngle(r);
+      var canonG = pieceGeometry(r.blockW, r.blockH, canonAngle, 0);
+      var uniformScale = slotScaleForPiece(targets[0], { width: canonG.width, height: canonG.height });
+
+      [0, 1].forEach(function (slotIdx) {
+        var pieceIdx = pieceIndexForSlot(r, slotIdx);
+        var home = cutPieceHome(r.blockW, r.blockH, angle, pieceIdx, center.x, center.y);
+        var fly = makeCutPiece(r, pieceIdx, r.blockW, r.blockH, angle);
+        fly.style.position = "absolute";
+        fly.style.left = home.left + "px";
+        fly.style.top = home.top + "px";
+        fly.style.width = home.width + "px";
+        fly.style.height = home.height + "px";
+        fly.style.transformOrigin = "center center";
+        fly.style.transition = "transform 0.72s cubic-bezier(.4,0,.2,1),box-shadow .28s ease,filter .28s ease";
+        layer.appendChild(fly);
+
+        var scale = uniformScale; /* perfectly match hole size */
+        var dx = targets[slotIdx].x - home.centerX;
+        var dy = targets[slotIdx].y - home.centerY;
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            fly.style.transform = "translate(" + dx + "px," + dy + "px) scale(" + scale + ")";
+          });
+        });
+      });
+
+      /* Rejection flash after landing */
+      later(function () {
+        sndWrong();
+        for (var i = 0; i < layer.children.length; i++) {
+          layer.children[i].style.filter = "url(#alpha-glow-wrong)";
+        }
+        later(function () { show(els.tryAgain); }, 700);
+      }, 850);
+    }
+
+    function tryAgain() {
+      var r = currentRound();
+      state.locked = false;
+      state.angle = r.startAngle;
+      els.flightLayer.innerHTML = "";
+      show(els.machineStage);
+      setupBots("layout-laser");
+      snapLaser(r.startAngle);
+      hideBeam();
+      els.cutLine.classList.remove("show");
+      els.machineBlock.classList.remove("vibrate");
+      els.machineBlock.innerHTML = "";
+      els.machineBlock.appendChild(makeBlock(r, r.blockW, r.blockH));
+      els.wrongSlash.classList.remove("show");
+      hide(els.tryAgain);
+      setInstruction("");
+
+      if (state.wrongAttempts >= 2) {
+        showCutLine(r.targetAngle);
+      }
+      startIdleHint();
+    }
+
+    function nextRound() {
+      clearTimers();
+      state.round++;
+      state.step = 0;
+      if (state.round >= ROUNDS.length) {
+        completeGame();
+        return;
+      }
+      renderStep();
+    }
+
+    function completeGame() {
+      resetScene();
+      setInstruction("");
+      show(els.completeStage);
+      try {
+        parent.postMessage({ type: "activity_complete" }, "*");
+      } catch (e) { }
+    }
+
+    function finishGame() {
+      state.round = 0;
+      state.step = 0;
+      hide(els.completeStage);
+      renderStep();
+    }
+
+    function burstCelebration(cx, cy) {
+      var colors = ["#FFE566", "#4DCAFF", "#FF6B8B", "#7BFF83", "#FF9D4D", "#C87AFF", "#FF4DA3", "#56FFE0"];
+      var count = 22;
+      for (var i = 0; i < count; i++) {
+        var dot = document.createElement("div");
+        dot.className = "spark-dot";
+        var angle = (i / count) * 2 * Math.PI;
+        var dist = 70 + Math.random() * 90;
+        var sx = Math.cos(angle) * dist;
+        var sy = Math.sin(angle) * dist;
+        var size = 8 + Math.random() * 8;
+        dot.style.cssText = "left:" + (cx - size / 2) + "px;top:" + (cy - size / 2) + "px;" +
+          "width:" + size + "px;height:" + size + "px;background:" + colors[i % colors.length] + ";" +
+          "animation-delay:" + (Math.random() * 0.18) + "s;";
+        dot.style.setProperty("--sx", sx.toFixed(1) + "px");
+        dot.style.setProperty("--sy", sy.toFixed(1) + "px");
+        els.flightLayer.appendChild(dot);
+        (function (el) { setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 1100); })(dot);
+      }
+    }
+
+    els.playStage.addEventListener("click", function () { sndTap(); nextStep(); });
+    els.hitLeft.addEventListener("click", function () {
+      if (state.tutActive) { tutHandleLeft(); return; }
+      rotateLaser(-45, els.hitLeft);
+    });
+    els.hitRight.addEventListener("click", function () {
+      if (state.tutActive) { tutHandleRight(); return; }
+      rotateLaser(45, els.hitRight);
+    });
+    els.hitCut.addEventListener("click", function () {
+      if (state.tutActive) { tutHandleCut(); return; }
+      cutBlock();
+    });
+    els.tryAgain.addEventListener("click", function () { sndTap(); tryAgain(); });
+    els.nextButton.addEventListener("click", function () { sndTap(); nextRound(); });
+    els.finishButton.addEventListener("click", function () { sndTap(); finishGame(); });
+
+    renderStep();
+  </script>
+
+  <svg width="0" height="0" style="position:absolute;z-index:-1;pointer-events:none;">
+    <defs>
+      <!-- Teaching Yellow Glow Shader -->
+      <filter id="alpha-glow-teach" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="blur" />
+        <feComponentTransfer in="blur" result="boost">
+          <feFuncA type="linear" slope="3" />
+        </feComponentTransfer>
+        <feFlood flood-color="#ffff00" result="color" />
+        <feComposite in="color" in2="boost" operator="in" result="glow" />
+        <feMerge>
+          <feMergeNode in="glow" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+
+      <!-- Try Again Red Glow Shader -->
+      <filter id="alpha-glow-wrong" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="blur" />
+        <feComponentTransfer in="blur" result="boost">
+          <feFuncA type="linear" slope="3" />
+        </feComponentTransfer>
+        <feFlood flood-color="#ff3333" result="redGlow" />
+        <feComposite in="redGlow" in2="boost" operator="in" result="glow" />
+
+        <!-- Red tint for the piece itself -->
+        <feColorMatrix in="SourceGraphic" type="matrix" values="
         1.2 0 0 0 0.3
         0 0.6 0 0 0
         0 0.6 0 0 0
         0 0 0 1 0" result="tinted" />
-      
-      <feMerge>
-        <feMergeNode in="glow" />
-        <feMergeNode in="tinted" />
-      </feMerge>
-    </filter>
-  </defs>
-</svg>
+
+        <feMerge>
+          <feMergeNode in="glow" />
+          <feMergeNode in="tinted" />
+        </feMerge>
+      </filter>
+    </defs>
+  </svg>
 
 </body>
+
 </html>
