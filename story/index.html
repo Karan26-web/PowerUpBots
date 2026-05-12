@@ -1192,6 +1192,7 @@
       letter-spacing: 0;
       text-shadow: 0 2px 0 rgba(18, 109, 181, .36);
       box-shadow: inset 0 -5px 0 rgba(0, 131, 210, .28), 0 4px 0 #0aa7e6;
+      z-index: 8;
       cursor: pointer;
       transition: transform .12s ease, filter .2s ease;
       -webkit-tap-highlight-color: transparent;
@@ -1210,9 +1211,11 @@
       inset: 0;
       z-index: 60;
       overflow: hidden;
+      isolation: isolate;
+      background-color: #e6f0ff;
       background:
-        linear-gradient(180deg, rgba(218, 233, 255, .45) 0%, rgba(224, 238, 255, .75) 100%),
-        radial-gradient(circle at 50% 40%, rgba(255, 255, 255, .96) 0 13%, rgba(229, 239, 255, .82) 35%, rgba(197, 218, 255, .6) 100%);
+        radial-gradient(circle at 50% 40%, #ffffff 0 13%, #e5efff 35%, #c5daff 100%),
+        linear-gradient(180deg, #e6f0ff 0%, #dbeaff 100%);
       transition: opacity .35s ease;
     }
 
@@ -1221,11 +1224,12 @@
       position: absolute;
       inset: -110px -180px -60px;
       background: repeating-conic-gradient(from -10deg at 50% 32%,
-          rgba(255, 255, 255, .58) 0deg,
-          rgba(255, 255, 255, .58) 8deg,
-          rgba(170, 201, 255, .12) 8deg,
-          rgba(170, 201, 255, .12) 18deg);
-      opacity: .68;
+          rgba(255, 255, 255, .5) 0deg,
+          rgba(255, 255, 255, .5) 8deg,
+          rgba(170, 201, 255, .2) 8deg,
+          rgba(170, 201, 255, .2) 18deg);
+      opacity: .74;
+      z-index: 0;
       pointer-events: none;
     }
 
@@ -1238,6 +1242,7 @@
       height: 31px;
       background: rgba(86, 150, 244, .55);
       box-shadow: 0 -1px 0 rgba(255, 255, 255, .46), 0 6px 16px rgba(77, 136, 221, .2);
+      z-index: 1;
     }
 
     .complete-copy {
@@ -1249,7 +1254,7 @@
       text-align: center;
       color: #10295d;
       font-weight: 900;
-      z-index: 3;
+      z-index: 6;
       text-shadow: 0 3px 0 rgba(255, 255, 255, .76), 0 6px 13px rgba(20, 50, 104, .16);
     }
 
@@ -1276,7 +1281,7 @@
       align-items: flex-end;
       justify-content: space-between;
       transform: translateX(-50%);
-      z-index: 2;
+      z-index: 3;
     }
 
     .complete-bot {
@@ -1351,7 +1356,8 @@
     .complete-confetti {
       position: absolute;
       inset: 0;
-      z-index: 1;
+      overflow: hidden;
+      z-index: 5;
       pointer-events: none;
     }
 
@@ -1359,12 +1365,13 @@
       position: absolute;
       left: var(--x);
       top: var(--y);
-      width: 12px;
-      height: 28px;
+      width: var(--w, 12px);
+      height: var(--h, 28px);
       border-radius: 6px 6px 3px 3px;
       background: var(--c);
-      transform: rotate(var(--r));
-      animation: completeConfettiDrift 2.4s ease-in-out infinite;
+      opacity: 0;
+      transform: translate3d(0, -80px, 0) rotate(var(--r));
+      animation: completeConfettiFall var(--dur, 3.4s) linear infinite;
       animation-delay: var(--d);
     }
 
@@ -1405,15 +1412,24 @@
       }
     }
 
-    @keyframes completeConfettiDrift {
+    @keyframes completeConfettiFall {
 
-      0%,
-      100% {
-        transform: translateY(0) rotate(var(--r))
+      0% {
+        opacity: 0;
+        transform: translate3d(0, -100px, 0) rotate(var(--r))
       }
 
-      50% {
-        transform: translateY(18px) rotate(calc(var(--r) + 18deg))
+      10% {
+        opacity: 1
+      }
+
+      92% {
+        opacity: 1
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate3d(var(--dx, 0px), var(--fall, 780px), 0) rotate(calc(var(--r) + var(--spin, 380deg)))
       }
     }
 
@@ -1611,7 +1627,7 @@
         <div class="complete-title">Great job!</div>
         <div class="complete-sub">You finished the lesson.</div>
       </div>
-      <div class="complete-confetti" aria-hidden="true">
+      <div id="completeConfetti" class="complete-confetti" aria-hidden="true">
         <span style="--x:8%;--y:17%;--c:#4dbeff;--r:24deg;--d:.1s"></span>
         <span style="--x:15%;--y:31%;--c:#9b5fd9;--r:-38deg;--d:.7s"></span>
         <span style="--x:23%;--y:24%;--c:#78dc2d;--r:-24deg;--d:.2s"></span>
@@ -1686,6 +1702,63 @@
     }
     function sndSuccess() { _beep('sine', 660, 0.12, 0.2); setTimeout(function () { _beep('sine', 880, 0.18, 0.22); }, 130); }
     function sndWrong() { _beep('sawtooth', 200, 0.25, 0.18, 120); }
+    function sndKidsCheer() {
+      var ctx = _ctx(); if (!ctx) return;
+      try {
+        if (ctx.state === "suspended" && ctx.resume) { ctx.resume(); }
+        var now = ctx.currentTime;
+        var master = ctx.createGain();
+        master.gain.setValueAtTime(0.001, now);
+        master.gain.exponentialRampToValueAtTime(0.42, now + 0.08);
+        master.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
+        master.connect(ctx.destination);
+
+        function whoop(delay, startFreq, endFreq, dur, vol) {
+          var o = ctx.createOscillator();
+          var g = ctx.createGain();
+          o.type = "sine";
+          o.frequency.setValueAtTime(startFreq, now + delay);
+          o.frequency.exponentialRampToValueAtTime(endFreq, now + delay + dur * 0.55);
+          o.frequency.exponentialRampToValueAtTime(startFreq * 1.08, now + delay + dur);
+          g.gain.setValueAtTime(0.001, now + delay);
+          g.gain.exponentialRampToValueAtTime(vol, now + delay + 0.04);
+          g.gain.exponentialRampToValueAtTime(0.001, now + delay + dur);
+          o.connect(g);
+          g.connect(master);
+          o.start(now + delay);
+          o.stop(now + delay + dur + 0.03);
+        }
+
+        function clap(delay, vol) {
+          var bufferSize = Math.floor(ctx.sampleRate * 0.08);
+          var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+          var data = buffer.getChannelData(0);
+          for (var i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2.2);
+          }
+          var src = ctx.createBufferSource();
+          var hp = ctx.createBiquadFilter();
+          var g = ctx.createGain();
+          hp.type = "highpass";
+          hp.frequency.setValueAtTime(1400, now + delay);
+          g.gain.setValueAtTime(vol, now + delay);
+          g.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.09);
+          src.buffer = buffer;
+          src.connect(hp);
+          hp.connect(g);
+          g.connect(master);
+          src.start(now + delay);
+        }
+
+        for (var w = 0; w < 12; w++) {
+          var d = (w % 4) * 0.09 + Math.random() * 0.18;
+          whoop(d, 520 + Math.random() * 280, 940 + Math.random() * 520, 0.48 + Math.random() * 0.35, 0.04 + Math.random() * 0.035);
+        }
+        for (var c = 0; c < 22; c++) {
+          clap(Math.random() * 1.25, 0.04 + Math.random() * 0.055);
+        }
+      } catch (e) { }
+    }
     function sndTurr() {
       var ctx = _ctx(); if (!ctx) return;
       try {
@@ -1810,7 +1883,8 @@
       orbitTarget: 0,
       orbitRaf: null,
       orbitActive: false,
-      idleHintTimer: null
+      idleHintTimer: null,
+      nextAction: null
     };
 
     var els = {
@@ -1852,6 +1926,7 @@
       tryAgain: document.getElementById("tryAgain"),
       nextButton: document.getElementById("nextButton"),
       completeStage: document.getElementById("completeStage"),
+      completeConfetti: document.getElementById("completeConfetti"),
       finishButton: document.getElementById("finishButton")
     };
 
@@ -1887,6 +1962,14 @@
       state.timers.push(id);
     }
 
+    function scheduleTeachingNext(action) {
+      state.nextAction = action || null;
+      hide(els.nextButton);
+      later(function () {
+        show(els.nextButton);
+      }, 4000);
+    }
+
     function currentRound() {
       return ROUNDS[state.round];
     }
@@ -1909,6 +1992,7 @@
       hide(els.tryAgain);
       hide(els.nextButton);
       hide(els.completeStage);
+      state.nextAction = null;
       els.shapeStage.innerHTML = "";
       els.teachContent.innerHTML = "";
       els.machineBlock.classList.remove("vibrate");
@@ -2369,7 +2453,7 @@
       return box;
     }
 
-    function renderTeaching(kind, angle, equal) {
+    function renderTeaching(kind, angle, equal, onNext) {
       var r = currentRound();
       var cutAngle = angle === undefined ? canonicalCutAngle(r) : angle;
       var w = r.name === "rectangle" ? 170 : r.name === "circle" ? 145 : 130;
@@ -2470,6 +2554,9 @@
         els.teachContent.appendChild(grid);
       }
       show(els.teachStage);
+      if (typeof onNext === "function") {
+        scheduleTeachingNext(onNext);
+      }
     }
 
     function renderStep() {
@@ -3078,20 +3165,7 @@
       splitMachineBlock(cutAngle);
       setInstruction("");
 
-      /* 1 – teach-one: 1 Whole */
-      later(function () {
-        hide(els.machineStage);
-        setupBots("layout-clear");
-        renderTeaching("teach-one", cutAngle, true);
-      }, 1000);
-
-      /* 2 – teach-two: halves — show the exact cut the child made */
-      later(function () {
-        renderTeaching("teach-two", cutAngle, true);
-      }, 3800);
-
-      /* 3 – fly halves to bots */
-      later(function () {
+      function powerBotsWithHalves() {
         hide(els.teachStage);
         setupBots("layout-laser");
         setInstruction("");
@@ -3145,13 +3219,25 @@
           burstCelebration(tgts[0].x, tgts[0].y);
           burstCelebration(tgts[1].x, tgts[1].y);
         });
-      }, 7000);
 
-      /* Show Next button — child taps to advance manually */
+        /* Show Next button — child taps to advance manually */
+        later(function () {
+          setInstruction("");
+          state.nextAction = null;
+          show(els.nextButton);
+        }, 1500);
+      }
+
+      function showSecondTeaching() {
+        renderTeaching("teach-two", cutAngle, true, powerBotsWithHalves);
+      }
+
+      /* 1 – teach-one: 1 Whole */
       later(function () {
-        setInstruction("");
-        show(els.nextButton);
-      }, 8500);
+        hide(els.machineStage);
+        setupBots("layout-clear");
+        renderTeaching("teach-one", cutAngle, true, showSecondTeaching);
+      }, 1000);
     }
 
     function splitMachineBlock(angle) {
@@ -3222,20 +3308,20 @@
       splitMachineBlock(cutAngle);
       setInstruction("");
 
-      later(function () {
-        hide(els.machineStage);
-        setupBots("layout-clear");
-        renderTeaching("teach-two", cutAngle, false);
-      }, 1050);
-
-      later(function () {
+      function showWrongPieces() {
         hide(els.teachStage);
         setupBots("layout-laser");
         setInstruction("");
         els.leftPod.classList.add("glow");
         els.rightPod.classList.add("glow");
         flyWrongToSlots(r, cutAngle);
-      }, 4300);
+      }
+
+      later(function () {
+        hide(els.machineStage);
+        setupBots("layout-clear");
+        renderTeaching("teach-two", cutAngle, false, showWrongPieces);
+      }, 1050);
     }
 
     function flyWrongToSlots(r, angle) {
@@ -3317,10 +3403,43 @@
       renderStep();
     }
 
+    function renderCompleteConfetti() {
+      if (!els.completeConfetti) { return; }
+      var colors = ["#4dbeff", "#9b5fd9", "#78dc2d", "#ffcf3b", "#ff6b8b", "#56e8ff"];
+      els.completeConfetti.innerHTML = "";
+      for (var i = 0; i < 72; i++) {
+        var bit = document.createElement("span");
+        var x = 4 + Math.random() * 92;
+        var y = -18 - Math.random() * 60;
+        var dx = -90 + Math.random() * 180;
+        var fall = 610 + Math.random() * 260;
+        var width = 8 + Math.random() * 10;
+        var height = 18 + Math.random() * 20;
+        var rotation = -60 + Math.random() * 120;
+        var spin = 260 + Math.random() * 520;
+        var duration = 2.7 + Math.random() * 1.8;
+        var delay = Math.random() * 1.8;
+        bit.style.setProperty("--x", x.toFixed(1) + "%");
+        bit.style.setProperty("--y", y.toFixed(1) + "px");
+        bit.style.setProperty("--dx", dx.toFixed(1) + "px");
+        bit.style.setProperty("--fall", fall.toFixed(1) + "px");
+        bit.style.setProperty("--w", width.toFixed(1) + "px");
+        bit.style.setProperty("--h", height.toFixed(1) + "px");
+        bit.style.setProperty("--r", rotation.toFixed(1) + "deg");
+        bit.style.setProperty("--spin", spin.toFixed(1) + "deg");
+        bit.style.setProperty("--dur", duration.toFixed(2) + "s");
+        bit.style.setProperty("--d", delay.toFixed(2) + "s");
+        bit.style.setProperty("--c", colors[i % colors.length]);
+        els.completeConfetti.appendChild(bit);
+      }
+    }
+
     function completeGame() {
       resetScene();
       setInstruction("");
+      renderCompleteConfetti();
       show(els.completeStage);
+      sndKidsCheer();
       try {
         parent.postMessage({ type: "activity_complete" }, "*");
       } catch (e) { }
@@ -3354,6 +3473,18 @@
       }
     }
 
+    function handleNextButton() {
+      sndTap();
+      hide(els.nextButton);
+      var action = state.nextAction;
+      state.nextAction = null;
+      if (typeof action === "function") {
+        action();
+        return;
+      }
+      nextRound();
+    }
+
     els.playStage.addEventListener("click", function () { sndTap(); nextStep(); });
     els.hitLeft.addEventListener("click", function () {
       if (state.tutActive) { tutHandleLeft(); return; }
@@ -3368,7 +3499,7 @@
       cutBlock();
     });
     els.tryAgain.addEventListener("click", function () { sndTap(); tryAgain(); });
-    els.nextButton.addEventListener("click", function () { sndTap(); nextRound(); });
+    els.nextButton.addEventListener("click", handleNextButton);
     els.finishButton.addEventListener("click", function () { sndTap(); finishGame(); });
 
     renderStep();
