@@ -21,7 +21,7 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #06111f;
+      background: #d9e7ff;
       display: flex;
       align-items: center;
       justify-content: center
@@ -2313,6 +2313,8 @@
 
     /* ── Web Audio sounds ── */
     var _ac = null;
+    var _pendingPlugConnect = null;
+    var _plugConnectMediaSrc = "";
     function _ctx() { if (!_ac) { var AC = window.AudioContext || window.webkitAudioContext; if (AC) _ac = new AC(); } return _ac; }
     function _beep(type, freq, dur, vol, freqEnd) {
       var ctx = _ctx(); if (!ctx) return;
@@ -2326,6 +2328,107 @@
         o.start(ctx.currentTime); o.stop(ctx.currentTime + dur + 0.01);
       } catch (e) { }
     }
+    function audioSceneIsReadyRound(round) {
+      return state && FLOW[state.step] && FLOW[state.step].scene === "ready" && state.round === round;
+    }
+    function buildPlugConnectMediaSrc() {
+      if (_plugConnectMediaSrc) { return _plugConnectMediaSrc; }
+      var rate = 22050;
+      var duration = 0.28;
+      var samples = Math.floor(rate * duration);
+      var dataSize = samples * 2;
+      var bytes = [];
+      function pushText(text) {
+        for (var i = 0; i < text.length; i++) { bytes.push(text.charCodeAt(i)); }
+      }
+      function push16(value) {
+        bytes.push(value & 255, (value >> 8) & 255);
+      }
+      function push32(value) {
+        bytes.push(value & 255, (value >> 8) & 255, (value >> 16) & 255, (value >> 24) & 255);
+      }
+      pushText("RIFF");
+      push32(36 + dataSize);
+      pushText("WAVEfmt ");
+      push32(16);
+      push16(1);
+      push16(1);
+      push32(rate);
+      push32(rate * 2);
+      push16(2);
+      push16(16);
+      pushText("data");
+      push32(dataSize);
+      for (var s = 0; s < samples; s++) {
+        var t = s / rate;
+        var value = 0;
+        if (t < 0.075) {
+          var clickEnv = Math.pow(1 - t / 0.075, 2.2);
+          var clickFreq = 200 + (150 * t / 0.075);
+          value += (Math.sin(2 * Math.PI * clickFreq * t) > 0 ? 1 : -1) * 0.24 * clickEnv;
+        }
+        if (t > 0.045 && t < 0.16) {
+          var sparkT = (t - 0.045) / 0.115;
+          var sparkEnv = Math.sin(Math.PI * sparkT);
+          value += Math.sin(2 * Math.PI * (1060 + 720 * sparkT) * t) * 0.16 * sparkEnv;
+        }
+        if (t > 0.12 && t < 0.24) {
+          var chirpT = (t - 0.12) / 0.12;
+          var chirpEnv = Math.sin(Math.PI * chirpT);
+          value += Math.sin(2 * Math.PI * (440 + 420 * chirpT) * t) * 0.18 * chirpEnv;
+        }
+        value = Math.max(-0.9, Math.min(0.9, value));
+        var pcm = value < 0 ? value * 32768 : value * 32767;
+        push16((pcm < 0 ? pcm + 65536 : pcm) | 0);
+      }
+      var binary = "";
+      for (var b = 0; b < bytes.length; b += 8192) {
+        binary += String.fromCharCode.apply(null, bytes.slice(b, b + 8192));
+      }
+      _plugConnectMediaSrc = "data:audio/wav;base64," + btoa(binary);
+      return _plugConnectMediaSrc;
+    }
+    function playPlugConnectMediaFallback(round) {
+      if (!audioSceneIsReadyRound(round)) { return Promise.reject(); }
+      try {
+        var audio = new Audio(buildPlugConnectMediaSrc());
+        audio.volume = 0.72;
+        return audio.play();
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    }
+    function queuePendingPlugConnect(round) {
+      _pendingPlugConnect = { round: round, expiresAt: Date.now() + TIMING.LONG_SCREEN + 1200 };
+    }
+    function playPlugConnectTones() {
+      _beep('square', 200, 0.06, 0.3, 340);
+      setTimeout(function () { _beep('sine', 1100, 0.1, 0.12, 1800); }, 45);
+      setTimeout(function () { _beep('sine', 440, 0.08, 0.18, 880); }, 120);
+    }
+    function flushPendingPlugConnect() {
+      var ctx = _ctx();
+      if (!_pendingPlugConnect || !ctx || ctx.state !== "running") { return; }
+      var pending = _pendingPlugConnect;
+      if (Date.now() > pending.expiresAt || !audioSceneIsReadyRound(pending.round)) {
+        _pendingPlugConnect = null;
+        return;
+      }
+      _pendingPlugConnect = null;
+      state.plugConnectPlayed[pending.round] = true;
+      playPlugConnectTones();
+    }
+    function unlockAudioFromGesture() {
+      var ctx = _ctx(); if (!ctx) return;
+      if (ctx.state === "suspended" && ctx.resume) {
+        ctx.resume().then(flushPendingPlugConnect).catch(function () { });
+      } else {
+        flushPendingPlugConnect();
+      }
+    }
+    ["pointerdown", "keydown", "touchstart"].forEach(function (eventName) {
+      window.addEventListener(eventName, unlockAudioFromGesture, { passive: true, capture: true });
+    });
     function sndTap() { _beep('sine', 520, 0.07, 0.18); }
     function sndRotate() {
       _beep('sine', 760, 0.045, 0.075, 920);
@@ -2398,17 +2501,26 @@
         }
       } catch (e) { }
     }
-    function sndPlugConnect() {
+    function sndPlugConnect(round) {
       var ctx = _ctx(); if (!ctx) return;
-      function _play() {
-        try {
-          _beep('square', 200, 0.06, 0.3, 340);
-          setTimeout(function () { _beep('sine', 1100, 0.1, 0.12, 1800); }, 45);
-          setTimeout(function () { _beep('sine', 440, 0.08, 0.18, 880); }, 120);
-        } catch (e) { }
+      round = round === undefined ? state.round : round;
+      if (state.plugConnectPlayed[round]) { return; }
+      if (ctx.state === "suspended") {
+        var mediaPlay = playPlugConnectMediaFallback(round);
+        if (!mediaPlay || typeof mediaPlay.then !== "function") {
+          state.plugConnectPlayed[round] = true;
+          return;
+        }
+        mediaPlay.then(function () {
+          state.plugConnectPlayed[round] = true;
+        }).catch(function () {
+          queuePendingPlugConnect(round);
+        });
+        if (ctx.resume) { ctx.resume().then(flushPendingPlugConnect).catch(function () { }); }
+        return;
       }
-      if (ctx.state === "suspended" && ctx.resume) { ctx.resume().then(_play).catch(function () { }); }
-      else { _play(); }
+      state.plugConnectPlayed[round] = true;
+      playPlugConnectTones();
     }
     function sndCharging() {
       var ctx = _ctx(); if (!ctx) return;
@@ -2680,6 +2792,7 @@
 
     function resetScene() {
       els.sceneBg.style.display = "none";
+      els.sceneBg.src = ASSETS + "Mainbg.png";
       state.teachingActive = false;
       els.game.classList.remove("teaching-active");
       hide(els.shapeStage);
@@ -2764,8 +2877,8 @@
         els.leftPod.classList.add("visible");
         els.rightPod.classList.add("visible");
         if (shouldAnimateConnection && !state.plugConnectPlayed[state.round]) {
-          state.plugConnectPlayed[state.round] = true;
-          later(sndPlugConnect, 1560);
+          var plugRound = state.round;
+          later(function () { sndPlugConnect(plugRound); }, 1560);
         }
       }
       if (layout === "layout-laser") {
@@ -3198,13 +3311,20 @@
         return { x: cx / (6 * area), y: cy / (6 * area) };
       }
 
-      function teachingHalfLabelPosition(g, piece) {
+      function teachingHalfLabelPosition(g, piece, index) {
         var points = polygonPoints(g);
         var centroid = polygonCentroid(points);
         var dx = parseFloat(piece.dataset.gapX || "0");
         var dy = parseFloat(piece.dataset.gapY || "0");
+        var maxX = Math.max.apply(null, points.map(function (p) { return p.x; }));
         var bottom = Math.max.apply(null, points.map(function (p) { return p.y; }));
         var labelGap = (orientation === "slash" || orientation === "backslash") ? 20 : 10;
+        if (r.cut === "diagonal" && orientation === "backslash" && index === 0) {
+          return {
+            x: pad + maxX + dx + 36,
+            y: pad + centroid.y + dy + 8
+          };
+        }
         return {
           x: pad + centroid.x + dx,
           y: pad + bottom + dy + labelGap
@@ -3212,8 +3332,8 @@
       }
 
       /* Labels follow each clipped polygon, not its bounding box. This matters for diagonal triangles. */
-      var lbl0 = teachingHalfLabelPosition(g0, h0);
-      var lbl1 = teachingHalfLabelPosition(g1, h1);
+      var lbl0 = teachingHalfLabelPosition(g0, h0, 0);
+      var lbl1 = teachingHalfLabelPosition(g1, h1, 1);
 
       function makeHalfLabel(pos) {
         var lbl = document.createElement("span");
@@ -3508,6 +3628,8 @@
       state.tutStep = -1;
       state.locked = false;
       state.angle = TUTORIAL_START_ANGLE;
+      els.sceneBg.src = ASSETS + "BgForTutorial.png";
+      els.sceneBg.style.display = "block";
       setupBots("layout-laser");
       setInstruction("");
       /* LaserMachine.png as tutorial overlay; LaserMachineWithoutLines stays as base */
