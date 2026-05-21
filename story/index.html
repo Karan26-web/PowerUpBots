@@ -196,6 +196,7 @@
       object-fit: contain;
       transform: translateX(-50%);
       transition: filter .35s ease, transform .45s cubic-bezier(.18, .89, .35, 1.18);
+      z-index: 5;
     }
 
     .bot-img.happy {
@@ -306,6 +307,7 @@
       object-fit: contain;
       opacity: 0;
       transition: opacity .35s ease, filter .35s ease;
+      z-index: 2;
     }
 
     .pod-img.visible {
@@ -579,55 +581,144 @@
     }
 
     .target-fill.filled {
-      opacity: 1
+      opacity: 1;
+      z-index: 7;
+    }
+
+    .target-fill.filled .fit-piece,
+    .target-fill.charged-focus .fit-piece {
+      position: relative;
+      z-index: 2;
     }
 
     .target-fill.glow {
       animation: targetGlow .9s ease-in-out 2
     }
 
-    /* Slot focus is painted as soft alpha inside the actual hollow target.
-       No border/box-shadow: those read as a square frame over the pod art. */
+    /* Slot focus: yellow glow that follows the hollow shape via clip-path on ::before.
+       drop-shadow on the parent creates an outer halo that respects the shaped alpha
+       (rectangle → rounded box, triangle → triangle, semicircle → semicircle). */
     .target-fill.socket-focus {
       opacity: 1;
       background: none;
       box-shadow: none;
-      filter: none;
+      filter:
+        drop-shadow(0 0 8px rgba(255, 232, 96, .95))
+        drop-shadow(0 0 18px rgba(255, 210, 40, .62))
+        drop-shadow(0 0 40px rgba(255, 210, 40, .32));
+      animation: socketYellowGlow 1.35s ease-in-out infinite;
     }
 
     .target-fill.socket-focus::before {
       content: "";
       position: absolute;
-      inset: -4px;
-      border-radius: var(--slot-focus-radius, 9px);
-      clip-path: var(--slot-focus-clip, inset(0 round 9px));
+      inset: 0;
+      border-radius: var(--slot-focus-radius, 8px);
+      clip-path: var(--slot-focus-clip, inset(0 round 8px));
       background:
         radial-gradient(ellipse at 50% 50%,
-          rgba(255, 244, 118, .68) 0%,
-          rgba(255, 229, 74, .42) 42%,
-          rgba(255, 218, 38, .14) 72%,
-          transparent 100%);
-      filter: blur(5px);
-      opacity: .72;
-      -webkit-mask-image: radial-gradient(ellipse at 50% 50%, #000 0 56%, rgba(0,0,0,.45) 74%, transparent 100%);
-      mask-image: radial-gradient(ellipse at 50% 50%, #000 0 56%, rgba(0,0,0,.45) 74%, transparent 100%);
-      animation: socketHollowPulse 1.35s ease-in-out infinite;
+          rgba(255, 248, 168, .68) 0%,
+          rgba(255, 220, 60, .42) 55%,
+          rgba(255, 200, 30, .26) 100%);
       pointer-events: none;
+    }
+
+    .target-fill.socket-focus::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: var(--slot-focus-radius, 8px);
+      clip-path: var(--slot-focus-clip, inset(0 round 8px));
+      background:
+        radial-gradient(ellipse at 50% 50%,
+          transparent 0% 60%,
+          rgba(255, 252, 200, .9) 88%,
+          rgba(255, 235, 90, .72) 100%);
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    @keyframes socketYellowGlow {
+      0%, 100% {
+        filter:
+          drop-shadow(0 0 6px rgba(255, 232, 96, .85))
+          drop-shadow(0 0 14px rgba(255, 210, 40, .52))
+          drop-shadow(0 0 28px rgba(255, 210, 40, .26));
+      }
+      50% {
+        filter:
+          drop-shadow(0 0 12px rgba(255, 248, 130, 1))
+          drop-shadow(0 0 24px rgba(255, 210, 40, .78))
+          drop-shadow(0 0 48px rgba(255, 210, 40, .42));
+      }
+    }
+
+    /* Circle-variant rounds inherit the base socket-focus yellow shape from
+       --slot-focus-clip and --slot-focus-radius (set per round in JS), so no
+       per-variant cyan/yellow overrides are needed.
+
+       Exception: circle-horizontal pods have a horizontal dome hollow that
+       sits above the slot's piece-drop area. Override the pseudo-element
+       geometry so the dome-shaped highlight aligns with the visible hollow. */
+    .target-fill.socket-focus.slot-circle-horizontal::before,
+    .target-fill.socket-focus.slot-circle-horizontal::after {
+      inset: -14px -4px auto -4px;
+      height: 62px;
+      width: auto;
+      clip-path: ellipse(50% 100% at 50% 100%);
+      border-radius: 0;
     }
 
     /* Pod itself stays neutral — the hollow does the talking. */
     .pod-img.socket-focus {
-      filter: none;
+      filter: brightness(1.02);
     }
 
     @keyframes socketHollowPulse {
-      0%, 100% { opacity: .48; transform: scale(.98); }
-      50%     { opacity: .86; transform: scale(1.025); }
+      0%, 100% { opacity: .58; transform: scale(.99); }
+      50%     { opacity: .92; transform: scale(1.018); }
+    }
+
+    @keyframes socketHollowRim {
+      0%, 100% {
+        opacity: .7;
+        transform: scale(.995);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1.018);
+      }
+    }
+
+    @keyframes socketCircleAura {
+      0%, 100% {
+        opacity: .52;
+        transform: translate(-50%, -50%) scale(.98);
+      }
+
+      50% {
+        opacity: .9;
+        transform: translate(-50%, -50%) scale(1.04);
+      }
+    }
+
+    @keyframes socketCircleRim {
+      0%, 100% {
+        opacity: .72;
+        transform: translate(-50%, -50%) scale(.995);
+      }
+
+      50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.018);
+      }
     }
 
     .target-fill.charged-focus {
       opacity: 1;
       filter: none;
+      z-index: 7;
     }
 
     .target-fill.charged-focus::before {
@@ -722,6 +813,22 @@
       justify-content: center;
     }
 
+    .block-demo.equal-cue::before {
+      content: "";
+      position: absolute;
+      inset: -22px;
+      border-radius: 26px;
+      background:
+        radial-gradient(ellipse at 50% 50%,
+          rgba(255, 246, 118, .44) 0%,
+          rgba(255, 220, 42, .28) 46%,
+          rgba(255, 220, 42, 0) 72%);
+      filter: blur(2px);
+      animation: equalCueHalo 1.45s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
     .block-demo .whole-block,
     .split-demo .whole-block {
       position: absolute;
@@ -749,15 +856,28 @@
     .equal-highlight-part {
       position: absolute;
       inset: 0;
-      background: rgba(255, 255, 255, 0.22);
-      box-shadow: inset 0 0 22px rgba(255, 255, 255, 0.55);
-      animation: halfCuePulse 0.88s ease-in-out infinite;
+      background:
+        linear-gradient(135deg,
+          rgba(255, 238, 74, .52) 0%,
+          rgba(255, 255, 255, .2) 46%,
+          rgba(255, 198, 34, .36) 100%);
+      box-shadow:
+        inset 0 0 0 2px rgba(255, 255, 255, .74),
+        inset 0 0 22px rgba(255, 235, 92, .5),
+        0 0 18px rgba(255, 215, 56, .46);
+      animation: halfCuePulse 1.18s ease-in-out infinite;
       pointer-events: none;
       z-index: 3;
+      mix-blend-mode: screen;
     }
 
     .equal-highlight-part.part-two {
-      animation-delay: 0.44s;
+      animation-delay: 0.28s;
+      background:
+        linear-gradient(315deg,
+          rgba(255, 238, 74, .52) 0%,
+          rgba(255, 255, 255, .2) 46%,
+          rgba(255, 198, 34, .36) 100%);
     }
 
     .equal-highlight-part.vertical.part-one {
@@ -777,8 +897,27 @@
     }
 
     @keyframes halfCuePulse {
-      0%, 100% { opacity: 0.3; }
-      50% { opacity: 0.85; }
+      0%, 100% {
+        opacity: .42;
+        transform: scale(.992);
+      }
+
+      50% {
+        opacity: .86;
+        transform: scale(1.018);
+      }
+    }
+
+    @keyframes equalCueHalo {
+      0%, 100% {
+        opacity: .62;
+        transform: scale(.98);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1.04);
+      }
     }
 
     /* Glowing seam line between the two highlighted halves */
@@ -786,7 +925,7 @@
       position: absolute;
       pointer-events: none;
       z-index: 5;
-      animation: seamGlow 0.88s ease-in-out infinite;
+      animation: seamGlow 1.18s ease-in-out infinite;
     }
 
     .cut-cue-line.vertical {
@@ -795,10 +934,15 @@
       bottom: 0;
       width: 3px;
       transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.94);
+      background: linear-gradient(to bottom,
+        rgba(255, 255, 255, 0),
+        rgba(255, 255, 255, .98) 20%,
+        rgba(255, 255, 255, .98) 80%,
+        rgba(255, 255, 255, 0));
       box-shadow:
-        0 0 8px 4px rgba(255, 255, 255, 0.82),
-        0 0 20px 7px rgba(180, 240, 255, 0.56);
+        0 0 8px 3px rgba(255, 255, 255, 0.72),
+        0 0 22px 7px rgba(255, 231, 96, 0.48),
+        0 0 26px 10px rgba(255, 210, 40, 0.42);
     }
 
     .cut-cue-line.horizontal {
@@ -807,10 +951,15 @@
       right: 0;
       height: 3px;
       transform: translateY(-50%);
-      background: rgba(255, 255, 255, 0.94);
+      background: linear-gradient(to right,
+        rgba(255, 255, 255, 0),
+        rgba(255, 255, 255, .98) 20%,
+        rgba(255, 255, 255, .98) 80%,
+        rgba(255, 255, 255, 0));
       box-shadow:
-        0 0 8px 4px rgba(255, 255, 255, 0.82),
-        0 0 20px 7px rgba(180, 240, 255, 0.56);
+        0 0 8px 3px rgba(255, 255, 255, 0.72),
+        0 0 22px 7px rgba(255, 231, 96, 0.48),
+        0 0 26px 10px rgba(255, 210, 40, 0.42);
     }
 
     .cut-cue-line.slash,
@@ -818,10 +967,15 @@
       left: 50%;
       top: 50%;
       height: 3px;
-      background: rgba(255, 255, 255, 0.94);
+      background: linear-gradient(to right,
+        rgba(255, 255, 255, 0),
+        rgba(255, 255, 255, .98) 20%,
+        rgba(255, 255, 255, .98) 80%,
+        rgba(255, 255, 255, 0));
       box-shadow:
-        0 0 8px 4px rgba(255, 255, 255, 0.82),
-        0 0 20px 7px rgba(180, 240, 255, 0.56);
+        0 0 8px 3px rgba(255, 255, 255, 0.72),
+        0 0 22px 7px rgba(255, 231, 96, 0.48),
+        0 0 26px 10px rgba(255, 210, 40, 0.42);
     }
 
     @keyframes seamGlow {
@@ -896,46 +1050,78 @@
       50% { opacity: 1; }
     }
 
-    /* Guided slot preview: each half travels along a high arc into the hollow,
-       returns to the split block, then repeats once. The dotted SVG path mirrors
-       --mx/--my and --tx/--ty so the motion and visual cue agree. */
+    /* Guided slot preview: each half travels to the hollow, snaps back faster,
+       then finishes with one final move into the hollow. The dotted SVG path mirrors
+       the sampled Bezier points so the motion and visual cue agree. */
     .split-demo-piece.fly-tease {
       transition: none;
-      animation: splitFlyToHollowTease 6s cubic-bezier(.45, .05, .45, .95) forwards;
+      animation: splitFlyToHollowTease 7.8s linear forwards;
       filter: drop-shadow(0 0 14px rgba(94, 226, 255, .55));
     }
 
     @keyframes splitFlyToHollowTease {
-      0% {
+      0%, 7% {
         transform: translate(var(--seamX, 0px), var(--seamY, 0px)) scale(1);
         opacity: 1;
       }
-      12% {
-        transform: translate(var(--mx), var(--my)) scale(.9);
+      13% {
+        transform: translate(var(--p18x), var(--p18y)) scale(.98);
         opacity: .96;
       }
-      25% {
+      19% {
+        transform: translate(var(--p38x), var(--p38y)) scale(.91);
+        opacity: .98;
+      }
+      27% {
+        transform: translate(var(--p62x), var(--p62y)) scale(.82);
+        opacity: 1;
+      }
+      35% {
+        transform: translate(var(--p82x), var(--p82y)) scale(calc(var(--slotScale, .68) + .04));
+        opacity: 1;
+      }
+      42% {
         transform: translate(var(--tx), var(--ty)) scale(var(--slotScale, .68));
         opacity: 1;
       }
-      34% {
+      49% {
         transform: translate(var(--tx), var(--ty)) scale(var(--slotScale, .68));
         opacity: 1;
       }
-      43% {
-        transform: translate(var(--mx), var(--my)) scale(.9);
-        opacity: .96;
-      }
-      50% {
-        transform: translate(var(--seamX, 0px), var(--seamY, 0px)) scale(1);
+      54% {
+        transform: translate(var(--p82x), var(--p82y)) scale(calc(var(--slotScale, .68) + .04));
         opacity: 1;
+      }
+      58% {
+        transform: translate(var(--p62x), var(--p62y)) scale(.82);
+        opacity: .98;
       }
       62% {
-        transform: translate(var(--mx), var(--my)) scale(.9);
+        transform: translate(var(--p38x), var(--p38y)) scale(.91);
         opacity: .96;
       }
+      66% {
+        transform: translate(var(--seamX, 0px), var(--seamY, 0px)) scale(1);
+        opacity: 1;
+      }
+      72% {
+        transform: translate(var(--seamX, 0px), var(--seamY, 0px)) scale(1);
+        opacity: 1;
+      }
       78% {
-        transform: translate(var(--tx), var(--ty)) scale(var(--slotScale, .68));
+        transform: translate(var(--p18x), var(--p18y)) scale(.98);
+        opacity: .96;
+      }
+      86% {
+        transform: translate(var(--p38x), var(--p38y)) scale(.91);
+        opacity: .98;
+      }
+      92% {
+        transform: translate(var(--p62x), var(--p62y)) scale(.82);
+        opacity: 1;
+      }
+      97% {
+        transform: translate(var(--p82x), var(--p82y)) scale(calc(var(--slotScale, .68) + .04));
         opacity: 1;
       }
       100% {
@@ -2733,7 +2919,7 @@
       PLUG_SCREEN: 3100,
       READY_TEXT_SCREEN: 3300,
       MOVE_SCREEN: 1500,
-      HALVES_DEMO_SCREEN: 8400,
+      HALVES_DEMO_SCREEN: 10600,
       TEACH_WHOLE_IN: 180,
       TEACH_LABEL_IN: 1250,
       TEACH_MOVE_DOWN: 2650,
@@ -2753,6 +2939,7 @@
     var _ac = null;
     var _pendingPlugConnect = null;
     var _plugConnectMediaSrc = "";
+    var _laserCutAudio = null;
     function _ctx() { if (!_ac) { var AC = window.AudioContext || window.webkitAudioContext; if (AC) _ac = new AC(); } return _ac; }
     function _beep(type, freq, dur, vol, freqEnd) {
       var ctx = _ctx(); if (!ctx) return;
@@ -2837,6 +3024,19 @@
         return Promise.reject(e);
       }
     }
+    function playLaserCutMedia() {
+      try {
+        if (!_laserCutAudio) {
+          _laserCutAudio = new Audio("audios/laserSound.mp3");
+          _laserCutAudio.preload = "auto";
+          _laserCutAudio.volume = 0.95;
+        }
+        _laserCutAudio.currentTime = 0;
+        return _laserCutAudio.play();
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    }
     function queuePendingPlugConnect(round) {
       _pendingPlugConnect = { round: round, expiresAt: Date.now() + 45000 };
     }
@@ -2879,8 +3079,10 @@
       setTimeout(function () { _beep('triangle', 1040, 0.04, 0.045, 1180); }, 34);
     }
     function sndCut() {
-      _beep('sawtooth', 900, 0.05, 0.25, 900);
-      setTimeout(function () { _beep('sawtooth', 700, 0.35, 0.2, 80); }, 50);
+      playLaserCutMedia().catch(function () {
+        _beep('sawtooth', 900, 0.05, 0.25, 900);
+        setTimeout(function () { _beep('sawtooth', 700, 0.35, 0.2, 80); }, 50);
+      });
     }
     function sndSuccess() { _beep('sine', 660, 0.12, 0.2); setTimeout(function () { _beep('sine', 880, 0.18, 0.22); }, 130); }
     function sndWrong() { _beep('sawtooth', 200, 0.25, 0.18, 120); }
@@ -3035,6 +3237,7 @@
       {
         name: "circle",
         label: "Circle",
+        variant: "circle-horizontal",
         blockSrc: ASSETS + "CircleBlock.png",
         blockW: 220,
         blockH: 220,
@@ -3047,11 +3250,18 @@
         pod: ASSETS + "SemiCircleHollowleft.png",
         podLeft: ASSETS + "SemiCircleHollowleft.png",
         podRight: ASSETS + "SemiCircleHollowright.png",
-        podW: 160,
+        podW: 132,
         botAspect: 893 / 896,
         podAspectLeft: 1098 / 520,
         podAspectRight: 1098 / 520,
-        chargerOverlap: 60,
+        chargerOverlap: 58,
+        slotSize: { width: 96, height: 48 },
+        slotOffset: { left: 18, right: 22 },
+        slotFocus: {
+          left: "inset(0 round 999px 0 0 999px)",
+          right: "inset(0 round 0 999px 999px 0)",
+          radius: "999px"
+        },
         botWIntro: 220,
         botWReady: 180,
         happyBotW: 163
@@ -3079,8 +3289,8 @@
         podAspectRight: 1184 / 310,
         chargerOverlap: 72,
         slotSize: { width: 96, height: 170 },
-        slotOffset: { left: 42, right: 42 },
-        slotXOffset: { left: -5, right: 5 },
+        slotOffset: { left: 15, right: 15 },
+        slotXOffset: { left: -2, right: 2 },
         slotFocus: {
           left: "inset(0 round 999px 0 0 999px)",
           right: "inset(0 round 0 999px 999px 0)",
@@ -3103,6 +3313,8 @@
         startAngle: 90,
         targetAngle: 45,
         targetAngle2: 225,
+        acceptedAngles: [45, 135, 225, 315],
+        successAngle: 45,
         sadBot: ASSETS + "CircleBot.png",
         happyBot: ASSETS + "HappyCircleBot.png",
         pod: ASSETS + "45angleCircleHollow.png",
@@ -3114,11 +3326,11 @@
         podAspectRight: 1228 / 539,
         chargerOverlap: 74,
         slotSize: { width: 138, height: 128 },
-        slotOffset: { left: 20, right: 24 },
-        slotXOffset: { left: 24, right: -20 },
+        slotOffset: { left: 44, right: 45 },
+        slotXOffset: { left: 9, right: -15 },
         slotFocus: {
-          left: "polygon(0 38%, 46% 0, 100% 61%, 58% 100%)",
-          right: "polygon(0 0, 54% 38%, 100% 100%, 42% 100%)",
+          left: "polygon(4% 82%, 0 64%, 5% 42%, 18% 22%, 38% 9%, 62% 7%, 82% 17%, 98% 32%)",
+          right: "polygon(2% 32%, 18% 17%, 38% 7%, 62% 9%, 82% 22%, 95% 42%, 100% 64%, 96% 82%)",
           radius: "0"
         },
         pieceForSlot: [1, 0],
@@ -3259,8 +3471,7 @@
       var r = currentRound();
       if (!r) return null;
       var cur = state.angle;
-      var targets = [r.targetAngle];
-      if (r.targetAngle2 !== undefined) { targets.push(r.targetAngle2); }
+      var targets = acceptedCutAnglesForRound(r);
       /* Button semantics (matching tutorial): LEFT button rotates +45,
          RIGHT button rotates -45. So "go +angle" → press LEFT,
          "go -angle" → press RIGHT. */
@@ -3416,8 +3627,9 @@
       var rightSlotEl = els.rightBot.parentNode;
       var leftAspect = r.podAspectLeft || 2.3;
       var rightAspect = r.podAspectRight || r.podAspectLeft || 2.3;
-      leftSlotEl.style.setProperty("--power-spark-top", (podTopLeft + podW * leftAspect - (r.chargerOverlap || 14) + 8) + "px");
-      rightSlotEl.style.setProperty("--power-spark-top", (podTopRight + podW * rightAspect - (r.chargerOverlap || 14) + 8) + "px");
+      var chargerOverlap = chargerOverlapForRound(r);
+      leftSlotEl.style.setProperty("--power-spark-top", (podTopLeft + podW * leftAspect - chargerOverlap + 8) + "px");
+      rightSlotEl.style.setProperty("--power-spark-top", (podTopRight + podW * rightAspect - chargerOverlap + 8) + "px");
       els.leftPod.style.top = podTopLeft + "px";
       els.rightPod.style.top = podTopRight + "px";
       els.leftPod.style.width = podW + "px";
@@ -3451,6 +3663,7 @@
         fill.style.borderRadius = "";
         fill.style.removeProperty("--slot-focus-clip");
         fill.style.removeProperty("--slot-focus-radius");
+        fill.style.removeProperty("--socket-focus-size");
       });
     }
 
@@ -3462,7 +3675,11 @@
       var botTop = 720 - botW * (r.botAspect || 1.2);
       var podW = r.podW || 132;
       var podAspect = side === "right" ? (r.podAspectRight || r.podAspectLeft || 2.3) : (r.podAspectLeft || 2.3);
-      return botTop - podW * podAspect + (r.chargerOverlap || 14) + introPlugYOffset(layout);
+      return botTop - podW * podAspect + chargerOverlapForRound(r) + introPlugYOffset(layout);
+    }
+
+    function chargerOverlapForRound(r) {
+      return r && r.chargerOverlap !== undefined ? r.chargerOverlap : 14;
     }
 
     function targetSlotSizeForRound(r) {
@@ -3536,8 +3753,8 @@
         };
       }
       return {
-        clip: "inset(8px 7px 8px 7px round 8px)",
-        radius: "8px"
+        clip: "inset(0 5px 0 5px round 6px)",
+        radius: "6px"
       };
     }
 
@@ -3569,10 +3786,18 @@
         fill.style.marginLeft = targetSlotXOffsetForRound(r, item.side) + "px";
         fill.style.marginTop = "0px";
         fill.classList.add("slot-" + r.name, "slot-" + item.side);
+        if (r.variant) {
+          fill.classList.add("slot-" + r.variant);
+        }
 
         var focusStyle = slotFocusStyleForRound(r, item.side);
         fill.style.setProperty("--slot-focus-clip", focusStyle.clip);
         fill.style.setProperty("--slot-focus-radius", focusStyle.radius);
+        if (r.name === "circle" && r.variant !== "circle-horizontal") {
+          fill.style.setProperty("--socket-focus-size", (Math.min(width, height) + 18) + "px");
+        } else {
+          fill.style.removeProperty("--socket-focus-size");
+        }
 
         /* No clip-path or border-radius on the fill container — the piece inside has its own
            clip-path from pieceGeometry, and circle images use natural transparency for the arc shape. */
@@ -3841,9 +4066,20 @@
 
     function resultSplitGapForOrientation(orientation) {
       if (orientation === "slash" || orientation === "backslash") {
-        return 34;
+        return 4;
       }
       return 24;
+    }
+
+    function resultSplitGapForRound(r, orientation) {
+      if (r && r.name === "square" && (orientation === "slash" || orientation === "backslash")) {
+        return 2;
+      }
+      if (r && r.name === "circle" && r.variant === "circle-diagonal" &&
+        (orientation === "slash" || orientation === "backslash")) {
+        return 2;
+      }
+      return resultSplitGapForOrientation(orientation);
     }
 
     function renderWhole(glow, cue) {
@@ -3859,6 +4095,7 @@
       wrap.appendChild(block);
 
       if (cue === "halves") {
+        wrap.classList.add("equal-cue");
         var angle = canonicalCutAngle(r);
         var orientation = cutOrientation(angle);
         [0, 1].forEach(function (index) {
@@ -3927,14 +4164,14 @@
         whole.style.opacity = "0";
 
         /* Show halves with tiny seam only — pieces stay centre-aligned */
-        var seamOffsets = splitOffsetForOrientation(orientation, 6);
+        var seamOffsets = splitOffsetForOrientation(orientation, 2);
         dPieces.forEach(function (piece, index) {
           piece.style.opacity = "1";
           piece.style.transform = "translate(" + seamOffsets[index].x + "px," + seamOffsets[index].y + "px)";
         });
 
-        /* After brief pause, draw the travel guides and loop each half along
-           the same curved path into its hollow slot three times. */
+        /* After a brief pause, draw the travel guides and run the full
+           out-and-back preview before the final move into each hollow slot. */
         later(function () {
           var podTopL = podTopForRound(r, "layout-ready", "left");
           var podTopR = podTopForRound(r, "layout-ready", "right");
@@ -3959,14 +4196,20 @@
             var dy = targetY - pcY;
             var startX = pcX + seamOffsets[index].x;
             var startY = pcY + seamOffsets[index].y;
-            var controlX = (startX + targetX) / 2 + (goesToLeft ? -74 : 74);
-            var controlY = Math.max(82, Math.min(startY, targetY) - 190);
+            var controlX = (startX + targetX) / 2 + (goesToLeft ? -62 : 62);
+            var panelClearY = 245;
+            var softArcY = Math.min(startY, targetY) - 96;
+            var controlY = Math.max(panelClearY, softArcY);
             var mx = controlX - pcX;
             var my = controlY - pcY;
             var slotScale = slotScaleForPiece({ width: slotSize.width, height: slotSize.height }, g) *
               visualFitScaleForRound(r) * 0.9;
-            var guideEndX = targetX + (goesToLeft ? -slotSize.width * 0.42 : slotSize.width * 0.42);
-            var guideEndY = targetY - slotSize.height * 0.58;
+            var guideEndX = targetX;
+            var guideEndY = targetY;
+            var p18 = bezierPoint(startX, startY, controlX, controlY, guideEndX, guideEndY, 0.18);
+            var p38 = bezierPoint(startX, startY, controlX, controlY, guideEndX, guideEndY, 0.38);
+            var p62 = bezierPoint(startX, startY, controlX, controlY, guideEndX, guideEndY, 0.62);
+            var p82 = bezierPoint(startX, startY, controlX, controlY, guideEndX, guideEndY, 0.82);
 
             piece.style.setProperty("--seamX", seamOffsets[index].x + "px");
             piece.style.setProperty("--seamY", seamOffsets[index].y + "px");
@@ -3974,6 +4217,14 @@
             piece.style.setProperty("--ty", dy + "px");
             piece.style.setProperty("--mx", mx + "px");
             piece.style.setProperty("--my", my + "px");
+            piece.style.setProperty("--p18x", (p18.x - pcX) + "px");
+            piece.style.setProperty("--p18y", (p18.y - pcY) + "px");
+            piece.style.setProperty("--p38x", (p38.x - pcX) + "px");
+            piece.style.setProperty("--p38y", (p38.y - pcY) + "px");
+            piece.style.setProperty("--p62x", (p62.x - pcX) + "px");
+            piece.style.setProperty("--p62y", (p62.y - pcY) + "px");
+            piece.style.setProperty("--p82x", (p82.x - pcX) + "px");
+            piece.style.setProperty("--p82y", (p82.y - pcY) + "px");
             piece.style.setProperty("--slotScale", slotScale.toFixed(3));
             /* Clear the inline transform so the keyframe owns it */
             piece.style.transition = "none";
@@ -3984,6 +4235,14 @@
           });
         }, 700);
       }, 1450);
+    }
+
+    function bezierPoint(startX, startY, controlX, controlY, endX, endY, t) {
+      var inv = 1 - t;
+      return {
+        x: inv * inv * startX + 2 * inv * t * controlX + t * t * endX,
+        y: inv * inv * startY + 2 * inv * t * controlY + t * t * endY
+      };
     }
 
     function addSlotPathGuide(startX, startY, controlX, controlY, targetX, targetY, index) {
@@ -4899,6 +5158,28 @@
       return diff > 180 ? 360 - diff : diff;
     }
 
+    function acceptedCutAnglesForRound(r) {
+      if (r.acceptedAngles && r.acceptedAngles.length) {
+        return r.acceptedAngles;
+      }
+      var targets = [r.targetAngle];
+      if (r.targetAngle2 !== undefined) { targets.push(r.targetAngle2); }
+      return targets;
+    }
+
+    function isCorrectCutForRound(r, angle) {
+      return acceptedCutAnglesForRound(r).some(function (target) {
+        return angleDiff(angle, target) <= 8;
+      });
+    }
+
+    function resolvedCutAngleForRound(r, angle) {
+      if (r.successAngle !== undefined && isCorrectCutForRound(r, angle)) {
+        return r.successAngle;
+      }
+      return angle;
+    }
+
     function wrongPieceClip(angle, index) {
       var normalized = ((angle % 360) + 360) % 360;
       var diagonalDown = (normalized > 90 && normalized < 270);
@@ -4949,10 +5230,9 @@
 
       later(function () {
         hideBeam();
-        var correct = angleDiff(state.angle, r.targetAngle) <= 8 ||
-          (r.targetAngle2 !== undefined && angleDiff(state.angle, r.targetAngle2) <= 8);
+        var correct = isCorrectCutForRound(r, state.angle);
         if (correct) {
-          state.lastCutAngle = state.angle;
+          state.lastCutAngle = resolvedCutAngleForRound(r, state.angle);
           showSuccess();
         } else {
           showFail();
@@ -5007,7 +5287,7 @@
         wrap.appendChild(piece);
       });
 
-      var offsets = splitOffsetForOrientation(orientation, resultSplitGapForOrientation(orientation));
+      var offsets = splitOffsetForOrientation(orientation, resultSplitGapForRound(r, orientation));
       pieces.forEach(function (piece, index) {
         piece.style.transform = "translate(" + offsets[index].x + "px," + offsets[index].y + "px)";
       });
@@ -5049,8 +5329,9 @@
       var podW = r.podW || 132;
       var aspectL = r.podAspectLeft || 2.3;
       var aspectR = r.podAspectRight || r.podAspectLeft || 2.3;
-      var newTopL = newBotTop - podW * aspectL + (r.chargerOverlap || 14);
-      var newTopR = newBotTop - podW * aspectR + (r.chargerOverlap || 14);
+      var chargerOverlap = chargerOverlapForRound(r);
+      var newTopL = newBotTop - podW * aspectL + chargerOverlap;
+      var newTopR = newBotTop - podW * aspectR + chargerOverlap;
 
       els.leftPod.classList.add("jump");
       els.rightPod.classList.add("jump");
@@ -5082,7 +5363,7 @@
         if (centerOverride) {
           var startOffsets = splitOffsetForOrientation(
             cutOrientation(angle),
-            resultSplitGapForOrientation(cutOrientation(angle))
+            resultSplitGapForRound(r, cutOrientation(angle))
           );
           home.left += startOffsets[pieceIdx].x;
           home.top += startOffsets[pieceIdx].y;
@@ -5187,11 +5468,11 @@
             h0.style.transition = trans;
             h1.style.transition = trans;
             if (orientation === "slash") {
-              h0.style.transform = "translate(-12px,-12px)";
-              h1.style.transform = "translate(12px,12px)";
+              h0.style.transform = "translate(-3px,-3px)";
+              h1.style.transform = "translate(3px,3px)";
             } else {
-              h0.style.transform = "translate(12px,-12px)";
-              h1.style.transform = "translate(-12px,12px)";
+              h0.style.transform = "translate(3px,-3px)";
+              h1.style.transform = "translate(-3px,3px)";
             }
           });
         });
@@ -5297,7 +5578,7 @@
         if (centerOverride) {
           var startOffsets = splitOffsetForOrientation(
             cutOrientation(angle),
-            resultSplitGapForOrientation(cutOrientation(angle))
+            resultSplitGapForRound(r, cutOrientation(angle))
           );
           home.left += startOffsets[pieceIdx].x;
           home.top += startOffsets[pieceIdx].y;
