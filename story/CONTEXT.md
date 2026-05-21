@@ -53,24 +53,22 @@ story/
 | # | Name | Block | Cut | Target Angle | Left Pod | Right Pod |
 |---|------|-------|-----|-------------|----------|-----------|
 | 0 | rectangle | RectangleBlock.png 220×110 | vertical | 90° or 270° | SquareHollow | SquareHollow |
-| 1 | circle | CircleBlock.png 220×220 | horizontal | 0° or 180° | SemiCircleHollowleft | SemiCircleHollowright |
-| 2 | square | CSS div 190×190 (purple #9B5FD9) | diagonal | 135° or 315° | TriangularHollowLeft | TriangularHollowRight |
+| 1 | square | CSS div 155×155 (purple #9B5FD9) | diagonal | 45° or 225° | TriangularHollowLeft | TriangularHollowRight |
+| 2 | circle | CircleBlock.png 220×220 | horizontal | 0° or 180° | SemiCircleHollowleft | SemiCircleHollowright |
 
 ### FLOW (per round, defined in `FLOW` array ~line 1045)
 
 ```
-intro → ready → whole → needs → halves → tutorial* → play* → laser
+intro → plug → plugReady → moveOut → whole → needs → halves → tutorial* → laser
 ```
 
 \* `tutorial` scene: runs guided sequence only on round 0 (skips to next on rounds 1+).  
-\* `play` scene ("Let's Play" button): shown only on round 0 (skips to next on rounds 1+).
 
 ### Scene Descriptions
 
-- **intro / ready / whole / needs / halves**: Narration scenes with bot layout and shape display. Auto-advance via `duration` timer.
+- **intro / plug / plugReady / moveOut / whole / needs / halves**: Narration scenes with bot layout and shape display. Auto-advance via `duration` timer.
 - **tutorial**: Guided laser demo with bubbles. Shows LaserMachine.png overlay (guide lines). Only round 0.
-- **play**: Shows TutorialAfterScreen.png "Let's Play" button. User taps to proceed. Only round 0.
-- **laser**: Interactive gameplay — user moves laser and taps CUT. No guide line overlay.
+- **laser**: Interactive gameplay — user moves laser and taps CUT. No instruction panel and no guide line overlay.
 
 ---
 
@@ -109,18 +107,20 @@ Both labels (big and equal) share the SAME styling. Only the block shape changes
 1. `splitMachineBlock` — block splits into two pieces with animation
 2. Teaching screen 1: "1 Whole" (1000ms delay)
 3. Teaching screen 2: "2 Equal Parts" (3800ms delay)
-4. `flyHalvesToSlots` — pieces animate from machine center to bot pod slots (7000ms)
-5. Bots switch to happy state, pods glow, confetti burst
-6. "Next" button appears (8500ms)
+4. Result split screen — bots at left/right, no instruction panel, cut parts centered
+5. `flyHalvesToSlots` — pieces animate from center to bot pod slots
+6. Filled slot screen — bots switch to happy state, slots glow green, confetti burst
+7. "Next" button appears
 
 ### Fail Flow (`showFail`, ~line 2239)
 
-1. `splitMachineBlock` + `wrongSlash` overlay shown
-2. Teaching screen 2: "Not Equal Parts" (1050ms)
-3. `flyWrongToSlots` — wrong pieces animate to slots, bounce back with red flash
-4. "Try Again" button appears
-5. On retry: `tryAgain()` resets laser, block, unlocks interaction
-6. After 1st fail: alignment lines shown (LaserMachine overlay via `tutorialOverlay`)
+1. `splitMachineBlock` — block splits at the attempted angle
+2. Teaching screen 1/2 shows "1 Whole" then "Not Equal Parts"
+3. Result split screen — bots at left/right, no instruction panel, attempted cut parts centered
+4. `flyWrongToSlots` — wrong pieces animate to slots, glow red, wiggle, and return
+5. "Try Again" button appears
+6. On retry: `tryAgain()` resets laser, block, unlocks interaction
+7. After 1st fail: alignment lines shown (LaserMachine overlay via `tutorialOverlay`)
 
 ---
 
@@ -156,7 +156,8 @@ Pod and fill sizes (from `setupTargetSlots`, ~line 1235):
 - **Square block uses CSS, not PNG**: `r.blockSrc = ""` — rendered as `div.css-square { background: #9B5FD9 }`. Color changed from original pink (#d23d62) to purple (#9B5FD9).
 - **Circle borderRadius on inner cut piece = "0"**: Explicitly cleared in `makeCutPiece` to prevent white-line artifact at the horizontal cut boundary when two semicircles are displayed adjacent.
 - **Horizontal split gap fix**: In `splitMachineBlock`, h0 gets `marginBottom: "-1px"` for horizontal (circle) cuts to close the 1px rendering gap between stacked semicircles.
-- **Let's Play screen**: Only shown on round 0 (tutorial). Rounds 1+ skip directly to laser gameplay.
+- **Post-tutorial starts cleanly**: After the tutorial, gameplay starts directly on the laser screen with no instruction panel.
+- **Post-teaching result screens**: Correct and wrong cuts both show the no-instruction split result screen before the slot-fit screen/animation.
 - **Laser beam hidden during alignment**: Beam.svg only appears on CUT action, not during laser positioning.
 - **Tutorial only on round 0**: The `{scene:"tutorial"}` step calls `nextStep()` immediately for `state.round > 0`.
 
