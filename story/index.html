@@ -2940,6 +2940,14 @@
     var _pendingPlugConnect = null;
     var _plugConnectMediaSrc = "";
     var _laserCutAudio = null;
+    var _plugConnectAudio = (function () {
+      try {
+        var a = new Audio("audios/plug.mp3");
+        a.preload = "auto";
+        a.volume = 0.95;
+        return a;
+      } catch (e) { return null; }
+    })();
     function _ctx() { if (!_ac) { var AC = window.AudioContext || window.webkitAudioContext; if (AC) _ac = new AC(); } return _ac; }
     function _beep(type, freq, dur, vol, freqEnd) {
       var ctx = _ctx(); if (!ctx) return;
@@ -3057,6 +3065,11 @@
       }
       _pendingPlugConnect = null;
       state.plugConnectPlayed[pending.round] = true;
+      var mp3Play = playPlugMp3();
+      if (mp3Play && typeof mp3Play.then === "function") {
+        mp3Play.catch(function () { playPlugConnectTones(); });
+        return;
+      }
       playPlugConnectTones();
     }
     function unlockAudioFromGesture() {
@@ -3147,9 +3160,34 @@
         }
       } catch (e) { }
     }
+    function playPlugMp3() {
+      if (!_plugConnectAudio) { return null; }
+      try {
+        _plugConnectAudio.currentTime = 0;
+        return _plugConnectAudio.play();
+      } catch (e) { return null; }
+    }
     function sndPlugConnect(round) {
-      var ctx = _ctx(); if (!ctx) return;
       round = round === undefined ? state.round : round;
+      if (state.plugConnectPlayed[round]) { return; }
+      /* Prefer the preloaded MP3 — better autoplay tolerance than synth tones,
+         and gives a designed sound instead of beeps. Falls back to tones if the
+         file is missing or .play() is blocked. */
+      var mp3Play = playPlugMp3();
+      if (mp3Play && typeof mp3Play.then === "function") {
+        state.plugConnectPlayed[round] = true;
+        mp3Play.catch(function () {
+          /* Autoplay block or missing file — undo the played-flag and try the
+             Web Audio path so the queued-flush mechanism still works. */
+          state.plugConnectPlayed[round] = false;
+          sndPlugConnectWebAudio(round);
+        });
+        return;
+      }
+      sndPlugConnectWebAudio(round);
+    }
+    function sndPlugConnectWebAudio(round) {
+      var ctx = _ctx(); if (!ctx) return;
       if (state.plugConnectPlayed[round]) { return; }
       if (ctx.state === "suspended") {
         queuePendingPlugConnect(round);
