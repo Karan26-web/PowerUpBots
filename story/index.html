@@ -621,6 +621,9 @@
           rgba(255, 220, 60, .42) 55%,
           rgba(255, 200, 30, .26) 100%);
       pointer-events: none;
+      opacity: .76;
+      transform-origin: center center;
+      animation: socketHollowBlink 1.05s ease-in-out infinite;
     }
 
     .target-fill.socket-focus::after {
@@ -636,6 +639,9 @@
           rgba(255, 235, 90, .72) 100%);
       pointer-events: none;
       mix-blend-mode: screen;
+      opacity: .88;
+      transform-origin: center center;
+      animation: socketHollowBlink 1.05s ease-in-out infinite reverse;
     }
 
     @keyframes socketYellowGlow {
@@ -653,20 +659,38 @@
       }
     }
 
-    /* Circle-variant rounds inherit the base socket-focus yellow shape from
-       --slot-focus-clip and --slot-focus-radius (set per round in JS), so no
-       per-variant cyan/yellow overrides are needed.
+    @keyframes socketHollowBlink {
+      0%, 100% {
+        opacity: .52;
+        transform: scale(.985);
+      }
 
-       Exception: circle-horizontal pods have a horizontal dome hollow that
-       sits above the slot's piece-drop area. Override the pseudo-element
-       geometry so the dome-shaped highlight aligns with the visible hollow. */
+      50% {
+        opacity: .96;
+        transform: scale(1.025);
+      }
+    }
+
+    /* Circle variants use explicit half-ellipse / angled clips from JS. Keep
+       their glow inside the same slot box as the fitted block piece. */
     .target-fill.socket-focus.slot-circle-horizontal::before,
-    .target-fill.socket-focus.slot-circle-horizontal::after {
-      inset: -14px -4px auto -4px;
-      height: 62px;
+    .target-fill.socket-focus.slot-circle-horizontal::after,
+    .target-fill.socket-focus.slot-circle-vertical::before,
+    .target-fill.socket-focus.slot-circle-vertical::after {
+      inset: 0;
       width: auto;
-      clip-path: ellipse(50% 100% at 50% 100%);
+      height: auto;
+      clip-path: var(--slot-focus-clip, inset(0));
       border-radius: 0;
+    }
+
+    .target-fill.socket-focus.slot-circle-diagonal::before,
+    .target-fill.socket-focus.slot-circle-diagonal::after {
+      inset: 0;
+      width: auto;
+      height: auto;
+      clip-path: var(--slot-focus-clip, inset(0));
+      border-radius: var(--slot-focus-radius, 50%);
     }
 
     /* Pod itself stays neutral — the hollow does the talking. */
@@ -3296,9 +3320,9 @@
         slotSize: { width: 96, height: 48 },
         slotOffset: { left: 18, right: 22 },
         slotFocus: {
-          left: "inset(0 round 999px 0 0 999px)",
-          right: "inset(0 round 0 999px 999px 0)",
-          radius: "999px"
+          left: "ellipse(50% 100% at 50% 0)",
+          right: "ellipse(50% 100% at 50% 100%)",
+          radius: "0"
         },
         botWIntro: 220,
         botWReady: 180,
@@ -3321,20 +3345,56 @@
         podLeft: ASSETS + "VerticalSemiCircleHollow.png",
         podRight: ASSETS + "VerticalSemiCircleHollow.png",
         podFlipRight: true,
-        podW: 118,
+        podW: 108,
         botAspect: 893 / 896,
         podAspectLeft: 1184 / 310,
         podAspectRight: 1184 / 310,
         chargerOverlap: 72,
-        slotSize: { width: 96, height: 170 },
-        slotOffset: { left: 15, right: 15 },
-        slotXOffset: { left: -2, right: 2 },
+        slotSize: { width: 80, height: 154 },
+        slotOffset: { left: 20, right: 20 },
+        slotXOffset: { left: -4, right: 4 },
         slotFocus: {
-          left: "inset(0 round 999px 0 0 999px)",
-          right: "inset(0 round 0 999px 999px 0)",
-          radius: "999px"
+          left: "ellipse(100% 50% at 100% 50%)",
+          right: "ellipse(100% 50% at 0 50%)",
+          radius: "0"
         },
         pieceForSlot: [0, 1],
+        visualFitScale: 1,
+        botWIntro: 220,
+        botWReady: 180,
+        happyBotW: 163
+      },
+      {
+        name: "circle",
+        label: "Circle",
+        variant: "circle-diagonal",
+        blockSrc: ASSETS + "CircleBlock.png",
+        blockW: 220,
+        blockH: 220,
+        cut: "diagonal",
+        startAngle: 90,
+        targetAngle: 135,
+        acceptedAngles: [135],
+        successAngle: 135,
+        sadBot: ASSETS + "CircleBot.png",
+        happyBot: ASSETS + "HappyCircleBot.png",
+        pod: ASSETS + "45angleCircleHollow.png",
+        podLeft: ASSETS + "45angleCircleHollow.png",
+        podRight: ASSETS + "135anglecutCircleHollow.png",
+        podW: 168,
+        botAspect: 893 / 896,
+        podAspectLeft: 1242 / 539,
+        podAspectRight: 1226 / 562,
+        chargerOverlap: 92,
+        slotSize: { width: 110, height: 110 },
+        slotOffset: { left: 18, right: 41 },
+        slotXOffset: { left: 14, right: -10 },
+        slotFocus: {
+          left: "polygon(4% 82%, 0 64%, 5% 42%, 18% 22%, 38% 9%, 62% 7%, 82% 17%, 98% 32%)",
+          right: "polygon(2% 32%, 18% 17%, 38% 7%, 62% 9%, 82% 22%, 95% 42%, 100% 64%, 96% 82%)",
+          radius: "50%"
+        },
+        pieceForSlot: [1, 0],
         visualFitScale: 0.92,
         botWIntro: 220,
         botWReady: 180,
@@ -3350,29 +3410,28 @@
         cut: "diagonal",
         startAngle: 90,
         targetAngle: 45,
-        targetAngle2: 225,
-        acceptedAngles: [45, 135, 225, 315],
+        acceptedAngles: [45],
         successAngle: 45,
         sadBot: ASSETS + "CircleBot.png",
         happyBot: ASSETS + "HappyCircleBot.png",
-        pod: ASSETS + "45angleCircleHollow.png",
-        podLeft: ASSETS + "45angleCircleHollow.png",
-        podRight: ASSETS + "135anglecutCircleHollow.png",
-        podW: 176,
+        pod: ASSETS + "CircleLastFlowHollow1.png",
+        podLeft: ASSETS + "CircleLastFlowHollow1.png",
+        podRight: ASSETS + "CircleLastFlowHollow2.png",
+        podW: 168,
         botAspect: 893 / 896,
-        podAspectLeft: 1230 / 564,
-        podAspectRight: 1228 / 539,
-        chargerOverlap: 74,
-        slotSize: { width: 138, height: 128 },
-        slotOffset: { left: 44, right: 45 },
-        slotXOffset: { left: 9, right: -15 },
+        podAspectLeft: 1242 / 539,
+        podAspectRight: 1224 / 562,
+        chargerOverlap: 92,
+        slotSize: { width: 110, height: 110 },
+        slotOffset: { left: 41, right: 18 },
+        slotXOffset: { left: 14, right: -10 },
         slotFocus: {
-          left: "polygon(4% 82%, 0 64%, 5% 42%, 18% 22%, 38% 9%, 62% 7%, 82% 17%, 98% 32%)",
-          right: "polygon(2% 32%, 18% 17%, 38% 7%, 62% 9%, 82% 22%, 95% 42%, 100% 64%, 96% 82%)",
-          radius: "0"
+          left: "polygon(2% 32%, 18% 17%, 38% 7%, 62% 9%, 82% 22%, 95% 42%, 100% 64%, 96% 82%)",
+          right: "polygon(4% 82%, 0 64%, 5% 42%, 18% 22%, 38% 9%, 62% 7%, 82% 17%, 98% 32%)",
+          radius: "50%"
         },
-        pieceForSlot: [1, 0],
-        visualFitScale: 0.58,
+        pieceForSlot: [0, 1],
+        visualFitScale: 0.92,
         botWIntro: 220,
         botWReady: 180,
         happyBotW: 163
