@@ -47,33 +47,7 @@
       --ease-snap: cubic-bezier(.16, 1.18, .3, 1);
     }
 
-    #game::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      z-index: 110;
-      pointer-events: none;
-      opacity: 0;
-      background: rgba(230, 244, 255, .62);
-    }
-
-    #game.screen-fade::after {
-      animation: screenFade .58s ease-out both;
-    }
-
-    @keyframes screenFade {
-      0% {
-        opacity: 0;
-      }
-
-      20% {
-        opacity: .35;
-      }
-
-      100% {
-        opacity: 0;
-      }
-    }
+    /* Screen transition fade overlay removed; it caused a visible white flash. */
 
     .bg {
       position: absolute;
@@ -100,8 +74,8 @@
       transition: opacity .28s ease, transform .28s ease;
     }
 
-    #instruction:not(.hidden) {
-      animation: instructionFloat 3.4s ease-in-out infinite;
+    #instruction {
+      filter: drop-shadow(0 10px 16px rgba(77, 151, 220, .12));
     }
 
     #instruction.hidden {
@@ -135,20 +109,6 @@
       line-height: 1.14;
       font-weight: 900;
       letter-spacing: 0;
-    }
-
-    @keyframes instructionFloat {
-
-      0%,
-      100% {
-        transform: translateY(0);
-        filter: drop-shadow(0 10px 16px rgba(77, 151, 220, .08));
-      }
-
-      50% {
-        transform: translateY(-3px);
-        filter: drop-shadow(0 13px 18px rgba(77, 151, 220, .14));
-      }
     }
 
     #scene {
@@ -196,7 +156,9 @@
       object-fit: contain;
       transform: translateX(-50%);
       transition: filter .35s ease, transform .45s cubic-bezier(.18, .89, .35, 1.18);
-      z-index: 5;
+      z-index: 8;
+      will-change: transform, filter;
+      backface-visibility: hidden;
     }
 
     .bot-img.happy {
@@ -226,7 +188,7 @@
       box-shadow: 0 0 16px 6px #74dbff;
       transform: translateX(-50%);
       animation: pulseDown 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-      z-index: 10;
+      z-index: 6;
     }
 
     @keyframes pulseDown {
@@ -307,7 +269,9 @@
       object-fit: contain;
       opacity: 0;
       transition: opacity .35s ease, filter .35s ease;
-      z-index: 2;
+      z-index: 4;
+      will-change: transform, opacity;
+      backface-visibility: hidden;
     }
 
     .pod-img.visible {
@@ -376,6 +340,7 @@
     }
 
     .layout-intro-plug.power-connecting .pod-img.visible {
+      z-index: 4;
       opacity: 1;
       animation: powerCableConnect 1.86s cubic-bezier(.16, 1.12, .3, 1) both;
     }
@@ -476,6 +441,7 @@
     }
 
     .layout-ready.power-connecting .pod-img.visible {
+      z-index: 4;
       opacity: 1;
       animation: powerCableConnect 1.86s cubic-bezier(.16, 1.12, .3, 1) both;
     }
@@ -499,36 +465,36 @@
     @keyframes powerCableConnect {
       0% {
         opacity: 0;
-        clip-path: inset(0 0 72% 0 round 14px);
-        transform: translateX(-50%) translateY(-168px) scaleY(.9);
+        clip-path: inset(0 0 0 0 round 14px);
+        transform: translateX(-50%) translateY(-132px) scale(.98);
         filter: brightness(.96);
       }
 
-      31% {
+      16% {
         opacity: 1;
-        clip-path: inset(0 0 72% 0 round 14px);
-        transform: translateX(-50%) translateY(-36px) scaleY(.9);
+        clip-path: inset(0 0 0 0 round 14px);
+        transform: translateX(-50%) translateY(-96px) scale(.99);
       }
 
       62% {
-        clip-path: inset(0 0 18% 0 round 14px);
-        transform: translateX(-50%) translateY(-9px) scaleY(.98);
+        clip-path: inset(0 0 0 0 round 14px);
+        transform: translateX(-50%) translateY(-12px) scale(1);
       }
 
       78% {
         clip-path: inset(0 0 0 0 round 14px);
-        transform: translateX(-50%) translateY(7px) scaleY(1.018);
+        transform: translateX(-50%) translateY(4px) scale(1.012);
         filter: brightness(1.18) drop-shadow(0 0 10px rgba(116, 219, 255, .48));
       }
 
       88% {
-        transform: translateX(-50%) translateY(-3px) scaleY(.995);
+        transform: translateX(-50%) translateY(-2px) scale(.998);
       }
 
       100% {
         opacity: 1;
         clip-path: inset(0 0 0 0 round 14px);
-        transform: translateX(-50%) translateY(0) scaleY(1);
+        transform: translateX(-50%) translateY(0) scale(1);
         filter: brightness(1);
       }
     }
@@ -595,53 +561,56 @@
       animation: targetGlow .9s ease-in-out 2
     }
 
-    /* Slot focus: yellow glow that follows the hollow shape via clip-path on ::before.
-       drop-shadow on the parent creates an outer halo that respects the shaped alpha
-       (rectangle → rounded box, triangle → triangle, semicircle → semicircle). */
+    /* Slot focus: yellow pulse clipped inside the hollow shape. */
     .target-fill.socket-focus {
       opacity: 1;
+      overflow: hidden;
       background: none;
       box-shadow: none;
-      filter:
-        drop-shadow(0 0 8px rgba(255, 232, 96, .95))
-        drop-shadow(0 0 18px rgba(255, 210, 40, .62))
-        drop-shadow(0 0 40px rgba(255, 210, 40, .32));
-      animation: socketYellowGlow 1.35s ease-in-out infinite;
+      filter: none;
+      animation: none;
     }
 
+    /* Subtle yellow fill sitting inside the hollow. */
     .target-fill.socket-focus::before {
       content: "";
       position: absolute;
-      inset: 0;
+      inset: var(--slot-focus-inset, 4px);
       border-radius: var(--slot-focus-radius, 8px);
       clip-path: var(--slot-focus-clip, inset(0 round 8px));
       background:
         radial-gradient(ellipse at 50% 50%,
-          rgba(255, 248, 168, .68) 0%,
-          rgba(255, 220, 60, .42) 55%,
-          rgba(255, 200, 30, .26) 100%);
+          rgba(255, 248, 156, .46) 0%,
+          rgba(255, 221, 76, .24) 66%,
+          rgba(255, 221, 76, 0) 100%);
       pointer-events: none;
-      opacity: .76;
+      opacity: 1;
       transform-origin: center center;
-      animation: socketHollowBlink 1.05s ease-in-out infinite;
+      animation: socketHollowBlink 1.1s ease-in-out infinite;
     }
 
+    /* Strong yellow rim that traces the actual clip-path of the hollow. */
     .target-fill.socket-focus::after {
       content: "";
       position: absolute;
-      inset: 0;
+      inset: var(--slot-focus-inset, 6px);
       border-radius: var(--slot-focus-radius, 8px);
       clip-path: var(--slot-focus-clip, inset(0 round 8px));
-      background:
-        radial-gradient(ellipse at 50% 50%,
-          transparent 0% 60%,
-          rgba(255, 252, 200, .9) 88%,
-          rgba(255, 235, 90, .72) 100%);
+      background: transparent;
+      box-shadow:
+        inset 0 0 0 3px rgba(255, 245, 134, .95),
+        inset 0 0 14px rgba(255, 220, 60, .8),
+        inset 0 0 28px rgba(255, 210, 40, .4);
       pointer-events: none;
       mix-blend-mode: screen;
-      opacity: .88;
+      opacity: 1;
       transform-origin: center center;
-      animation: socketHollowBlink 1.05s ease-in-out infinite reverse;
+      animation: socketRimPulse 1.1s ease-in-out infinite;
+    }
+
+    @keyframes socketRimPulse {
+      0%, 100% { opacity: .7; }
+      50%      { opacity: 1; }
     }
 
     @keyframes socketYellowGlow {
@@ -661,13 +630,13 @@
 
     @keyframes socketHollowBlink {
       0%, 100% {
-        opacity: .52;
-        transform: scale(.985);
+        opacity: .54;
+        transform: scale(1);
       }
 
       50% {
-        opacity: .96;
-        transform: scale(1.025);
+        opacity: 1;
+        transform: scale(1);
       }
     }
 
@@ -677,7 +646,7 @@
     .target-fill.socket-focus.slot-circle-horizontal::after,
     .target-fill.socket-focus.slot-circle-vertical::before,
     .target-fill.socket-focus.slot-circle-vertical::after {
-      inset: 0;
+      inset: var(--slot-focus-inset, 4px);
       width: auto;
       height: auto;
       clip-path: var(--slot-focus-clip, inset(0));
@@ -686,16 +655,35 @@
 
     .target-fill.socket-focus.slot-circle-diagonal::before,
     .target-fill.socket-focus.slot-circle-diagonal::after {
-      inset: 0;
+      inset: var(--slot-focus-inset, 6px);
       width: auto;
       height: auto;
       clip-path: var(--slot-focus-clip, inset(0));
       border-radius: var(--slot-focus-radius, 50%);
     }
 
-    /* Pod itself stays neutral — the hollow does the talking. */
+    .target-fill.socket-focus.slot-circle-diagonal {
+      border-radius: 50%;
+    }
+
+    /* Keep the pod art neutral; the clipped fill layer owns the blink glow. */
     .pod-img.socket-focus {
-      filter: brightness(1.02);
+      filter: brightness(1.03);
+    }
+
+    @keyframes podSocketGlow {
+      0%, 100% {
+        filter:
+          drop-shadow(0 0 6px rgba(255, 232, 96, .72))
+          drop-shadow(0 0 14px rgba(255, 210, 40, .38))
+          brightness(1.02);
+      }
+      50% {
+        filter:
+          drop-shadow(0 0 14px rgba(255, 248, 130, .95))
+          drop-shadow(0 0 28px rgba(255, 210, 40, .62))
+          brightness(1.06);
+      }
     }
 
     @keyframes socketHollowPulse {
@@ -853,8 +841,8 @@
       z-index: 0;
     }
 
-    .block-demo .whole-block,
-    .split-demo .whole-block {
+    .block-demo > .whole-block,
+    .split-demo > .whole-block {
       position: absolute;
       left: 50%;
       top: 50%;
@@ -1023,6 +1011,10 @@
       filter: drop-shadow(0 0 14px rgba(94, 226, 255, .65));
     }
 
+    .half-wrap.socket-square-preview {
+      overflow: hidden;
+    }
+
     .slot-path-guide {
       position: absolute;
       inset: 0;
@@ -1154,7 +1146,7 @@
       }
     }
 
-    .split-demo .whole-block {
+    .split-demo > .whole-block {
       transition: opacity .26s ease, filter .26s ease;
     }
 
@@ -1192,6 +1184,7 @@
       flex: 0 0 auto;
       filter: drop-shadow(0 12px 14px rgba(58, 88, 139, .18));
       transform: translateZ(0);
+      backface-visibility: hidden;
       background: transparent;
     }
 
@@ -2336,6 +2329,7 @@
       justify-content: center;
       transition: transform .9s cubic-bezier(.18, .89, .32, 1.08), opacity .9s ease;
       will-change: transform, opacity;
+      backface-visibility: hidden;
     }
 
     .flying-half.soft-mismatch {
@@ -2719,6 +2713,7 @@
       border-radius: 50%;
       pointer-events: none;
       animation: sparkDot .75s ease-out both;
+      will-change: transform, opacity;
     }
 
     @keyframes nextBtnPop {
@@ -2944,13 +2939,13 @@
       READY_TEXT_SCREEN: 3300,
       MOVE_SCREEN: 1500,
       HALVES_DEMO_SCREEN: 10600,
-      TEACH_WHOLE_IN: 180,
-      TEACH_LABEL_IN: 1250,
-      TEACH_MOVE_DOWN: 2650,
-      TEACH_SPLIT: 3650,
-      TEACH_HALF_LABELS: 4550,
-      TEACH_EQUAL_LABEL: 5900,
-      TEACH_NEXT_BUTTON: 7350
+      TEACH_WHOLE_IN: 150,
+      TEACH_LABEL_IN: 850,
+      TEACH_MOVE_DOWN: 1900,
+      TEACH_SPLIT: 2700,
+      TEACH_HALF_LABELS: 3400,
+      TEACH_EQUAL_LABEL: 4400,
+      TEACH_NEXT_BUTTON: 5500
     };
 
     var EASE = {
@@ -3110,7 +3105,7 @@
     ["pointerdown", "mousedown", "click", "keydown", "touchstart"].forEach(function (eventName) {
       window.addEventListener(eventName, unlockAudioFromGesture, { passive: true, capture: true });
     });
-    function sndTap() { _beep('sine', 520, 0.07, 0.18); }
+    function sndTap() { _beep('sine', 520, 0.07, 0.18); if (navigator.vibrate) { navigator.vibrate(28); } }
     function sndRotate() {
       _beep('sine', 760, 0.045, 0.075, 920);
       setTimeout(function () { _beep('triangle', 1040, 0.04, 0.045, 1180); }, 34);
@@ -3267,9 +3262,17 @@
         botAspect: 894 / 606,
         podAspectLeft: 1056 / 444,
         podAspectRight: 1056 / 444,
-        chargerOverlap: 68,
+        chargerOverlap: 20,
+        connectorOverlapBoost: 30,
+        readyConnectorOverlapBoost: 30,
+        laserConnectorOverlapBoost: 42,
         botWIntro: 205,
-        botWReady: 150,
+        botWReady: 205,
+        botWLaser: 150,
+        readyPodTop: 172,
+        podHeadContactDrop: 8,
+        previewFitScale: 0.95,
+        previewSlotNudge: { y: -7 },
         happyBotW: 163
       },
       {
@@ -3291,9 +3294,15 @@
         botAspect: 784 / 742,
         podAspectLeft: 1054 / 469,
         podAspectRight: 1089 / 444,
-        chargerOverlap: 85,
+        chargerOverlap: 22,
+        connectorOverlapBoost: 24,
+        readyConnectorOverlapBoost: 42,
         botWIntro: 220,
-        botWReady: 185,
+        botWReady: 220,
+        botWLaser: 185,
+        readyPodTop: { left: 188, right: 198 },
+        podHeadContactDrop: 8,
+        previewFitScale: 0.82,
         happyBotW: 180
       },
       {
@@ -3316,7 +3325,10 @@
         botAspect: 893 / 896,
         podAspectLeft: 1098 / 520,
         podAspectRight: 1098 / 520,
-        chargerOverlap: 58,
+        chargerOverlap: 20,
+        connectorOverlapBoost: 28,
+        readyConnectorOverlapBoost: 48,
+        readyPodTop: 258,
         slotSize: { width: 96, height: 48 },
         slotOffset: { left: 18, right: 22 },
         slotFocus: {
@@ -3325,7 +3337,10 @@
           radius: "0"
         },
         botWIntro: 220,
-        botWReady: 180,
+        botWReady: 235,
+        botWLaser: 180,
+        podHeadContactDrop: 8,
+        previewFitScale: 0.84,
         happyBotW: 163
       },
       {
@@ -3349,7 +3364,10 @@
         botAspect: 893 / 896,
         podAspectLeft: 1184 / 310,
         podAspectRight: 1184 / 310,
-        chargerOverlap: 72,
+        chargerOverlap: 22,
+        connectorOverlapBoost: 24,
+        readyConnectorOverlapBoost: 46,
+        readyPodTop: 240,
         slotSize: { width: 80, height: 154 },
         slotOffset: { left: 20, right: 20 },
         slotXOffset: { left: -4, right: 4 },
@@ -3361,7 +3379,10 @@
         pieceForSlot: [0, 1],
         visualFitScale: 1,
         botWIntro: 220,
-        botWReady: 180,
+        botWReady: 235,
+        botWLaser: 180,
+        podHeadContactDrop: 8,
+        previewFitScale: 0.84,
         happyBotW: 163
       },
       {
@@ -3385,19 +3406,26 @@
         botAspect: 893 / 896,
         podAspectLeft: 1242 / 539,
         podAspectRight: 1226 / 562,
-        chargerOverlap: 92,
+        chargerOverlap: 25,
+        connectorOverlapBoost: 32,
+        readyConnectorOverlapBoost: 46,
+        readyPodTop: { left: 230, right: 240 },
         slotSize: { width: 110, height: 110 },
-        slotOffset: { left: 18, right: 41 },
+        slotOffset: { left: 15, right: 38 },
         slotXOffset: { left: 14, right: -10 },
         slotFocus: {
-          left: "polygon(4% 82%, 0 64%, 5% 42%, 18% 22%, 38% 9%, 62% 7%, 82% 17%, 98% 32%)",
-          right: "polygon(2% 32%, 18% 17%, 38% 7%, 62% 9%, 82% 22%, 95% 42%, 100% 64%, 96% 82%)",
-          radius: "50%"
+          left: "polygon(0% 0%, 100% 100%, 0% 100%)",
+          right: "polygon(0% 0%, 100% 0%, 100% 100%)",
+          radius: "50%",
+          inset: "10px"
         },
-        pieceForSlot: [1, 0],
-        visualFitScale: 0.92,
+        pieceForSlot: [0, 1],
+        visualFitScale: 0.82,
         botWIntro: 220,
-        botWReady: 180,
+        botWReady: 235,
+        botWLaser: 180,
+        podHeadContactDrop: 8,
+        previewFitScale: 0.82,
         happyBotW: 163
       },
       {
@@ -3421,19 +3449,26 @@
         botAspect: 893 / 896,
         podAspectLeft: 1242 / 539,
         podAspectRight: 1224 / 562,
-        chargerOverlap: 92,
+        chargerOverlap: 25,
+        connectorOverlapBoost: 32,
+        readyConnectorOverlapBoost: 46,
+        readyPodTop: { left: 230, right: 240 },
         slotSize: { width: 110, height: 110 },
-        slotOffset: { left: 41, right: 18 },
+        slotOffset: { left: 43, right: 12 },
         slotXOffset: { left: 14, right: -10 },
         slotFocus: {
-          left: "polygon(2% 32%, 18% 17%, 38% 7%, 62% 9%, 82% 22%, 95% 42%, 100% 64%, 96% 82%)",
-          right: "polygon(4% 82%, 0 64%, 5% 42%, 18% 22%, 38% 9%, 62% 7%, 82% 17%, 98% 32%)",
-          radius: "50%"
+          left: "polygon(0% 0%, 100% 0%, 0% 100%)",
+          right: "polygon(100% 0%, 100% 100%, 0% 100%)",
+          radius: "50%",
+          inset: "10px"
         },
-        pieceForSlot: [0, 1],
-        visualFitScale: 0.92,
+        pieceForSlot: [1, 0],
+        visualFitScale: 0.82,
         botWIntro: 220,
-        botWReady: 180,
+        botWReady: 235,
+        botWLaser: 180,
+        podHeadContactDrop: 8,
+        previewFitScale: 0.82,
         happyBotW: 163
       }
     ];
@@ -3686,6 +3721,16 @@
       return layout === "layout-intro" || layout === "layout-intro-plug" || layout === "layout-intro-connected";
     }
 
+    function botWidthForLayout(r, layout) {
+      if (isIntroPlacement(layout)) {
+        return r.botWIntro;
+      }
+      if (layout === "layout-laser") {
+        return r.botWLaser || r.botWReady;
+      }
+      return r.botWReady;
+    }
+
     function showsChargingPods(layout) {
       return layout === "layout-ready" || layout === "layout-laser" ||
         layout === "layout-intro-plug" || layout === "layout-intro-connected";
@@ -3693,6 +3738,26 @@
 
     function introPlugYOffset(layout) {
       return layout === "layout-intro-plug" || layout === "layout-intro-connected" ? 18 : 0;
+    }
+
+    function connectedPodPlacement(layout, options) {
+      return layout === "layout-intro-connected" ||
+        layout === "layout-intro-plug" ||
+        layout === "layout-ready" ||
+        layout === "layout-laser";
+    }
+
+    function connectorOverlapBoostForRound(r, layout, options) {
+      if (!connectedPodPlacement(layout, options)) {
+        return 0;
+      }
+      if (layout === "layout-ready" && r && r.readyConnectorOverlapBoost !== undefined) {
+        return r.readyConnectorOverlapBoost;
+      }
+      if (layout === "layout-laser" && r && r.laserConnectorOverlapBoost !== undefined) {
+        return r.laserConnectorOverlapBoost;
+      }
+      return r && r.connectorOverlapBoost !== undefined ? r.connectorOverlapBoost : 0;
     }
 
     function setupBots(layout, options) {
@@ -3715,18 +3780,20 @@
       els.rightPod.src = r.podRight || r.pod;
       els.leftPod.style.transform = r.podFlipLeft ? "translateX(-50%) scaleX(-1)" : "translateX(-50%)";
       els.rightPod.style.transform = r.podFlipRight ? "translateX(-50%) scaleX(-1)" : "translateX(-50%)";
-      els.leftBot.style.width = (isIntroPlacement(layout) ? r.botWIntro : r.botWReady) + "px";
-      els.rightBot.style.width = (isIntroPlacement(layout) ? r.botWIntro : r.botWReady) + "px";
-      var podTopLeft = podTopForRound(r, layout, "left");
-      var podTopRight = podTopForRound(r, layout, "right");
+      var botW = botWidthForLayout(r, layout);
+      els.leftBot.style.width = botW + "px";
+      els.rightBot.style.width = botW + "px";
+      var podTopLeft = podTopForRound(r, layout, "left", options);
+      var podTopRight = podTopForRound(r, layout, "right", options);
       var podW = r.podW || 132;
       var leftSlotEl = els.leftBot.parentNode;
       var rightSlotEl = els.rightBot.parentNode;
       var leftAspect = r.podAspectLeft || 2.3;
       var rightAspect = r.podAspectRight || r.podAspectLeft || 2.3;
       var chargerOverlap = chargerOverlapForRound(r);
-      leftSlotEl.style.setProperty("--power-spark-top", (podTopLeft + podW * leftAspect - chargerOverlap + 8) + "px");
-      rightSlotEl.style.setProperty("--power-spark-top", (podTopRight + podW * rightAspect - chargerOverlap + 8) + "px");
+      var contactOverlap = chargerOverlap + connectorOverlapBoostForRound(r, layout, options);
+      leftSlotEl.style.setProperty("--power-spark-top", (podTopLeft + podW * leftAspect - contactOverlap + 8) + "px");
+      rightSlotEl.style.setProperty("--power-spark-top", (podTopRight + podW * rightAspect - contactOverlap + 8) + "px");
       els.leftPod.style.top = podTopLeft + "px";
       els.rightPod.style.top = podTopRight + "px";
       els.leftPod.style.width = podW + "px";
@@ -3736,13 +3803,13 @@
       els.leftPod.className = "pod-img";
       els.rightPod.className = "pod-img";
       clearTargetFills();
-      setupTargetSlots(r, layout);
+      setupTargetSlots(r, layout, options);
       if (showsChargingPods(layout) && layout !== "layout-laser") {
         els.leftPod.classList.add("visible");
         els.rightPod.classList.add("visible");
         if (shouldAnimateConnection && !state.plugConnectPlayed[state.round]) {
           var plugRound = state.round;
-          later(function () { sndPlugConnect(plugRound); }, 1560);
+          later(function () { sndPlugConnect(plugRound); }, 1450);
         }
       }
       if (layout === "layout-laser") {
@@ -3760,19 +3827,28 @@
         fill.style.borderRadius = "";
         fill.style.removeProperty("--slot-focus-clip");
         fill.style.removeProperty("--slot-focus-radius");
+        fill.style.removeProperty("--slot-focus-inset");
         fill.style.removeProperty("--socket-focus-size");
       });
     }
 
-    function podTopForRound(r, layout, side) {
+    function podTopForRound(r, layout, side, options) {
       if (!showsChargingPods(layout)) {
         return 0;
       }
-      var botW = isIntroPlacement(layout) ? r.botWIntro : r.botWReady;
+      var headContactDrop = r.podHeadContactDrop || 0;
+      if (layout === "layout-ready" && r.readyPodTop !== undefined) {
+        if (typeof r.readyPodTop === "number") {
+          return r.readyPodTop + headContactDrop;
+        }
+        return (side === "right" ? r.readyPodTop.right : r.readyPodTop.left) + headContactDrop;
+      }
+      var botW = botWidthForLayout(r, layout);
       var botTop = 720 - botW * (r.botAspect || 1.2);
       var podW = r.podW || 132;
       var podAspect = side === "right" ? (r.podAspectRight || r.podAspectLeft || 2.3) : (r.podAspectLeft || 2.3);
-      return botTop - podW * podAspect + chargerOverlapForRound(r) + introPlugYOffset(layout);
+      return botTop - podW * podAspect + chargerOverlapForRound(r) +
+        introPlugYOffset(layout) + connectorOverlapBoostForRound(r, layout, options) + headContactDrop;
     }
 
     function chargerOverlapForRound(r) {
@@ -3828,17 +3904,35 @@
       return 0.92;
     }
 
+    function previewFitScaleForRound(r) {
+      return r.previewFitScale !== undefined ? r.previewFitScale : 0.86;
+    }
+
+    function previewSlotNudgeForRound(r, side) {
+      var nudge = r.previewSlotNudge || {};
+      var sideNudge = side === "right" ? nudge.right : nudge.left;
+      if (!sideNudge) {
+        sideNudge = nudge;
+      }
+      return {
+        x: sideNudge.x || 0,
+        y: sideNudge.y || 0
+      };
+    }
+
     function slotFocusStyleForRound(r, side) {
       if (r.slotFocus) {
         return {
           clip: side === "right" ? r.slotFocus.right : r.slotFocus.left,
-          radius: r.slotFocus.radius || "999px"
+          radius: r.slotFocus.radius || "999px",
+          inset: r.slotFocus.inset || "4px"
         };
       }
       if (r.name === "circle") {
         return {
           clip: "inset(0 round " + (side === "left" ? "0 0 999px 999px" : "999px 999px 0 0") + ")",
-          radius: side === "left" ? "0 0 999px 999px" : "999px 999px 0 0"
+          radius: side === "left" ? "0 0 999px 999px" : "999px 999px 0 0",
+          inset: "5px"
         };
       }
       if (r.name === "square") {
@@ -3846,18 +3940,20 @@
           clip: side === "left"
             ? "polygon(0 0, 0 100%, 100% 100%)"
             : "polygon(0 0, 100% 0, 100% 100%)",
-          radius: "0"
+          radius: "0",
+          inset: "12px"
         };
       }
       return {
         clip: "inset(0 5px 0 5px round 6px)",
-        radius: "6px"
+        radius: "6px",
+        inset: "14px"
       };
     }
 
-    function setupTargetSlots(r, layout) {
-      var podTopLeft = podTopForRound(r, layout, "left");
-      var podTopRight = podTopForRound(r, layout, "right");
+    function setupTargetSlots(r, layout, options) {
+      var podTopLeft = podTopForRound(r, layout, "left", options);
+      var podTopRight = podTopForRound(r, layout, "right", options);
       var slotSize = targetSlotSizeForRound(r);
       /* Slot dimensions calibrated to the visual hollow in each pod image.
          Circle pod (160px wide): inset semicircle slot = 142px x 68px.
@@ -3890,6 +3986,7 @@
         var focusStyle = slotFocusStyleForRound(r, item.side);
         fill.style.setProperty("--slot-focus-clip", focusStyle.clip);
         fill.style.setProperty("--slot-focus-radius", focusStyle.radius);
+        fill.style.setProperty("--slot-focus-inset", focusStyle.inset);
         if (r.name === "circle" && r.variant !== "circle-horizontal") {
           fill.style.setProperty("--socket-focus-size", (Math.min(width, height) + 18) + "px");
         } else {
@@ -3943,6 +4040,7 @@
     }
 
     function canonicalCutAngle(r) {
+      if (r.successAngle !== undefined) { return lineAngleDegrees(r.successAngle); }
       if (r.cut === "horizontal") { return 0; }
       if (r.cut === "diagonal") { return 45; }
       if (r.cut === "diagonal135") { return 135; }
@@ -4287,8 +4385,10 @@
             var pcX = 640 - r.blockW / 2 + g.minX + g.width  / 2;
             var pcY = 360 - r.blockH / 2 + g.minY + g.height / 2;
             var goesToLeft = pieceIndexForSlot(r, 0) === index;
-            var targetX = goesToLeft ? leftSlotCX  : rightSlotCX;
-            var targetY = goesToLeft ? leftSlotCY  : rightSlotCY;
+            var targetSide = goesToLeft ? "left" : "right";
+            var previewNudge = previewSlotNudgeForRound(r, targetSide);
+            var targetX = (goesToLeft ? leftSlotCX  : rightSlotCX) + previewNudge.x;
+            var targetY = (goesToLeft ? leftSlotCY  : rightSlotCY) + previewNudge.y;
             var dx = targetX - pcX;
             var dy = targetY - pcY;
             var startX = pcX + seamOffsets[index].x;
@@ -4300,13 +4400,15 @@
             var mx = controlX - pcX;
             var my = controlY - pcY;
             var slotScale = slotScaleForPiece({ width: slotSize.width, height: slotSize.height }, g) *
-              visualFitScaleForRound(r) * 0.9;
-            var guideEndX = targetX;
+              visualFitScaleForRound(r) * previewFitScaleForRound(r);
+            var motionEndX = targetX;
+            var motionEndY = targetY;
+            var guideEndX = targetX + (targetSide === "left" ? slotSize.width / 2 + 22 : -slotSize.width / 2 - 22);
             var guideEndY = targetY;
-            var p18 = bezierPoint(startX, startY, controlX, controlY, guideEndX, guideEndY, 0.18);
-            var p38 = bezierPoint(startX, startY, controlX, controlY, guideEndX, guideEndY, 0.38);
-            var p62 = bezierPoint(startX, startY, controlX, controlY, guideEndX, guideEndY, 0.62);
-            var p82 = bezierPoint(startX, startY, controlX, controlY, guideEndX, guideEndY, 0.82);
+            var p18 = bezierPoint(startX, startY, controlX, controlY, motionEndX, motionEndY, 0.18);
+            var p38 = bezierPoint(startX, startY, controlX, controlY, motionEndX, motionEndY, 0.38);
+            var p62 = bezierPoint(startX, startY, controlX, controlY, motionEndX, motionEndY, 0.62);
+            var p82 = bezierPoint(startX, startY, controlX, controlY, motionEndX, motionEndY, 0.82);
 
             piece.style.setProperty("--seamX", seamOffsets[index].x + "px");
             piece.style.setProperty("--seamY", seamOffsets[index].y + "px");
@@ -4326,6 +4428,9 @@
             /* Clear the inline transform so the keyframe owns it */
             piece.style.transition = "none";
             piece.style.transform = "";
+            if (r.name === "rectangle") {
+              piece.classList.add("socket-square-preview");
+            }
             piece.classList.add("fly-tease");
 
             addSlotPathGuide(startX, startY, controlX, controlY, guideEndX, guideEndY, index);
@@ -4354,20 +4459,8 @@
         els.flightLayer.appendChild(svg);
       }
 
-      var d = "M " + startX.toFixed(1) + " " + startY.toFixed(1) +
-        " Q " + controlX.toFixed(1) + " " + controlY.toFixed(1) +
-        " " + targetX.toFixed(1) + " " + targetY.toFixed(1);
-
-      var shadow = document.createElementNS(ns, "path");
-      shadow.setAttribute("class", "slot-path-shadow");
-      shadow.setAttribute("d", d);
-      svg.appendChild(shadow);
-
-      var path = document.createElementNS(ns, "path");
-      path.setAttribute("d", d);
-      path.style.animationDelay = (index * 0.16) + "s";
-      svg.appendChild(path);
-
+      /* Compute arrowhead geometry first so the dashed path can stop at the
+         arrow's base — otherwise the line draws through the arrow body. */
       var endAngle = Math.atan2(targetY - controlY, targetX - controlX);
       var size = 28;
       var tipX = targetX;
@@ -4379,6 +4472,20 @@
       var leftY = backY + Math.sin(endAngle + Math.PI / 2) * wing;
       var rightX = backX + Math.cos(endAngle - Math.PI / 2) * wing;
       var rightY = backY + Math.sin(endAngle - Math.PI / 2) * wing;
+
+      var d = "M " + startX.toFixed(1) + " " + startY.toFixed(1) +
+        " Q " + controlX.toFixed(1) + " " + controlY.toFixed(1) +
+        " " + backX.toFixed(1) + " " + backY.toFixed(1);
+
+      var shadow = document.createElementNS(ns, "path");
+      shadow.setAttribute("class", "slot-path-shadow");
+      shadow.setAttribute("d", d);
+      svg.appendChild(shadow);
+
+      var path = document.createElementNS(ns, "path");
+      path.setAttribute("d", d);
+      path.style.animationDelay = (index * 0.16) + "s";
+      svg.appendChild(path);
 
       var arrow = document.createElementNS(ns, "polygon");
       arrow.setAttribute("class", "slot-path-arrow");
@@ -4681,11 +4788,10 @@
       els.sceneBg.style.display = "block";
       setupBots("layout-intro-connected");
       setInstruction(text);
-      /* Always play the plug-connect sound when arriving on this screen —
-         reset the guard so it fires even if it already played during the plug animation. */
       var plugRound = state.round;
-      state.plugConnectPlayed[plugRound] = false;
-      later(function () { sndPlugConnect(plugRound); }, 350);
+      if (!state.plugConnectPlayed[plugRound]) {
+        later(function () { sndPlugConnect(plugRound); }, 350);
+      }
     }
 
     function setupMoveOut() {
@@ -5347,6 +5453,41 @@
     function fillSlotWithPiece(fill, r, index, angle) {
       var w = parseFloat(fill.style.width || "0");
       var h = parseFloat(fill.style.height || "0");
+      var side = fill === els.rightFill ? "right" : "left";
+      if (r.name === "circle" && r.variant === "circle-diagonal" && r.slotFocus) {
+        var focusStyle = slotFocusStyleForRound(r, side);
+        var maskSize = Math.min(w, h);
+        var shell = document.createElement("div");
+        shell.className = "fit-piece";
+        shell.style.width = maskSize + "px";
+        shell.style.height = maskSize + "px";
+        shell.style.borderRadius = "50%";
+        shell.style.overflow = "hidden";
+        shell.style.transformOrigin = "center center";
+        shell.style.transform = "translateZ(0) scale(.98)";
+        shell.style.filter = "none";
+
+        var clip = document.createElement("div");
+        clip.style.position = "absolute";
+        clip.style.inset = "0";
+        clip.style.clipPath = focusStyle.clip;
+        clip.style.borderRadius = focusStyle.radius;
+
+        var block = makeBlock(r, maskSize, maskSize);
+        block.style.position = "absolute";
+        block.style.left = "0";
+        block.style.top = "0";
+        block.style.width = "100%";
+        block.style.height = "100%";
+        block.style.filter = "none";
+
+        clip.appendChild(block);
+        shell.appendChild(clip);
+        fill.innerHTML = "";
+        fill.appendChild(shell);
+        fill.classList.add("filled");
+        return;
+      }
       var piece = makeCutPiece(r, index, r.blockW, r.blockH, angle);
       var home = cutPieceHome(r.blockW, r.blockH, angle, index, 0, 0);
       var scale = slotScaleForPiece({ width: w, height: h }, home) * visualFitScaleForRound(r);
@@ -5426,7 +5567,7 @@
       var podW = r.podW || 132;
       var aspectL = r.podAspectLeft || 2.3;
       var aspectR = r.podAspectRight || r.podAspectLeft || 2.3;
-      var chargerOverlap = chargerOverlapForRound(r);
+      var chargerOverlap = chargerOverlapForRound(r) + connectorOverlapBoostForRound(r, "layout-intro-connected");
       var newTopL = newBotTop - podW * aspectL + chargerOverlap;
       var newTopR = newBotTop - podW * aspectR + chargerOverlap;
 
@@ -5482,14 +5623,15 @@
         var dx = targets[slotIdx].x - home.centerX;
         var dyOffset = r.name === "rectangle" ? 8 : 0;
         var dy = targets[slotIdx].y - home.centerY - dyOffset;
-        requestAnimationFrame(function () {
+        var stagger = slotIdx * 100;
+        setTimeout(function () {
           requestAnimationFrame(function () {
             fly.style.transform = "translate(" + dx + "px," + dy + "px) scale(" + scale + ")";
           });
-        });
+        }, stagger);
       });
 
-      setTimeout(onDone, 1050);
+      setTimeout(onDone, 1150);
     }
 
     function showSuccess() {
@@ -5504,7 +5646,10 @@
         els.game.classList.remove("teaching-active");
         hide(els.teachStage);
         hide(els.machineStage);
-        setupBots("layout-ready");
+        /* Smoothly slide the pod down and play the plug-connect sfx before
+           the halves arrive. Reset the guard so the sfx plays each round. */
+        state.plugConnectPlayed[state.round] = false;
+        setupBots("layout-ready", { connect: true });
         setInstruction("");
         renderResultSplitScreen(r, cutAngle);
 
@@ -5529,13 +5674,13 @@
               show(els.nextButton);
             }, 700);
           }, { x: 640, y: 360 });
-        }, 1250);
+        }, 2000);
       }
 
       later(function () {
         setupBots("layout-laser");
         renderTeaching("teach-full", cutAngle, true, powerBotsWithHalves);
-      }, 1000);
+      }, 700);
     }
 
     function splitMachineBlock(angle) {
