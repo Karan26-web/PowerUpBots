@@ -282,6 +282,10 @@
       animation: podGlow 1s ease-in-out 2
     }
 
+    .pod-img.front-layer {
+      z-index: 60;
+    }
+
     .pod-connector-neck-cover {
       position: absolute;
       left: 50%;
@@ -1822,9 +1826,8 @@
       width: 1280px;
       height: 720px;
       z-index: 18;
-      border: 0;
       background: transparent;
-      cursor: pointer;
+      cursor: default;
       transition: opacity .28s ease;
       -webkit-tap-highlight-color: transparent;
       overflow: hidden;
@@ -1836,7 +1839,7 @@
       inset: -18%;
       z-index: 1;
       pointer-events: none;
-      opacity: .64;
+      opacity: 0;
       background:
         linear-gradient(116deg, transparent 16%, rgba(120, 231, 255, .24) 29%, transparent 43%),
         linear-gradient(246deg, transparent 38%, rgba(220, 148, 255, .22) 49%, transparent 62%);
@@ -1856,13 +1859,21 @@
       background-size: 88px 88px;
       -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%);
       mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%);
-      opacity: .22;
+      opacity: 0;
       animation: playGridDrift 12s linear infinite;
     }
 
     #playStage.hidden {
       opacity: 0;
       pointer-events: none;
+    }
+
+    #playStage.preplay-mode::before {
+      opacity: .64;
+    }
+
+    #playStage.preplay-mode::after {
+      opacity: .22;
     }
 
     #playBg {
@@ -1873,6 +1884,9 @@
       object-fit: cover;
       pointer-events: none;
       z-index: 0;
+    }
+
+    #playStage.preplay-mode #playBg {
       animation: playBgBreath 6.5s ease-in-out infinite;
     }
 
@@ -1895,6 +1909,7 @@
       z-index: 5;
       filter: drop-shadow(0 18px 18px rgba(31, 71, 139, .18));
       transform-origin: 50% 92%;
+      display: none;
     }
 
     #iraChar.play-idle {
@@ -1914,44 +1929,137 @@
       pointer-events: none;
       background: radial-gradient(ellipse, rgba(112, 232, 255, .48) 0 24%, rgba(112, 232, 255, .2) 48%, transparent 72%);
       filter: blur(1px);
+      display: none;
     }
 
     #iraGlowRing.show {
       animation: iraGlowSettle .7s ease-out both, iraShadowFloat 2.8s ease-in-out .72s infinite;
     }
 
-    #playBtnImg {
-      position: absolute;
-      width: 210px;
-      height: auto;
-      left: 761px;
-      top: 535px;
-      opacity: 0;
-      transform: scale(0.85) translateY(16px);
-      transition: opacity 0.4s ease, transform 0.4s cubic-bezier(.34, 1.3, .64, 1), filter 0.18s ease;
-      pointer-events: none;
-      z-index: 6;
-      filter: drop-shadow(0 0 0 rgba(77, 202, 255, 0));
-      transform-origin: 50% 58%;
+    #playStage.preplay-mode #iraChar,
+    #playStage.preplay-mode #iraGlowRing {
+      display: block;
     }
 
-    #playBtnImg.play-ready {
+    #playButton {
+      position: absolute;
+      right: 56px;
+      bottom: 46px;
+      width: 218px;
+      height: 168px;
+      border: 0;
+      border-radius: 34px;
+      opacity: 0;
+      transform: scale(0.85) translateY(16px);
+      transition:
+        opacity 0.4s ease,
+        transform 0.4s cubic-bezier(.34, 1.3, .64, 1),
+        filter 0.18s ease,
+        box-shadow 0.18s ease;
+      pointer-events: none;
+      cursor: pointer;
+      z-index: 6;
+      overflow: visible;
+      transform-origin: 50% 58%;
+      background: transparent;
+      box-shadow: none;
+      filter: drop-shadow(0 0 16px rgba(255, 214, 54, .78)) drop-shadow(0 10px 20px rgba(255, 149, 0, .35));
+    }
+
+    #playButton::before {
+      content: "";
+      position: absolute;
+      inset: 16% 7% 14% 5%;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(255, 244, 86, .62) 0 16%, rgba(255, 194, 37, .34) 42%, transparent 72%);
+      transform: scale(.88);
+      opacity: .72;
+      z-index: 1;
+      filter: blur(11px);
+      animation: letsGoAura 1.55s ease-in-out infinite;
+    }
+
+    #playButton::after {
+      content: "";
+      position: absolute;
+      inset: 20% 10% 18% 8%;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(255, 255, 255, .52) 0 10%, transparent 58%);
+      opacity: .52;
+      transform: scale(.9);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    #playButton img {
+      position: relative;
+      z-index: 3;
+      display: block;
+      width: 100%;
+      height: auto;
+      pointer-events: none;
+    }
+
+    #playStage.preplay-mode #playButton {
+      left: 756px;
+      right: auto;
+      top: 535px;
+      bottom: auto;
+      width: 224px;
+      height: auto;
+      border-radius: 28px;
+      filter: drop-shadow(0 0 18px rgba(255, 167, 38, .78)) drop-shadow(0 0 18px rgba(77, 202, 255, .42));
+      transform-origin: center center;
+    }
+
+    #playStage.preplay-mode #playButton::before {
+      inset: -16px -22px;
+      border-radius: 36px;
+      background: radial-gradient(ellipse, rgba(255, 210, 48, .44) 0 18%, rgba(255, 149, 0, .28) 42%, rgba(77, 202, 255, .12) 64%, transparent 80%);
+      filter: blur(13px);
+    }
+
+    #playStage.preplay-mode #playButton::after {
+      inset: 8px 16px;
+      border-radius: 26px;
+      background: radial-gradient(ellipse, rgba(255, 255, 255, .48) 0 12%, transparent 62%);
+    }
+
+    #playStage.preplay-mode #playButton.play-ready:hover {
+      transform: scale(1.1) translateY(-6px);
+      filter: drop-shadow(0 0 42px rgba(255, 180, 30, 1)) drop-shadow(0 0 20px rgba(255, 255, 255, .86)) drop-shadow(0 0 14px rgba(77, 202, 255, .66));
+    }
+
+    #playButton.play-ready {
+      pointer-events: auto;
       animation: playButtonBreathe 1.7s ease-in-out infinite,
                  playButtonGlow 1.7s ease-in-out infinite;
     }
 
-    #playStage:not(.hidden):hover #playBtnImg.play-ready {
+    #playButton.play-ready:hover {
       animation: none;
-      transform: scale(1.12) translateY(-5px);
-      filter: drop-shadow(0 0 48px rgba(255, 180, 30, 1)) drop-shadow(0 0 22px rgba(255, 255, 255, .95)) drop-shadow(0 0 8px rgba(255, 220, 80, .8));
-      transition: transform 0.18s cubic-bezier(.34, 1.5, .64, 1), filter 0.18s ease;
+      transform: scale(1.08) translateY(-6px);
+      filter: drop-shadow(0 0 44px rgba(255, 225, 45, 1)) drop-shadow(0 0 18px rgba(255, 255, 255, .92)) drop-shadow(0 16px 20px rgba(255, 139, 0, .38));
+      box-shadow: none;
+      transition: transform 0.18s cubic-bezier(.34, 1.5, .64, 1), filter 0.18s ease, box-shadow 0.18s ease;
     }
 
-    #playStage:not(.hidden):active #playBtnImg.play-ready {
+    #playButton.play-ready:active,
+    #playButton.play-clicked {
       animation: none;
       transform: scale(0.93) translateY(3px);
-      filter: drop-shadow(0 0 70px rgba(255, 220, 60, 1)) drop-shadow(0 0 36px rgba(255, 255, 255, 1));
-      transition: transform 0.07s ease, filter 0.07s ease;
+      filter: drop-shadow(0 0 58px rgba(255, 231, 72, 1)) drop-shadow(0 0 26px rgba(255, 255, 255, 1));
+      box-shadow: none;
+      transition: transform 0.07s ease, filter 0.07s ease, box-shadow 0.07s ease;
+    }
+
+    #playButton.play-clicked {
+      animation: playButtonClickPop .2s ease-out both;
+    }
+
+    #playStage.play-exit {
+      animation: playStageExit .22s ease both;
+      pointer-events: none;
     }
 
     .play-particle {
@@ -2050,7 +2158,7 @@
       }
 
       50% {
-        transform: scale(1.12) translateY(-7px);
+        transform: scale(1.07) translateY(-6px);
       }
     }
 
@@ -2058,11 +2166,50 @@
 
       0%,
       100% {
-        filter: drop-shadow(0 0 16px rgba(255, 165, 40, .6)) drop-shadow(0 0 32px rgba(77, 202, 255, .5));
+        filter: drop-shadow(0 0 16px rgba(255, 214, 54, .78)) drop-shadow(0 10px 20px rgba(255, 149, 0, .35));
       }
 
       50% {
-        filter: drop-shadow(0 0 42px rgba(255, 165, 40, .98)) drop-shadow(0 0 24px rgba(255, 255, 255, .72));
+        filter: drop-shadow(0 0 34px rgba(255, 224, 48, 1)) drop-shadow(0 0 22px rgba(255, 255, 255, .72)) drop-shadow(0 12px 22px rgba(255, 149, 0, .42));
+      }
+    }
+
+    @keyframes letsGoAura {
+      0%,
+      100% {
+        opacity: .55;
+        transform: scale(.88);
+      }
+
+      50% {
+        opacity: .96;
+        transform: scale(1.08);
+      }
+    }
+
+    @keyframes playButtonClickPop {
+      0% {
+        transform: scale(1.06) translateY(-4px);
+      }
+
+      55% {
+        transform: scale(.92) translateY(5px);
+      }
+
+      100% {
+        transform: scale(1.02) translateY(-1px);
+      }
+    }
+
+    @keyframes playStageExit {
+      0% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      100% {
+        opacity: 0;
+        transform: scale(1.012);
       }
     }
 
@@ -2117,6 +2264,11 @@
 
     #machineStage.hidden {
       transform: translate(-50%, -47%)
+    }
+
+    #game.laser-intro #machineStage {
+      top: 416px;
+      transform: translate(-50%, -50%) scale(0.82);
     }
 
     #machineImg {
@@ -3198,6 +3350,15 @@
       filter: drop-shadow(0 0 18px rgba(255, 55, 55, .95)) drop-shadow(0 0 8px rgba(255, 0, 0, .75)) !important;
     }
 
+    .wrong-fit-hold {
+      animation: wrongFitPulse 1.3s ease-in-out infinite;
+    }
+
+    @keyframes wrongFitPulse {
+      0%, 100% { filter: drop-shadow(0 0 12px rgba(255, 55, 55, .80)) drop-shadow(0 0 5px rgba(255, 0, 0, .55)); }
+      50%       { filter: drop-shadow(0 0 24px rgba(255, 55, 55, 1.0)) drop-shadow(0 0 10px rgba(255, 0, 0, .85)); }
+    }
+
     @media (prefers-reduced-motion:reduce) {
 
       *,
@@ -3241,13 +3402,15 @@
         <div id="teachContent"></div>
       </div>
 
-      <button id="playStage" class="hidden" type="button" aria-label="Start the laser game">
-        <img id="playBg" src="assets/LetsPlayBG.png" alt="">
+      <section id="playStage" class="hidden">
+        <img id="playBg" src="assets/GameStartScreen.png" alt="">
         <div id="playFx" aria-hidden="true"></div>
         <div id="iraGlowRing" aria-hidden="true"></div>
         <img id="iraChar" src="assets/Ira.png" alt="Ira">
-        <img id="playBtnImg" src="assets/PlayButton.png" alt="Play">
-      </button>
+        <button id="playButton" type="button" aria-label="Let's go">
+          <img id="playButtonImg" src="assets/LetsGoButton.png" alt="Let's Go">
+        </button>
+      </section>
 
       <div id="machineStage" class="hidden" aria-hidden="true">
         <!-- base machine (always LaserMachineWithoutLines) -->
@@ -3375,6 +3538,14 @@
     /* ── Web Audio sounds ── */
     var _ac = null;
     var _pendingPlugConnect = null;
+    var _themeAudio = (function () {
+      try {
+        var a = new Audio("audios/ThemeMusic.mp3");
+        a.loop = true;
+        a.volume = 0.28;
+        return a;
+      } catch (e) { return null; }
+    }());
     var PLUG_CONNECT_AUDIO_SRC = "audios/PlugConnect.mp3";
     var PLUG_CONNECT_VOLUME = 1;
     var _plugConnectMediaSrc = "";
@@ -3764,10 +3935,188 @@
         botWLaser: 150,
         readyPodTop: 172,
         podHeadContactDrop: 8,
-        previewFitScale: 0.95,
+        previewFitScale: 1.0,
         previewSlotNudge: { y: -7 },
         happyBotAspect: 838 / 620,
         happyBotW: 163
+      },
+      {
+        name: "rectangle",
+        label: "Rectangle",
+        variant: "rectangle-wide",
+        blockSrc: ASSETS + "RectangleBlock.png",
+        blockW: 320,
+        blockH: 68,
+        cut: "vertical",
+        startAngle: 45,
+        targetAngle: 90,
+        targetAngle2: 270,
+        sadBot: ASSETS + "SquareBotSadState.png",
+        happyBot: ASSETS + "happyPinkBot.png",
+        pod: ASSETS + "RectangleHollow.png",
+        podLeft: ASSETS + "RectangleHollow.png",
+        podRight: ASSETS + "RectangleHollow.png",
+        podW: 168,
+        botAspect: 894 / 606,
+        podAspectLeft: 1074 / 600,
+        podAspectRight: 1074 / 600,
+        chargerOverlap: 20,
+        connectorOverlapBoost: 30,
+        readyConnectorOverlapBoost: 30,
+        laserConnectorOverlapBoost: 42,
+        botWIntro: 205,
+        botWReady: 205,
+        botWLaser: 150,
+        readyPodTop: 188,
+        podHeadContactDrop: 8,
+        slotSize: { width: 162, height: 72 },
+        slotOffset: { left: 2, right: 2 },
+        visualFitScale: 1,
+        focusFrameSize: { wRatio: 1.02, hRatio: 0.50 },
+        previewFitScale: 0.92,
+        previewSlotNudge: { y: -4 },
+        happyBotAspect: 838 / 620,
+        happyBotW: 163
+      },
+      {
+        name: "rectangle",
+        label: "Rectangle",
+        variant: "rectangle-tall",
+        blockSrc: ASSETS + "RectangleBlock.png",
+        blockW: 100,
+        blockH: 200,
+        cut: "horizontal",
+        startAngle: 45,
+        targetAngle: 0,
+        targetAngle2: 180,
+        sadBot: ASSETS + "SquareBotSadState.png",
+        happyBot: ASSETS + "happyPinkBot.png",
+        pod: ASSETS + "SmallSquareHollow.png",
+        podLeft: ASSETS + "SmallSquareHollow.png",
+        podRight: ASSETS + "SmallSquareHollow.png",
+        podW: 130,
+        botAspect: 894 / 606,
+        podAspectLeft: 1086 / 444,
+        podAspectRight: 1086 / 444,
+        chargerOverlap: 20,
+        connectorOverlapBoost: 30,
+        readyConnectorOverlapBoost: 30,
+        laserConnectorOverlapBoost: 42,
+        botWIntro: 205,
+        botWReady: 205,
+        botWLaser: 150,
+        readyPodTop: 167,
+        podHeadContactDrop: 8,
+        slotSize: { width: 60, height: 60 },
+        slotOffset: { left: 8, right: 8 },
+        visualFitScale: 1,
+        focusFrameSize: { wRatio: 0.58, hRatio: 0.60 },
+        previewFitScale: 0.92,
+        happyBotAspect: 838 / 620,
+        happyBotW: 163
+      },
+      {
+        name: "rectangle",
+        label: "Rectangle",
+        variant: "rectangle-vertical",
+        blockSrc: ASSETS + "RectangleBlock.png",
+        blockW: 200,
+        blockH: 240,
+        cut: "vertical",
+        startAngle: 45,
+        targetAngle: 90,
+        targetAngle2: 270,
+        sadBot: ASSETS + "SquareBotSadState.png",
+        happyBot: ASSETS + "happyPinkBot.png",
+        pod: ASSETS + "VerticalRectangleHollow.png",
+        podLeft: ASSETS + "VerticalRectangleHollow.png",
+        podRight: ASSETS + "VerticalRectangleHollow.png",
+        podW: 130,
+        botAspect: 894 / 606,
+        podAspectLeft: 1242 / 444,
+        podAspectRight: 1242 / 444,
+        chargerOverlap: 20,
+        connectorOverlapBoost: 30,
+        readyConnectorOverlapBoost: 30,
+        laserConnectorOverlapBoost: 42,
+        botWIntro: 205,
+        botWReady: 205,
+        botWLaser: 150,
+        readyPodTop: 122,
+        podHeadContactDrop: 8,
+        slotSize: { width: 64, height: 154 },
+        slotOffset: { left: 10, right: 10 },
+        visualFitScale: 1,
+        focusFrameSize: { wRatio: 0.56, hRatio: 1.30 },
+        previewFitScale: 0.92,
+        happyBotAspect: 838 / 620,
+        happyBotW: 163
+      },
+      {
+        name: "rectangle",
+        label: "Rectangle",
+        variant: "rectangle-wide-hcut",
+        blockSrc: ASSETS + "RectangleBlock.png",
+        blockW: 200,
+        blockH: 170,
+        cut: "horizontal",
+        startAngle: 45,
+        targetAngle: 0,
+        targetAngle2: 180,
+        sadBot: ASSETS + "SquareBotSadState.png",
+        happyBot: ASSETS + "happyPinkBot.png",
+        pod: ASSETS + "RectangleHollow.png",
+        podLeft: ASSETS + "RectangleHollow.png",
+        podRight: ASSETS + "RectangleHollow.png",
+        podW: 168,
+        botAspect: 894 / 606,
+        podAspectLeft: 1074 / 600,
+        podAspectRight: 1074 / 600,
+        chargerOverlap: 20,
+        connectorOverlapBoost: 30,
+        readyConnectorOverlapBoost: 30,
+        laserConnectorOverlapBoost: 42,
+        botWIntro: 205,
+        botWReady: 205,
+        botWLaser: 150,
+        readyPodTop: 188,
+        podHeadContactDrop: 8,
+        slotSize: { width: 162, height: 72 },
+        slotOffset: { left: 2, right: 2 },
+        visualFitScale: 1.45,
+        focusFrameSize: { wRatio: 1.02, hRatio: 0.50 },
+        previewFitScale: 0.92,
+        previewSlotNudge: { y: -4 },
+        happyBotAspect: 838 / 620,
+        happyBotW: 163
+      },
+      {
+        name: "rectangle",
+        label: "Rectangle",
+        variant: "rectangle-flat-hcut",
+        blockSrc: ASSETS + "RectangleBlock.png",
+        blockW: 220, blockH: 120,
+        cut: "horizontal",
+        startAngle: 45,
+        targetAngle: 0, targetAngle2: 180,
+        sadBot: ASSETS + "SquareBotSadState.png",
+        happyBot: ASSETS + "happyPinkBot.png",
+        pod: ASSETS + "RectangleHollow2.png",
+        podLeft: ASSETS + "RectangleHollow2.png",
+        podRight: ASSETS + "RectangleHollow2.png",
+        podW: 168,
+        botAspect: 894 / 606,
+        podAspectLeft: 1118 / 774, podAspectRight: 1118 / 774,
+        chargerOverlap: 20, connectorOverlapBoost: 30,
+        readyConnectorOverlapBoost: 30, laserConnectorOverlapBoost: 42,
+        botWIntro: 205, botWReady: 205, botWLaser: 150,
+        readyPodTop: 240, podHeadContactDrop: 8,
+        slotSize: { width: 166, height: 68 },
+        slotOffset: { left: 2, right: 0 },
+        visualFitScale: 1.25,
+        focusFrameSize: { wRatio: 1.02, hRatio: 0.42 },
+        previewFitScale: 0.9, previewSlotNudge: { y: -4 },
+        happyBotAspect: 838 / 620, happyBotW: 163
       },
       {
         name: "square",
@@ -3791,14 +4140,14 @@
         chargerOverlap: 22,
         connectorOverlapBoost: 24,
         readyConnectorOverlapBoost: 42,
-        laserConnectorOverlapBoost: 16,
+        laserConnectorOverlapBoost: 4,
         botWIntro: 220,
         botWReady: 220,
         botWLaser: 185,
-        readyPodTop: { left: 188, right: 160 },
+        readyPodTop: { left: 198, right: 170 },
         podHeadContactDrop: 10,
         podXOffset: { left: 4, right: 0 },
-        happyConnectorNudge: 0,
+        happyConnectorNudge: 30,
         happyPodXOffset: { left: 22, right: 18 },
         previewFitScale: 0.82,
         happyBotAspect: 954 / 854,
@@ -3867,7 +4216,7 @@
         chargerOverlap: 22,
         connectorOverlapBoost: 24,
         readyConnectorOverlapBoost: 46,
-        readyPodTop: 240,
+        readyPodTop: 119,
         slotSize: { width: 80, height: 154 },
         slotOffset: { left: 20, right: 20 },
         slotXOffset: { left: -4, right: 4 },
@@ -3989,7 +4338,9 @@
       { scene: "whole", text: "Here is one whole energy block.", duration: TIMING.SHORT_SCREEN },
       { scene: "needs", text: "Each bot needs a part of the block.", duration: TIMING.LONG_SCREEN },
       { scene: "halves", text: "So, we need to cut the block", duration: TIMING.HALVES_DEMO_SCREEN },
+      { scene: "laserIntro", text: "Use the laser to cut the block.", duration: TIMING.SHORT_SCREEN },
       { scene: "tutorial" },
+      { scene: "preplay" },
       { scene: "cutInstruct", text: "Cut the block into two equal parts.", duration: TIMING.SHORT_SCREEN },
       { scene: "slotInstruct", text: "Make sure the parts fit into the slots.", duration: TIMING.LONG_SCREEN },
       { scene: "laser" }
@@ -4032,10 +4383,12 @@
       teachStage: document.getElementById("teachStage"),
       teachContent: document.getElementById("teachContent"),
       playStage: document.getElementById("playStage"),
+      playBg: document.getElementById("playBg"),
       playFx: document.getElementById("playFx"),
       iraChar: document.getElementById("iraChar"),
       iraGlowRing: document.getElementById("iraGlowRing"),
-      playBtnImg: document.getElementById("playBtnImg"),
+      playButton: document.getElementById("playButton"),
+      playButtonImg: document.getElementById("playButtonImg"),
       machineStage: document.getElementById("machineStage"),
       machineImg: document.getElementById("machineImg"),
       tutorialOverlay: document.getElementById("tutorialOverlay"),
@@ -4175,7 +4528,7 @@
       els.sceneBg.style.display = "none";
       els.sceneBg.src = ASSETS + "Mainbg.png";
       state.teachingActive = false;
-      els.game.classList.remove("teaching-active");
+      els.game.classList.remove("teaching-active", "laser-intro");
       hide(els.shapeStage);
       hide(els.teachStage);
       hide(els.playStage);
@@ -4189,7 +4542,8 @@
       if (els.playFx) { els.playFx.innerHTML = ""; }
       els.iraChar.classList.remove("play-idle");
       els.iraGlowRing.classList.remove("show");
-      els.playBtnImg.classList.remove("play-ready");
+      els.playStage.classList.remove("play-exit", "start-mode", "preplay-mode");
+      els.playButton.classList.remove("play-ready", "play-clicked");
       els.machineBlock.classList.remove("vibrate");
       els.machineBlock.classList.remove("rejoin-pop");
       els.machineBlock.style.opacity = "";
@@ -4199,6 +4553,8 @@
       clearTargetFills();
       clearAttemptGuides();
       els.wrongSlash.classList.remove("show");
+      els.leftPod.classList.remove("front-layer");
+      els.rightPod.classList.remove("front-layer");
       if (state.orbitRaf) { cancelAnimationFrame(state.orbitRaf); state.orbitRaf = null; }
       state.orbitActive = false;
       els.laserImg.style.display = "none";
@@ -4530,8 +4886,11 @@
       frame.className = "pod-hollow-focus-frame";
       frame.setAttribute("aria-hidden", "true");
       frame.style.top = podEl.style.top;
-      frame.style.setProperty("--hollow-focus-w", Math.round(podW * 0.79) + "px");
-      frame.style.setProperty("--hollow-focus-h", Math.round(podW * 0.79) + "px");
+      var ffs = r && r.focusFrameSize;
+      var wRatio = (ffs && ffs.wRatio) || 0.79;
+      var hRatio = (ffs && ffs.hRatio) || 0.79;
+      frame.style.setProperty("--hollow-focus-w", Math.round(podW * wRatio) + "px");
+      frame.style.setProperty("--hollow-focus-h", Math.round(podW * hRatio) + "px");
       frame.style.marginLeft = podEl.style.marginLeft || "0px";
       if (podEl.style.transform && podEl.style.transform.indexOf("scaleX(-1)") !== -1) {
         frame.style.transform = "translateX(-50%) scaleX(-1)";
@@ -5099,6 +5458,11 @@
         var angle = canonicalCutAngle(r);
         var orientation = cutOrientation(angle);
         var splitOffsets = splitOffsetForOrientation(orientation, 6);
+
+        var wholeBlock = makeBlock(r, r.blockW, r.blockH);
+        wrap.appendChild(wholeBlock);
+
+        var dPieces = [];
         [0, 1].forEach(function (index) {
           var g = pieceGeometry(r.blockW, r.blockH, angle, index);
           var piece = makeCutPiece(r, index, r.blockW, r.blockH, angle);
@@ -5106,11 +5470,15 @@
           piece.style.position = "absolute";
           piece.style.left = g.minX + "px";
           piece.style.top = g.minY + "px";
-          piece.style.transform = "translate(" + splitOffsets[index].x + "px," + splitOffsets[index].y + "px)";
+          piece.style.opacity = "0";
+          piece.style.transform = "translate(0px,0px)";
+          dPieces.push(piece);
           wrap.appendChild(piece);
         });
+
         var line = document.createElement("div");
         line.className = "cut-cue-line " + orientation;
+        line.style.opacity = "0";
         if (orientation === "slash" || orientation === "backslash") {
           var diag = Math.sqrt(r.blockW * r.blockW + r.blockH * r.blockH);
           var deg = orientation === "backslash" ? 45 : -45;
@@ -5118,6 +5486,24 @@
           line.style.transform = "translate(-50%, -50%) rotate(" + deg + "deg)";
         }
         wrap.appendChild(line);
+
+        later(function () {
+          wholeBlock.style.transition = "opacity 0.28s ease";
+          wholeBlock.style.opacity = "0";
+          dPieces.forEach(function (piece) {
+            piece.style.transition = "opacity 0.28s ease";
+            piece.style.opacity = "1";
+          });
+          later(function () {
+            sndSplitDemo();
+            line.style.transition = "opacity 0.3s ease";
+            line.style.opacity = "1";
+            dPieces.forEach(function (piece, index) {
+              piece.style.transition = "transform 0.5s cubic-bezier(.4,0,.2,1)";
+              piece.style.transform = "translate(" + splitOffsets[index].x + "px," + splitOffsets[index].y + "px)";
+            });
+          }, 350);
+        }, 800);
       } else {
         var block = makeBlock(r, r.blockW, r.blockH);
         if (glow) block.classList.add("static-glow");
@@ -5451,7 +5837,24 @@
     function renderTeaching(kind, angle, equal, onNext) {
       var r = currentRound();
       var cutAngle = angle === undefined ? canonicalCutAngle(r) : angle;
-      var w = r.name === "rectangle" ? 170 : r.name === "circle" ? 145 : 130;
+      var w;
+      if (r.name === "rectangle" && r.variant === "rectangle-tall") {
+        w = 80;
+      } else if (r.name === "rectangle" && r.variant === "rectangle-wide") {
+        w = 360;
+      } else if (r.name === "rectangle" && r.variant === "rectangle-vertical") {
+        w = 110;
+      } else if (r.name === "rectangle" && r.variant === "rectangle-wide-hcut") {
+        w = 180;
+      } else if (r.name === "rectangle" && r.variant === "rectangle-flat-hcut") {
+        w = 220;
+      } else if (r.name === "rectangle") {
+        w = 170;
+      } else if (r.name === "circle") {
+        w = 145;
+      } else {
+        w = 130;
+      }
       var h = Math.round(w * r.blockH / r.blockW);
       els.teachContent.innerHTML = "";
       state.teachingActive = true;
@@ -5551,6 +5954,13 @@
           lbl.style.transform = "translateX(-50%) translateY(0)";
         });
       }, TIMING.TEACH_HALF_LABELS);
+
+      later(function () {
+        (halvesBox._pieces || []).forEach(function (p) {
+          p.style.transition = "filter 0.5s ease";
+          p.classList.remove("teach-shape-glow");
+        });
+      }, TIMING.TEACH_SPLIT + 3000);
 
       later(function () {
         lblEqual.style.opacity = "1";
@@ -5660,7 +6070,7 @@
       if (state.round > 0) {
         if (step.scene === "intro" || step.scene === "plug" || step.scene === "plugReady" ||
           step.scene === "moveOut" || step.scene === "whole" || step.scene === "needs" ||
-          step.scene === "halves" || step.scene === "tutorial") {
+          step.scene === "halves" || step.scene === "laserIntro" || step.scene === "tutorial" || step.scene === "preplay") {
           nextStep();
           return;
         }
@@ -5704,36 +6114,30 @@
 
       if (step.scene === "play") {
         if (state.round > 0) { nextStep(); return; }
+        state.locked = false;
         setInstruction("");
         setupBots("layout-clear");
-        /* reset Ira & play button to initial off-screen/hidden state */
-        els.iraChar.style.transition = "none";
+        els.playBg.src = ASSETS + "GameStartScreen.png";
+        els.playButtonImg.src = ASSETS + "LetsGoButton.png";
+        els.playButtonImg.alt = "Let's Go";
+        els.playButton.setAttribute("aria-label", "Let's go");
+        els.playStage.classList.add("start-mode");
         els.iraChar.classList.remove("play-idle");
-        els.iraChar.style.transform = "translateX(1200px)";
+        els.iraChar.style.transition = "";
+        els.iraChar.style.transform = "";
         els.iraGlowRing.classList.remove("show");
-        els.playBtnImg.classList.remove("play-ready");
-        els.playBtnImg.style.opacity = "0";
-        els.playBtnImg.style.transform = "scale(0.85) translateY(16px)";
-        seedPlayMagic();
+        els.playStage.classList.remove("play-exit");
+        els.playButton.classList.remove("play-ready", "play-clicked");
+        els.playButton.style.opacity = "0";
+        els.playButton.style.transform = "scale(0.85) translateY(16px)";
         show(els.playStage);
-        /* Ira enters from right in a single smooth motion */
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () {
-            els.iraChar.style.transition = "transform 0.72s cubic-bezier(0.25, 1.1, 0.4, 1)";
-            els.iraChar.style.transform = "translateX(0)";
-            later(function () { els.iraGlowRing.classList.add("show"); }, 680);
-          });
-        });
-        /* phase 3: play button pops in */
         later(function () {
-          els.playBtnImg.style.opacity = "1";
-          els.playBtnImg.style.transform = "scale(1) translateY(0)";
-        }, 820);
+          els.playButton.style.opacity = "1";
+          els.playButton.style.transform = "scale(1) translateY(0)";
+        }, 220);
         later(function () {
-          els.iraChar.style.transition = "";
-          els.iraChar.classList.add("play-idle");
-          els.playBtnImg.classList.add("play-ready");
-        }, 1240);
+          els.playButton.classList.add("play-ready");
+        }, 560);
       }
 
       if (step.scene === "tutorial") {
@@ -5747,6 +6151,10 @@
 
       if (step.scene === "preplay") {
         setupPreplay(text);
+      }
+
+      if (step.scene === "laserIntro") {
+        setupLaserIntro(text);
       }
 
       if (step.scene === "cutInstruct") {
@@ -5938,7 +6346,48 @@
     }
 
     function setupPreplay(text) {
+      state.locked = false;
+      setInstruction("");
+      setupBots("layout-clear");
+      els.playBg.src = ASSETS + "LetsPlayBG.png";
+      els.playButtonImg.src = ASSETS + "PlayButton.png";
+      els.playButtonImg.alt = "Play";
+      els.playButton.setAttribute("aria-label", "Play");
+      els.playStage.classList.add("preplay-mode");
+      els.playStage.classList.remove("play-exit");
+      els.playButton.classList.remove("play-ready", "play-clicked");
+      els.playButton.style.opacity = "0";
+      els.playButton.style.transform = "scale(0.85) translateY(16px)";
+      els.iraChar.classList.remove("play-idle");
+      els.iraChar.style.transition = "none";
+      els.iraChar.style.transform = "translateX(1200px)";
+      els.iraGlowRing.classList.remove("show");
+      seedPlayMagic();
+      show(els.playStage);
+
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          els.iraChar.style.transition = "transform 0.72s cubic-bezier(0.25, 1.1, 0.4, 1)";
+          els.iraChar.style.transform = "translateX(0)";
+          later(function () { els.iraGlowRing.classList.add("show"); }, 680);
+        });
+      });
+
+      later(function () {
+        els.playButton.style.opacity = "1";
+        els.playButton.style.transform = "scale(1) translateY(0)";
+      }, 820);
+
+      later(function () {
+        els.iraChar.style.transition = "";
+        els.iraChar.classList.add("play-idle");
+        els.playButton.classList.add("play-ready");
+      }, 1240);
+    }
+
+    function setupLaserIntro(text) {
       var r = currentRound();
+      els.game.classList.add("laser-intro");
       els.sceneBg.style.display = "block";
       setInstruction(text);
       setupBots("layout-laser");
@@ -5955,18 +6404,12 @@
       els.cutLine.style.height = (r.blockH + 12) + "px";
       els.cutLine.style.borderRadius = (r.name === "circle" ? "50%" : "0");
       els.cutLine.classList.remove("show");
-      els.wrongSlash.style.width = els.blockCover.style.width;
-      els.wrongSlash.style.height = els.blockCover.style.height;
-      els.wrongSlash.style.borderRadius = els.blockCover.style.borderRadius;
       state.orbitActive = true;
       snapLaser(r.startAngle);
       showLaserHead();
       [els.bubbleLeft, els.bubbleRight, els.bubbleCut].forEach(function (el) {
         el.classList.add("fade");
       });
-      els.hitLeft.disabled = true;
-      els.hitRight.disabled = true;
-      els.hitCut.disabled = true;
       show(els.machineStage);
     }
 
@@ -6296,7 +6739,9 @@
       var clip = document.createElementNS(ns, "clipPath");
       var path = document.createElementNS(ns, "path");
       clip.setAttribute("id", clipId);
-      path.setAttribute("d", diagonalSemicircleFocusPath(r, side, size, size, 0));
+      var inset = r.diagSlotFillInset === undefined ? 8 : r.diagSlotFillInset;
+      var innerSize = Math.max(1, size - inset * 2);
+      path.setAttribute("d", diagonalSemicircleFocusPath(r, side, innerSize, innerSize, inset));
       clip.appendChild(path);
       defs.appendChild(clip);
 
@@ -6361,7 +6806,7 @@
       var home = cutPieceHome(r.blockW, r.blockH, angle, index, 0, 0);
       var scale = slotScaleForPiece({ width: w, height: h }, home) * visualFitScaleForRound(r);
       fill.innerHTML = "";
-      var dyOffset = r.name === "rectangle" ? "-8px" : "0px";
+      var dyOffset = (r.name === "rectangle" && !r.variant) ? "-8px" : "0px";
       piece.classList.add("fit-piece");
       piece.style.transformOrigin = "center center";
       piece.style.transform = "translateZ(0) translateY(" + dyOffset + ") scale(" + scale + ")";
@@ -6505,7 +6950,7 @@
 
         var scale = slotScaleForPiece(targets[slotIdx], home) * visualFitScaleForRound(r);
         var dx = targets[slotIdx].x - home.centerX;
-        var dyOffset = r.name === "rectangle" ? 8 : 0;
+        var dyOffset = (r.name === "rectangle" && !r.variant) ? 8 : 0;
         var dy = targets[slotIdx].y - home.centerY - dyOffset;
         var stagger = slotIdx * 100;
         setTimeout(function () {
@@ -6651,8 +7096,12 @@
           els.leftPod.classList.add("glow");
           els.rightPod.classList.add("glow");
           flyWrongToSlots(r, cutAngle, function () {
-            restoreMachineForRetry(r);
-            show(els.tryAgain);
+            els.machineStage.classList.remove("checking-fit");
+            setInstruction("Oops! The parts don't fit in the slots.");
+            later(function () {
+              setInstruction("");
+              show(els.tryAgain);
+            }, 1800);
           }, { x: 640, y: 360 });
         }, 1250);
       }
@@ -6754,10 +7203,11 @@
       later(function () {
         flyers.forEach(function (fly) {
           fly.classList.remove("soft-mismatch", "wrong-fit-glow");
-          fly.style.transition = "transform .78s cubic-bezier(.65,0,.35,1), filter .28s ease";
-          fly.style.filter = "drop-shadow(0 0 10px rgba(120, 219, 255, .28))";
-          fly.style.transform = "translate(0,0) scale(1)";
+          fly.classList.add("wrong-fit-hold");
+          /* Pieces stay at fitTransform in the slot — no return animation */
         });
+        els.leftPod.classList.add("front-layer");
+        els.rightPod.classList.add("front-layer");
         setInstruction("");
       }, 1880);
 
@@ -6765,7 +7215,7 @@
         if (typeof onDone === "function") {
           onDone();
         }
-      }, 2820);
+      }, 2200);
     }
 
     function tryAgain() {
@@ -6773,9 +7223,13 @@
       state.locked = false;
       state.angle = r.startAngle;
       els.flightLayer.innerHTML = "";
+      els.leftPod.classList.remove("front-layer");
+      els.rightPod.classList.remove("front-layer");
+      els.machineStage.classList.remove("checking-fit");
       show(els.machineStage);
       setupBots("layout-laser");
       snapLaser(r.startAngle);
+      showLaserHead();
       hideBeam();
       clearAttemptGuides();
       els.machineBlock.classList.remove("vibrate");
@@ -6885,10 +7339,15 @@
       nextRound();
     }
 
-    els.playStage.addEventListener("click", function () {
+    els.playButton.addEventListener("click", function () {
+      if (state.locked || !els.playButton.classList.contains("play-ready")) { return; }
+      state.locked = true;
       primePlugConnectAudio();
+      if (_themeAudio) { _themeAudio.currentTime = 0; _themeAudio.play().catch(function () {}); }
       sndTap();
-      nextStep();
+      els.playButton.classList.add("play-clicked");
+      els.playStage.classList.add("play-exit");
+      later(nextStep, 190);
     });
     els.hitLeft.addEventListener("click", function () {
       if (state.tutActive) { tutHandleLeft(); return; }
