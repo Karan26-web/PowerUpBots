@@ -2014,13 +2014,13 @@
     }
 
     #playStage.preplay-mode #playButton {
-      left: 756px;
+      left: 736px;
       right: auto;
-      top: 535px;
+      top: 515px;
       bottom: auto;
-      width: 224px;
-      height: auto;
-      border-radius: 28px;
+      width: 264px;
+      height: 96px;
+      border-radius: 48px;
       filter: drop-shadow(0 0 18px rgba(255, 167, 38, .78)) drop-shadow(0 0 18px rgba(77, 202, 255, .42));
       transform-origin: center center;
     }
@@ -3564,6 +3564,41 @@
     var _plugConnectMediaSrc = "";
     var _laserCutAudio = null;
     var _plugConnectPrimed = false;
+    var INSTRUCTION_AUDIO = {
+      "Let us charge the bots.": "audios/Let us charge the bots..mp3",
+      "The bots are ready to get charged.": "audios/The bots are ready to get charged!.mp3",
+      "Here is one whole energy block.": "audios/Here is one whole energy block..mp3",
+      "Each bot needs a part of the block.": "audios/Each bot needs a part of the energy block.mp3",
+      "So, we need to cut the block": "audios/So, We need to cut the block.mp3"
+    };
+    var _instructionAudioCache = {};
+    var _instructionAudioCurrent = null;
+    function playInstructionAudio(text) {
+      if (_instructionAudioCurrent) {
+        try {
+          _instructionAudioCurrent.pause();
+          _instructionAudioCurrent.currentTime = 0;
+        } catch (e) { }
+        _instructionAudioCurrent = null;
+      }
+      var src = INSTRUCTION_AUDIO[text];
+      if (!src) { return; }
+      var audio = _instructionAudioCache[src];
+      if (!audio) {
+        try {
+          audio = new Audio(src);
+          audio.preload = "auto";
+          audio.volume = 0.95;
+          _instructionAudioCache[src] = audio;
+        } catch (e) { return; }
+      }
+      try {
+        audio.currentTime = 0;
+        _instructionAudioCurrent = audio;
+        var p = audio.play();
+        if (p && typeof p.catch === "function") { p.catch(function () { }); }
+      } catch (e) { }
+    }
     var _plugConnectAudio = (function () {
       try {
         var a = new Audio(PLUG_CONNECT_AUDIO_SRC);
@@ -4022,7 +4057,7 @@
         podHeadContactDrop: 8,
         slotSize: { width: 60, height: 60 },
         slotOffset: { left: 8, right: 8 },
-        visualFitScale: 1,
+        visualFitScale: 1.65,
         focusFrameSize: { wRatio: 0.58, hRatio: 0.60 },
         previewFitScale: 0.92,
         happyBotAspect: 838 / 620,
@@ -4060,6 +4095,7 @@
         slotSize: { width: 64, height: 154 },
         slotOffset: { left: 10, right: 10 },
         visualFitScale: 1,
+        fitPieceScale: { x: 1.45, y: 1.05 },
         focusFrameSize: { wRatio: 0.56, hRatio: 1.30 },
         previewFitScale: 0.92,
         happyBotAspect: 838 / 620,
@@ -4088,16 +4124,17 @@
         chargerOverlap: 20,
         connectorOverlapBoost: 30,
         readyConnectorOverlapBoost: 30,
-        laserConnectorOverlapBoost: 42,
+        laserConnectorOverlapBoost: 20,
+        happyConnectorNudge: 10,
         botWIntro: 205,
         botWReady: 205,
         botWLaser: 150,
-        readyPodTop: 188,
+        readyPodTop: 158,
         podHeadContactDrop: 8,
         slotSize: { width: 162, height: 72 },
         slotOffset: { left: 2, right: 2 },
-        visualFitScale: 1.45,
-        focusFrameSize: { wRatio: 1.02, hRatio: 0.50 },
+        visualFitScale: 0.74,
+        focusFrameSize: { wRatio: 0.95, hRatio: 0.40 },
         previewFitScale: 0.92,
         previewSlotNudge: { y: -4 },
         happyBotAspect: 838 / 620,
@@ -4162,6 +4199,7 @@
         podXOffset: { left: 4, right: 0 },
         happyConnectorNudge: 30,
         happyPodXOffset: { left: 22, right: 18 },
+        fitPieceScale: { right: { x: 1.05, y: 1.03 } },
         previewFitScale: 0.82,
         happyBotAspect: 954 / 854,
         happyBotW: 180
@@ -4171,8 +4209,8 @@
         label: "Circle",
         variant: "circle-horizontal",
         blockSrc: ASSETS + "CircleBlock.png",
-        blockW: 220,
-        blockH: 220,
+        blockW: 130,
+        blockH: 130,
         cut: "horizontal",
         startAngle: 45,
         targetAngle: 0,
@@ -4197,6 +4235,7 @@
           right: "ellipse(50% 100% at 50% 100%)",
           radius: "0"
         },
+        happyPodXOffset: { left: 12, right: 12 },
         botWIntro: 220,
         botWReady: 235,
         botWLaser: 180,
@@ -4210,8 +4249,8 @@
         label: "Circle",
         variant: "circle-vertical",
         blockSrc: ASSETS + "CircleBlock.png",
-        blockW: 220,
-        blockH: 220,
+        blockW: 160,
+        blockH: 160,
         cut: "vertical",
         startAngle: 45,
         targetAngle: 90,
@@ -4240,6 +4279,7 @@
         },
         pieceForSlot: [0, 1],
         visualFitScale: 1,
+        happyPodXOffset: { left: 12, right: 12 },
         botWIntro: 220,
         botWReady: 235,
         botWLaser: 180,
@@ -4253,13 +4293,13 @@
         label: "Circle",
         variant: "circle-diagonal",
         blockSrc: ASSETS + "CircleBlock.png",
-        blockW: 220,
-        blockH: 220,
+        blockW: 150,
+        blockH: 150,
         cut: "diagonal",
         startAngle: 90,
-        targetAngle: 315,
-        acceptedAngles: [315],
-        successAngle: 135,
+        targetAngle: 45,
+        acceptedAngles: [45],
+        successAngle: 45,
         sadBot: ASSETS + "CircleBot.png",
         happyBot: ASSETS + "HappyCircleBot.png",
         pod: ASSETS + "45angleCircleHollow.png",
@@ -4271,9 +4311,10 @@
         podAspectRight: 1226 / 562,
         chargerOverlap: 25,
         connectorOverlapBoost: 32,
-        readyConnectorOverlapBoost: 164,
-        readyPodTop: { left: 280, right: 301 },
-        podXOffset: { left: 16, right: 16 },
+        readyConnectorOverlapBoost: 48,
+        laserConnectorOverlapBoost: 56,
+        readyPodTop: { left: 179, right: 197 },
+        podXOffset: { left: 12, right: 17 },
         slotSize: { width: 110, height: 110 },
         slotOffset: { left: 15, right: 38 },
         slotXOffset: { left: 14, right: -10 },
@@ -4286,6 +4327,8 @@
         pieceForSlot: [1, 0],
         visualFitScale: 0.82,
         fitSettleDelay: 1450,
+        happyConnectorNudge: 36,
+        happyPodXOffset: { left: 12, right: 17 },
         botWIntro: 220,
         botWReady: 235,
         botWLaser: 180,
@@ -4299,13 +4342,13 @@
         label: "Circle",
         variant: "circle-diagonal",
         blockSrc: ASSETS + "CircleBlock.png",
-        blockW: 220,
-        blockH: 220,
+        blockW: 150,
+        blockH: 150,
         cut: "diagonal",
         startAngle: 90,
-        targetAngle: 225,
-        acceptedAngles: [225],
-        successAngle: 45,
+        targetAngle: 135,
+        acceptedAngles: [135],
+        successAngle: 135,
         sadBot: ASSETS + "CircleBot.png",
         happyBot: ASSETS + "HappyCircleBot.png",
         pod: ASSETS + "CircleLastFlowHollow1.png",
@@ -4317,9 +4360,10 @@
         podAspectRight: 1224 / 562,
         chargerOverlap: 25,
         connectorOverlapBoost: 32,
-        readyConnectorOverlapBoost: 164,
-        readyPodTop: { left: 280, right: 301 },
-        podXOffset: { left: 16, right: 16 },
+        readyConnectorOverlapBoost: 48,
+        laserConnectorOverlapBoost: 56,
+        readyPodTop: { left: 179, right: 197 },
+        podXOffset: { left: 1, right: 18 },
         slotSize: { width: 110, height: 110 },
         slotOffset: { left: 43, right: 12 },
         slotXOffset: { left: 14, right: -10 },
@@ -4332,6 +4376,8 @@
         pieceForSlot: [0, 1],
         visualFitScale: 0.82,
         fitSettleDelay: 1450,
+        happyConnectorNudge: 36,
+        happyPodXOffset: { left: 1, right: 18 },
         botWIntro: 220,
         botWReady: 235,
         botWLaser: 180,
@@ -4531,10 +4577,12 @@
       if (!text) {
         hide(els.instruction);
         els.instructionText.textContent = "";
+        playInstructionAudio("");
         return;
       }
       els.instructionText.textContent = text;
       show(els.instruction);
+      playInstructionAudio(text);
     }
 
     function resetScene() {
@@ -6824,7 +6872,17 @@
       var dyOffset = (r.name === "rectangle" && !r.variant) ? "-8px" : "0px";
       piece.classList.add("fit-piece");
       piece.style.transformOrigin = "center center";
-      piece.style.transform = "translateZ(0) translateY(" + dyOffset + ") scale(" + scale + ")";
+      var fitScaleXY = r.fitPieceScale;
+      var sideScale = fitScaleXY && (fitScaleXY.left || fitScaleXY.right)
+        ? (side === "right" ? fitScaleXY.right : fitScaleXY.left)
+        : fitScaleXY;
+      if (sideScale) {
+        var sx = scale * (sideScale.x || 1);
+        var sy = scale * (sideScale.y || 1);
+        piece.style.transform = "translateZ(0) translateY(" + dyOffset + ") scale(" + sx + ", " + sy + ")";
+      } else {
+        piece.style.transform = "translateZ(0) translateY(" + dyOffset + ") scale(" + scale + ")";
+      }
       piece.style.filter = "none";
       fill.appendChild(piece);
       fill.classList.add("filled");
@@ -6897,7 +6955,7 @@
       var podW = r.podW || 132;
       var aspectL = r.podAspectLeft || 2.3;
       var aspectR = r.podAspectRight || r.podAspectLeft || 2.3;
-      var happyContactNudge = r.happyConnectorNudge !== undefined ? r.happyConnectorNudge : 6;
+      var happyContactNudge = r.happyConnectorNudge !== undefined ? r.happyConnectorNudge : 10;
       var chargerOverlap = chargerOverlapForRound(r) +
         connectorOverlapBoostForRound(r, "layout-intro-connected") +
         (r.podHeadContactDrop || 0) +
