@@ -3581,7 +3581,7 @@
     var _plugConnectMediaSrc = "";
     var _laserCutAudio = null;
     var _plugConnectPrimed = false;
-    var SUCCESS_CHARGED_TEXT = "Yay! The robots are charged!";
+    var SUCCESS_CHARGED_TEXT = "Yay! The bots are charged!";
     var INSTRUCTION_AUDIO = {
       "Let us charge the bots.": "audios/Let us charge the bots..ogg",
       "The bots are ready to get charged.": "audios/The bots are ready to get charged!.ogg",
@@ -3596,7 +3596,7 @@
       "Use the laser to cut the block.": "audios/Use the laser to cut the block..ogg",
       "Cut the block into two equal parts.": "audios/Cut the block into two equal parts.ogg",
       "Make sure both parts fit into the slots.": "audios/Make sure both parts fit into the slots.ogg",
-      [SUCCESS_CHARGED_TEXT]: "audios/Yay The robots are charged.ogg",
+      [SUCCESS_CHARGED_TEXT]: "audios/Yay! The bots are charged.ogg",
       "Oops! The parts don't fit in the slots.": "audios/Oops! The parts don’t fit in the slots..ogg"
     };
     var _instructionAudioCache = {};
@@ -4109,8 +4109,8 @@
         botWLaser: 150,
         readyPodTop: 172,
         podHeadContactDrop: 8,
-        slotOffset: { left: 5, right: 5 },
-        fitPieceScale: { x: 1, y: 1.10 },
+        slotOffset: { left: 6, right: 6 },
+        fitPieceScale: { x: 1, y: 1.0 },
         previewFitScale: 1.0,
         previewSlotNudge: { y: -7 },
         happyBotAspect: 838 / 620,
@@ -4298,10 +4298,6 @@
         botWIntro: 205, botWReady: 205, botWLaser: 150,
         readyPodTop: 240, podHeadContactDrop: 18,
         podXOffset: { left: 4, right: 4 },
-        connectorStemCover: {
-          left: { top: 176, x: -4, width: 26, height: 17 },
-          right: { top: 176, x: -4, width: 26, height: 17 }
-        },
         slotSize: { width: 166, height: 68 },
         slotOffset: { left: 7, right: 7 },
         visualFitScale: 0.95,
