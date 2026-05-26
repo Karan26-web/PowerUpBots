@@ -3141,21 +3141,7 @@
       width: 92px;
       height: 92px;
       transform: translateX(-50%);
-      filter: drop-shadow(0 0 14px rgba(114, 255, 95, .95));
       animation: completeTokenFloat 1.6s ease-in-out infinite;
-    }
-
-    .complete-token::after {
-      content: "";
-      position: absolute;
-      left: 50%;
-      top: 72px;
-      width: 3px;
-      height: 50px;
-      transform: translateX(-50%);
-      border-radius: 4px;
-      background: rgba(44, 88, 155, .62);
-      box-shadow: 0 0 8px rgba(86, 229, 255, .75);
     }
 
     .complete-token-rect {
@@ -3506,8 +3492,8 @@
           <div class="complete-ground-shadow"></div>
         </div>
       </div>
-      <button id="finishButton" type="button" aria-label="Continue">
-        Continue
+      <button id="finishButton" type="button" aria-label="Next">
+        Next
       </button>
     </section>
   </main>
@@ -3581,43 +3567,70 @@
     var _plugConnectMediaSrc = "";
     var _laserCutAudio = null;
     var _plugConnectPrimed = false;
+    var SUCCESS_CHARGED_TEXT = "Yay! The robots are charged!";
     var INSTRUCTION_AUDIO = {
       "Let us charge the bots.": "audios/Let us charge the bots..ogg",
       "The bots are ready to get charged.": "audios/The bots are ready to get charged!.ogg",
       "Here is one whole energy block.": "audios/Here is one whole energy block..ogg",
       "Each bot needs a part of the energy block.": "audios/Each bot needs a part of the energy block.ogg",
-      "So, we need to cut the block": "audios/So, We need to cut the block.ogg",
+      "So, we need to cut the block into two equal parts.": "audios/So, We need to cut the block.ogg",
       "into two equal parts.": "audios/into two equal parts.ogg",
+      "Tap to move.": "audios/Tap to move.ogg",
+      "Tap to cut.": "audios/tap to cut.ogg",
       "Use the laser to cut the block.": "audios/Use the laser to cut the block..ogg",
       "Cut the block into two equal parts.": "audios/Cut the block into two equal parts.ogg",
       "Make sure both parts fit into the slots.": "audios/Make sure both parts fit into the slots.ogg",
-      "Yay! The robots are charged!": "audios/Yay The robots are charged.ogg",
+      [SUCCESS_CHARGED_TEXT]: "audios/Yay The robots are charged.ogg",
       "Oops! The parts don't fit in the slots.": "audios/Oops! The parts don’t fit in the slots..ogg"
     };
     var _instructionAudioCache = {};
     var _instructionAudioCurrent = null;
-    function whenInstructionAudioEnds(cb) {
-      var a = _instructionAudioCurrent;
-      if (!a || a.ended) { cb(); return; }
-      var fired = false;
-      function fire() { if (!fired) { fired = true; cb(); } }
-      a.addEventListener("ended", fire, { once: true });
-      setTimeout(fire, 8000);
-    }
-    function playInstructionAudio(text) {
-      if (_instructionAudioCurrent) {
-        try {
-          _instructionAudioCurrent.pause();
-          _instructionAudioCurrent.currentTime = 0;
-        } catch (e) { }
-        if (_instructionAudioCurrent._ducked) {
-          _instructionAudioCurrent._ducked = false;
-          unduckTheme();
-        }
+    var _instructionAudioPlayToken = 0;
+    function stopInstructionAudio(force) {
+      var audio = _instructionAudioCurrent;
+      if (!audio) { return true; }
+      if (!force && audio._playThrough && !audio.ended) {
+        return false;
+      }
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch (e) { }
+      if (audio._ducked) {
+        audio._ducked = false;
+        unduckTheme();
+      }
+      audio._playThrough = false;
+      if (_instructionAudioCurrent === audio) {
         _instructionAudioCurrent = null;
+      }
+      return true;
+    }
+    function whenInstructionAudioEnds(audio, cb) {
+      if (typeof audio === "function") { cb = audio; audio = null; }
+      var a = audio || _instructionAudioCurrent;
+      if (!a) { if (cb) cb(); return; }
+      var token = a._playToken;
+      var fired = false;
+      function fire() {
+        if (fired || a._playToken !== token) { return; }
+        fired = true;
+        a._playThrough = false;
+        if (cb) cb();
+      }
+      a.addEventListener("ended", fire, { once: true });
+      a.addEventListener("error", fire, { once: true });
+      setTimeout(fire, 12000);
+    }
+    function playInstructionAudio(text, options) {
+      options = options || {};
+      if (!text) {
+        stopInstructionAudio(!!options.forceAudioStop);
+        return null;
       }
       var src = INSTRUCTION_AUDIO[text];
       if (!src) { return; }
+      stopInstructionAudio(true);
       var audio = _instructionAudioCache[src];
       if (!audio) {
         try {
@@ -3629,6 +3642,8 @@
       }
       try {
         audio.currentTime = 0;
+        audio._playToken = ++_instructionAudioPlayToken;
+        audio._playThrough = !!options.playThrough;
         _instructionAudioCurrent = audio;
         duckTheme();
         audio._ducked = true;
@@ -3641,7 +3656,9 @@
         if (p && typeof p.catch === "function") {
           p.catch(function () { release(); });
         }
+        return audio;
       } catch (e) { }
+      return null;
     }
     var _plugConnectAudio = (function () {
       try {
@@ -4076,6 +4093,8 @@
         botWLaser: 150,
         readyPodTop: 172,
         podHeadContactDrop: 8,
+        slotOffset: { left: 9, right: 9 },
+        fitPieceScale: { x: 1, y: 1.04 },
         previewFitScale: 1.0,
         previewSlotNudge: { y: -7 },
         happyBotAspect: 838 / 620,
@@ -4151,9 +4170,10 @@
         readyPodTop: 167,
         podHeadContactDrop: 8,
         slotSize: { width: 70, height: 70 },
-        slotOffset: { left: 5, right: 5 },
+        slotOffset: { left: 3, right: 3 },
         slotOverflow: "hidden",
         visualFitScale: 1.0,
+        fitPieceScale: { x: 1, y: 1.03 },
         focusFrameSize: { wRatio: 0.55, hRatio: 0.56 },
         focusFrameOffset: { top: 3 },
         hollowFocusClip: "inset(1% 22% 76% 22% round 9px)",
@@ -4222,18 +4242,19 @@
         chargerOverlap: 20,
         connectorOverlapBoost: 30,
         readyConnectorOverlapBoost: 30,
-        laserConnectorOverlapBoost: 50,
+        laserConnectorOverlapBoost: 40,
         happyConnectorNudge: 10,
         botWIntro: 205,
         botWReady: 205,
         botWLaser: 150,
-        readyPodTop: 195,
+        readyPodTop: 184,
         podHeadContactDrop: 8,
         podXOffset: { left: -5, right: -5 },
         slotSize: { width: 162, height: 72 },
         slotOffset: { left: 2, right: 2 },
         visualFitScale: 1.0,
-        focusFrameSize: { wRatio: 0.95, hRatio: 0.40 },
+        focusFrameSize: { wRatio: 0.97, hRatio: 0.46 },
+        focusFrameOffset: { top: 2 },
         previewFitScale: 0.92,
         previewSlotNudge: { y: -4 },
         happyBotAspect: 838 / 620,
@@ -4261,9 +4282,13 @@
         botWIntro: 205, botWReady: 205, botWLaser: 150,
         readyPodTop: 240, podHeadContactDrop: 18,
         podXOffset: { left: 4, right: 4 },
+        connectorStemCover: {
+          left: { top: 180, x: -4, width: 22, height: 14 },
+          right: { top: 180, x: -4, width: 22, height: 14 }
+        },
         slotSize: { width: 166, height: 68 },
-        slotOffset: { left: 2, right: 0 },
-        visualFitScale: 1.25,
+        slotOffset: { left: 7, right: 7 },
+        visualFitScale: 0.95,
         focusFrameSize: { wRatio: 0.98, hRatio: 0.30 },
         focusFrameOffset: { top: 15 },
         hollowFocusClip: "inset(6% 1% 73% 1% round 10px)",
@@ -4331,7 +4356,10 @@
         readyConnectorOverlapBoost: 48,
         readyPodTop: 258,
         slotSize: { width: 96, height: 48 },
-        slotOffset: { left: 18, right: 22 },
+        slotOffset: { left: 21, right: 23 },
+        visualFitScale: 1.05,
+        fitPieceScale: { x: 1, y: 1.10 },
+        happyConnectorNudge: 22,
         slotFocus: {
           left: "ellipse(50% 100% at 50% 0)",
           right: "ellipse(50% 100% at 50% 100%)",
@@ -4370,10 +4398,11 @@
         chargerOverlap: 22,
         connectorOverlapBoost: 24,
         readyConnectorOverlapBoost: 46,
+        laserConnectorOverlapBoost: 14,
         readyPodTop: 119,
-        slotSize: { width: 80, height: 154 },
-        slotOffset: { left: 20, right: 20 },
-        slotXOffset: { left: -4, right: 4 },
+        slotSize: { width: 80, height: 130 },
+        slotOffset: { left: 28, right: 28 },
+        slotXOffset: { left: -10, right: 10 },
         slotFocus: {
           left: "ellipse(100% 50% at 100% 50%)",
           right: "ellipse(100% 50% at 0 50%)",
@@ -4414,12 +4443,12 @@
         chargerOverlap: 25,
         connectorOverlapBoost: 32,
         readyConnectorOverlapBoost: 48,
-        laserConnectorOverlapBoost: 56,
-        readyPodTop: { left: 179, right: 197 },
+        laserConnectorOverlapBoost: 33,
+        readyPodTop: { left: 162, right: 180 },
         podXOffset: { left: 12, right: 17 },
         slotSize: { width: 110, height: 110 },
-        slotOffset: { left: 15, right: 38 },
-        slotXOffset: { left: 14, right: -10 },
+        slotOffset: { left: 17, right: 43 },
+        slotXOffset: { left: 26, right: 7 },
         slotFocus: {
           left: "polygon(0% 0%, 100% 100%, 0% 100%)",
           right: "polygon(0% 0%, 100% 0%, 100% 100%)",
@@ -4427,9 +4456,9 @@
           inset: "10px"
         },
         pieceForSlot: [1, 0],
-        visualFitScale: 0.82,
+        visualFitScale: 0.97,
         fitSettleDelay: 1450,
-        happyConnectorNudge: 36,
+        happyConnectorNudge: 9,
         happyPodXOffset: { left: 12, right: 17 },
         botWIntro: 220,
         botWReady: 235,
@@ -4463,12 +4492,12 @@
         chargerOverlap: 25,
         connectorOverlapBoost: 32,
         readyConnectorOverlapBoost: 48,
-        laserConnectorOverlapBoost: 56,
-        readyPodTop: { left: 179, right: 197 },
+        laserConnectorOverlapBoost: 34,
+        readyPodTop: { left: 162, right: 181 },
         podXOffset: { left: 1, right: 18 },
-        slotSize: { width: 110, height: 110 },
-        slotOffset: { left: 43, right: 12 },
-        slotXOffset: { left: 14, right: -10 },
+        slotSize: { width: 108, height: 108 },
+        slotOffset: { left: 47, right: 13 },
+        slotXOffset: { left: 14, right: 9 },
         slotFocus: {
           left: "polygon(0% 0%, 100% 0%, 0% 100%)",
           right: "polygon(100% 0%, 100% 100%, 0% 100%)",
@@ -4476,9 +4505,9 @@
           inset: "10px"
         },
         pieceForSlot: [0, 1],
-        visualFitScale: 0.82,
+        visualFitScale: 0.99,
         fitSettleDelay: 1450,
-        happyConnectorNudge: 36,
+        happyConnectorNudge: 22,
         happyPodXOffset: { left: 1, right: 18 },
         botWIntro: 220,
         botWReady: 235,
@@ -4498,7 +4527,7 @@
       { scene: "moveOut", duration: TIMING.MOVE_SCREEN },
       { scene: "whole", text: "Here is one whole energy block.", duration: TIMING.SHORT_SCREEN },
       { scene: "needs", text: "Each bot needs a part of the energy block.", duration: TIMING.LONG_SCREEN },
-      { scene: "halves", text: "So, we need to cut the block", duration: TIMING.HALVES_DEMO_SCREEN },
+      { scene: "halves", text: "So, we need to cut the block into two equal parts.", duration: TIMING.HALVES_DEMO_SCREEN },
       { scene: "laserIntro", text: "Use the laser to cut the block.", duration: TIMING.SHORT_SCREEN },
       { scene: "tutorial" },
       { scene: "preplay" },
@@ -4672,19 +4701,18 @@
       return ROUNDS[state.round];
     }
 
-    function setInstruction(text) {
+    function setInstruction(text, options) {
       if (state.teachingActive) {
         text = "";
       }
       if (!text) {
         hide(els.instruction);
         els.instructionText.textContent = "";
-        playInstructionAudio("");
-        return;
+        return playInstructionAudio("", options);
       }
       els.instructionText.textContent = text;
       show(els.instruction);
-      playInstructionAudio(text);
+      return playInstructionAudio(text, options);
     }
 
     function resetScene() {
@@ -5096,6 +5124,8 @@
       els.rightBot.style.width = botW + "px";
       els.leftBot.style.marginLeft = "";
       els.rightBot.style.marginLeft = "";
+      els.leftBot.style.bottom = "";
+      els.rightBot.style.bottom = "";
       var podTopLeft = podTopForRound(r, layout, "left", options);
       var podTopRight = podTopForRound(r, layout, "right", options);
       var podW = r.podW || 132;
@@ -5730,7 +5760,7 @@
       show(els.shapeStage);
 
       whenInstructionAudioEnds(function () {
-        setInstruction("into two equal parts.");
+        playInstructionAudio("into two equal parts.");
         sndSplitDemo();
         whole.style.transition = "opacity 0.3s ease";
         whole.style.opacity = "0";
@@ -6385,6 +6415,8 @@
       var r = currentRound();
       state.tutActive = true;
       state.tutStep = -1;
+      state.tutMoveVOPlayed = false;
+      state.tutCutVOPlayed = false;
       state.locked = false;
       state.angle = TUTORIAL_START_ANGLE;
       els.sceneBg.src = ASSETS + "BgForTutorial.png";
@@ -6441,16 +6473,19 @@
         els.bubbleLeft.classList.remove("fade");
         if (els.handGesture) els.handGesture.className = "hand-gesture point-left show";
         els.btnLeft.classList.add("tut-highlight");
+        if (!state.tutMoveVOPlayed) { playInstructionAudio("Tap to move."); state.tutMoveVOPlayed = true; }
       }
       if (t.bubble === "right") {
         els.bubbleRight.classList.remove("fade");
         if (els.handGesture) els.handGesture.className = "hand-gesture point-right show";
         els.btnRight.classList.add("tut-highlight");
+        if (!state.tutMoveVOPlayed) { playInstructionAudio("Tap to move."); state.tutMoveVOPlayed = true; }
       }
       if (t.bubble === "cut") {
         els.bubbleCut.classList.remove("fade");
         if (els.handGesture) els.handGesture.className = "hand-gesture point-cut show";
         els.btnCut.classList.add("tut-highlight");
+        if (!state.tutCutVOPlayed) { playInstructionAudio("Tap to cut."); state.tutCutVOPlayed = true; }
       }
       els.hitLeft.disabled = (t.btn !== "left");
       els.hitRight.disabled = (t.btn !== "right");
@@ -7065,6 +7100,9 @@
       els.rightBot.style.width = hw;
       els.leftBot.style.marginLeft = happyBotXOffsetForRound(r, "left") + "px";
       els.rightBot.style.marginLeft = happyBotXOffsetForRound(r, "right") + "px";
+      var happyLift = r.happyBotLift !== undefined ? r.happyBotLift : 10;
+      els.leftBot.style.bottom = happyLift + "px";
+      els.rightBot.style.bottom = happyLift + "px";
       els.leftBot.classList.add("happy");
       els.rightBot.classList.add("happy");
       els.leftPod.classList.add("charged-focus");
@@ -7191,9 +7229,9 @@
             burstCelebration(tgts[0].x, tgts[0].y);
             burstCelebration(tgts[1].x, tgts[1].y);
 
-            setInstruction("Yay! The robots are charged!");
-            whenInstructionAudioEnds(function () {
-              setInstruction("");
+            var successAudio = setInstruction(SUCCESS_CHARGED_TEXT, { playThrough: true });
+            whenInstructionAudioEnds(successAudio, function () {
+              setInstruction("", { forceAudioStop: true });
               state.nextAction = null;
               show(els.nextButton);
             });
