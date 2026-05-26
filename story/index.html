@@ -3555,14 +3555,27 @@
     /* ── Web Audio sounds ── */
     var _ac = null;
     var _pendingPlugConnect = null;
+    var THEME_BASE_VOLUME = 0.16;
+    var THEME_DUCK_VOLUME = 0.04;
     var _themeAudio = (function () {
       try {
         var a = new Audio("audios/ThemeMusic.mp3");
         a.loop = true;
-        a.volume = 0.28;
+        a.volume = THEME_BASE_VOLUME;
         return a;
       } catch (e) { return null; }
     }());
+    var _themeDuckCount = 0;
+    function duckTheme() {
+      _themeDuckCount++;
+      if (_themeAudio) { _themeAudio.volume = THEME_DUCK_VOLUME; }
+    }
+    function unduckTheme() {
+      _themeDuckCount = Math.max(0, _themeDuckCount - 1);
+      if (_themeAudio && _themeDuckCount === 0) {
+        _themeAudio.volume = THEME_BASE_VOLUME;
+      }
+    }
     var PLUG_CONNECT_AUDIO_SRC = "audios/PlugConnect.mp3";
     var PLUG_CONNECT_VOLUME = 1;
     var _plugConnectMediaSrc = "";
@@ -3597,6 +3610,10 @@
           _instructionAudioCurrent.pause();
           _instructionAudioCurrent.currentTime = 0;
         } catch (e) { }
+        if (_instructionAudioCurrent._ducked) {
+          _instructionAudioCurrent._ducked = false;
+          unduckTheme();
+        }
         _instructionAudioCurrent = null;
       }
       var src = INSTRUCTION_AUDIO[text];
@@ -3613,8 +3630,17 @@
       try {
         audio.currentTime = 0;
         _instructionAudioCurrent = audio;
+        duckTheme();
+        audio._ducked = true;
+        var release = function () {
+          if (audio._ducked) { audio._ducked = false; unduckTheme(); }
+        };
+        audio.addEventListener("ended", release, { once: true });
+        audio.addEventListener("pause", release, { once: true });
         var p = audio.play();
-        if (p && typeof p.catch === "function") { p.catch(function () { }); }
+        if (p && typeof p.catch === "function") {
+          p.catch(function () { release(); });
+        }
       } catch (e) { }
     }
     var _plugConnectAudio = (function () {
@@ -3715,9 +3741,32 @@
           _laserCutAudio = new Audio("audios/laserSound.mp3");
           _laserCutAudio.preload = "auto";
           _laserCutAudio.volume = 0.95;
+          var releaseLaser = function () {
+            if (_laserCutAudio && _laserCutAudio._ducked) {
+              _laserCutAudio._ducked = false;
+              unduckTheme();
+            }
+          };
+          _laserCutAudio.addEventListener("ended", releaseLaser);
+          _laserCutAudio.addEventListener("pause", releaseLaser);
+        }
+        if (_laserCutAudio._ducked) {
+          _laserCutAudio._ducked = false;
+          unduckTheme();
         }
         _laserCutAudio.currentTime = 0;
-        return _laserCutAudio.play();
+        duckTheme();
+        _laserCutAudio._ducked = true;
+        var p = _laserCutAudio.play();
+        if (p && typeof p.catch === "function") {
+          p.catch(function () {
+            if (_laserCutAudio._ducked) {
+              _laserCutAudio._ducked = false;
+              unduckTheme();
+            }
+          });
+        }
+        return p;
       } catch (e) {
         return Promise.reject(e);
       }
@@ -3873,7 +3922,33 @@
         _plugConnectAudio.muted = false;
         _plugConnectAudio.volume = PLUG_CONNECT_VOLUME;
         _plugConnectAudio.currentTime = 0;
-        return _plugConnectAudio.play();
+        if (!_plugConnectAudio._duckBound) {
+          _plugConnectAudio._duckBound = true;
+          var releasePlug = function () {
+            if (_plugConnectAudio._ducked) {
+              _plugConnectAudio._ducked = false;
+              unduckTheme();
+            }
+          };
+          _plugConnectAudio.addEventListener("ended", releasePlug);
+          _plugConnectAudio.addEventListener("pause", releasePlug);
+        }
+        if (_plugConnectAudio._ducked) {
+          _plugConnectAudio._ducked = false;
+          unduckTheme();
+        }
+        duckTheme();
+        _plugConnectAudio._ducked = true;
+        var p = _plugConnectAudio.play();
+        if (p && typeof p.catch === "function") {
+          p.catch(function () {
+            if (_plugConnectAudio._ducked) {
+              _plugConnectAudio._ducked = false;
+              unduckTheme();
+            }
+          });
+        }
+        return p;
       } catch (e) { return null; }
     }
     function sndPlugConnect(round) {
