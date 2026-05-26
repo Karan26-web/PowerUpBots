@@ -6069,7 +6069,16 @@
         var dy = parseFloat(piece.dataset.gapY || "0");
         var maxX = Math.max.apply(null, points.map(function (p) { return p.x; }));
         var bottom = Math.max.apply(null, points.map(function (p) { return p.y; }));
-        var labelGap = (orientation === "slash" || orientation === "backslash") ? 20 : 10;
+        var labelGap = (orientation === "slash" || orientation === "backslash") ? 10 : 10;
+        /* For circle rounds with diagonal cuts the visible half-disk's bottom is the
+           chord-circle intersection on the "upper" side (~0.854h), not the polygon
+           bottom corner (h). Pull the label up to match the actual curve. */
+        if (r.name === "circle" && (orientation === "slash" || orientation === "backslash")) {
+          var upperPiece = index === 0;
+          if (upperPiece) {
+            bottom = height * (2 + Math.sqrt(2)) / 4;
+          }
+        }
         if (r.cut === "diagonal" && orientation === "backslash" && index === 0) {
           return {
             x: pad + maxX + dx + 36,
@@ -7679,6 +7688,11 @@
     els.tryAgain.addEventListener("click", function () { sndTap(); tryAgain(); });
     els.nextButton.addEventListener("click", handleNextButton);
     els.finishButton.addEventListener("click", function () { sndTap(); finishGame(); });
+
+    ["LetsPlayBG.png", "GameStartScreen.png"].forEach(function (src) {
+      var img = new Image();
+      img.src = ASSETS + src;
+    });
 
     renderStep();
   </script>
