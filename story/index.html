@@ -1900,10 +1900,10 @@
 
     #iraChar {
       position: absolute;
-      width: 252px;
+      width: 188px;
       height: auto;
-      left: 238px;
-      top: 91px;
+      left: 268px;
+      top: 180px;
       transform: translateX(1200px);
       pointer-events: none;
       z-index: 5;
@@ -2013,10 +2013,17 @@
       pointer-events: none;
     }
 
+    #playStage.start-mode #playButton {
+      left: 495px;
+      right: auto;
+      top: 480px;
+      bottom: auto;
+    }
+
     #playStage.preplay-mode #playButton {
       left: 736px;
       right: auto;
-      top: 515px;
+      top: 312px;
       bottom: auto;
       width: 264px;
       height: 96px;
@@ -3411,7 +3418,7 @@
         <div id="iraGlowRing" aria-hidden="true"></div>
         <img id="iraChar" src="assets/Ira.png" alt="">
         <button id="playButton" type="button" aria-label="Let's go">
-          <span id="playButtonImg">PLAY! &#9654;</span>
+          <span id="playButtonImg">PLAY</span>
         </button>
       </section>
 
@@ -3543,6 +3550,13 @@
     var _pendingPlugConnect = null;
     var THEME_BASE_VOLUME = 0.16;
     var THEME_DUCK_VOLUME = 0.04;
+    var THEME_POST_TUTORIAL_VOLUME = 0.07;
+    function lowerThemeAfterTutorial() {
+      THEME_BASE_VOLUME = THEME_POST_TUTORIAL_VOLUME;
+      if (_themeAudio && _themeDuckCount === 0) {
+        _themeAudio.volume = THEME_BASE_VOLUME;
+      }
+    }
     var _themeAudio = (function () {
       try {
         var a = new Audio("audios/ThemeMusic.mp3");
@@ -3577,6 +3591,8 @@
       "into two equal parts.": "audios/into two equal parts.ogg",
       "Tap to move.": "audios/Tap to move.ogg",
       "Tap to cut.": "audios/tap to cut.ogg",
+      "You are all set.": "audios/you are all set.ogg",
+      "Let's play.": "audios/Lets play.ogg",
       "Use the laser to cut the block.": "audios/Use the laser to cut the block..ogg",
       "Cut the block into two equal parts.": "audios/Cut the block into two equal parts.ogg",
       "Make sure both parts fit into the slots.": "audios/Make sure both parts fit into the slots.ogg",
@@ -4093,8 +4109,8 @@
         botWLaser: 150,
         readyPodTop: 172,
         podHeadContactDrop: 8,
-        slotOffset: { left: 9, right: 9 },
-        fitPieceScale: { x: 1, y: 1.04 },
+        slotOffset: { left: 5, right: 5 },
+        fitPieceScale: { x: 1, y: 1.10 },
         previewFitScale: 1.0,
         previewSlotNudge: { y: -7 },
         happyBotAspect: 838 / 620,
@@ -4283,8 +4299,8 @@
         readyPodTop: 240, podHeadContactDrop: 18,
         podXOffset: { left: 4, right: 4 },
         connectorStemCover: {
-          left: { top: 180, x: -4, width: 22, height: 14 },
-          right: { top: 180, x: -4, width: 22, height: 14 }
+          left: { top: 176, x: -4, width: 26, height: 17 },
+          right: { top: 176, x: -4, width: 26, height: 17 }
         },
         slotSize: { width: 166, height: 68 },
         slotOffset: { left: 7, right: 7 },
@@ -6549,6 +6565,7 @@
           tutSetStep(step + 1);
         } else {
           state.tutActive = false;
+          lowerThemeAfterTutorial();
           nextStep();
         }
       }, 1900);
@@ -6591,16 +6608,25 @@
         });
       });
 
-      later(function () {
-        els.playButton.style.opacity = "1";
-        els.playButton.style.transform = "scale(1) translateY(0)";
-      }, 820);
-
-      later(function () {
+      function revealPlayButton() {
         els.iraChar.style.transition = "";
         els.iraChar.classList.add("play-idle");
+        els.playButton.style.opacity = "1";
+        els.playButton.style.transform = "scale(1) translateY(0)";
         els.playButton.classList.add("play-ready");
-      }, 1240);
+      }
+
+      // After Ira finishes sliding in, play "You are all set." then "Let's play.",
+      // then reveal the Play button.
+      later(function () {
+        var first = playInstructionAudio("You are all set.");
+        whenInstructionAudioEnds(first, function () {
+          var second = playInstructionAudio("Let's play.");
+          whenInstructionAudioEnds(second, function () {
+            revealPlayButton();
+          });
+        });
+      }, 760);
     }
 
     function setupLaserIntro(text) {
