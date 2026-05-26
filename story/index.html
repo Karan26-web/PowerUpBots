@@ -4496,12 +4496,13 @@
         },
         semicircleFocusScale: 1.1,
         semicircleFocusOffset: {
-          left: { x: -2, y: -2 },
-          right: { x: -12, y: -5 }
+          left: { x: 2, y: -4 },
+          right: { x: -17, y: -8 }
         },
         pieceForSlot: [1, 0],
         visualFitScale: 1.0,
         fitPieceScale: { left: { x: 1.18, y: 1.22 }, right: { x: 1.16, y: 1.23 } },
+        diagSlotFillInset: { left: 2.6, right: 7.8 },
         fitSettleDelay: 1450,
         happyConnectorNudge: 9,
         happyPodXOffset: { left: 12, right: 17 },
@@ -4551,12 +4552,13 @@
         },
         semicircleFocusScale: 1.1,
         semicircleFocusOffset: {
-          left: { x: 2, y: 4 },
-          right: { x: -20, y: -14 }
+          left: { x: 5, y: 2 },
+          right: { x: -23, y: -11 }
         },
         pieceForSlot: [0, 1],
         visualFitScale: 1.0,
         fitPieceScale: { left: { x: 1.18, y: 1.24 }, right: { x: 1.16, y: 1.18 } },
+        diagSlotFillInset: { left: 2.4, right: 2.7 },
         fitSettleDelay: 1450,
         happyConnectorNudge: 22,
         happyPodXOffset: { left: 1, right: 18 },
@@ -7030,7 +7032,16 @@
       var clip = document.createElementNS(ns, "clipPath");
       var path = document.createElementNS(ns, "path");
       clip.setAttribute("id", clipId);
-      var inset = r.diagSlotFillInset === undefined ? 8 : r.diagSlotFillInset;
+      var insetCfg = r.diagSlotFillInset;
+      var inset;
+      if (insetCfg === undefined) {
+        inset = 8;
+      } else if (typeof insetCfg === "object" && insetCfg !== null) {
+        inset = side === "right" ? insetCfg.right : insetCfg.left;
+        if (inset === undefined) { inset = 8; }
+      } else {
+        inset = insetCfg;
+      }
       var innerSize = Math.max(1, size - inset * 2);
       path.setAttribute("d", diagonalSemicircleFocusPath(r, side, innerSize, innerSize, inset));
       clip.appendChild(path);
@@ -7739,7 +7750,6 @@
     </defs>
   </svg>
 
-  <script src="debug-jump.js"></script>
 </body>
 
 </html>
