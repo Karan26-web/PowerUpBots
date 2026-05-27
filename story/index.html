@@ -2302,6 +2302,40 @@
       pointer-events: none;
     }
 
+    #machineSvgLayer {
+      position: absolute;
+      left: 50%;
+      top: 60px;
+      width: var(--ring-size);
+      height: var(--ring-size);
+      transform: translateX(-50%);
+      pointer-events: none;
+      display: none;
+    }
+
+    #machineSvgLayer.show { display: block; }
+
+    #machineSvgLayer svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    #machineSvgLayer svg line.correct-line-glow {
+      stroke: #00d4ff;
+      stroke-width: 6;
+      stroke-dasharray: 14 10;
+      filter:
+        drop-shadow(0 0 6px rgba(0, 212, 255, .9))
+        drop-shadow(0 0 14px rgba(0, 212, 255, .55));
+      animation: correctLineGlow 1.6s ease-in-out infinite;
+    }
+
+    @keyframes correctLineGlow {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .7; }
+    }
+
     /* ── LaserMachine.png overlay (tutorial guide lines, same ring center) ── */
     #tutorialOverlay {
       position: absolute;
@@ -2568,18 +2602,15 @@
       left: 10%;
       top: 50%;
       width: 80%;
-      height: 8px;
+      height: 3px;
       border-radius: 999px;
       background:
         repeating-linear-gradient(90deg,
-          rgba(0, 97, 152, 1) 0 18px,
-          rgba(0, 126, 186, .96) 18px 24px,
-          rgba(0, 97, 152, 0) 24px 34px);
+          rgba(0, 200, 255, 1) 0 10px,
+          rgba(0, 200, 255, 0) 10px 18px);
       box-shadow:
-        0 0 0 2px rgba(227, 248, 255, .92),
-        0 0 8px rgba(0, 97, 152, .95),
-        0 0 20px rgba(0, 97, 152, .7),
-        0 0 34px rgba(0, 97, 152, .38);
+        0 0 6px rgba(0, 200, 255, .85),
+        0 0 14px rgba(0, 200, 255, .45);
       opacity: 1;
       transform: translateY(-50%) rotate(var(--cut-angle));
       animation: none;
@@ -2998,8 +3029,14 @@
     }
 
     @keyframes tryAgainPulse {
-      0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 60, 60, .7)) drop-shadow(0 0 16px rgba(255, 60, 60, .4)); transform: translateX(-50%) scale(1); }
-      50%       { filter: drop-shadow(0 0 20px rgba(255, 60, 60, .95)) drop-shadow(0 0 36px rgba(255, 80, 80, .6)); transform: translateX(-50%) scale(1.055); }
+      0%, 100% {
+        transform: translateX(-50%) scale(1);
+        filter: drop-shadow(0 0 8px rgba(255, 255, 255, .8)) drop-shadow(0 0 18px rgba(255, 255, 255, .45));
+      }
+      50% {
+        transform: translateX(-50%) scale(1.055);
+        filter: drop-shadow(0 0 16px rgba(255, 255, 255, .95)) drop-shadow(0 0 32px rgba(255, 255, 255, .6));
+      }
     }
 
     #tryAgain:active {
@@ -3383,16 +3420,11 @@
     }
 
     .wrong-fit-glow {
-      filter: drop-shadow(0 0 18px rgba(255, 55, 55, .95)) drop-shadow(0 0 8px rgba(255, 0, 0, .75)) !important;
+      filter: none !important;
     }
 
     .wrong-fit-hold {
-      animation: wrongFitPulse 1.3s ease-in-out infinite;
-    }
-
-    @keyframes wrongFitPulse {
-      0%, 100% { filter: drop-shadow(0 0 12px rgba(255, 55, 55, .80)) drop-shadow(0 0 5px rgba(255, 0, 0, .55)); }
-      50%       { filter: drop-shadow(0 0 24px rgba(255, 55, 55, 1.0)) drop-shadow(0 0 10px rgba(255, 0, 0, .85)); }
+      animation: none;
     }
 
     @media (prefers-reduced-motion:reduce) {
@@ -3451,9 +3483,11 @@
       <div id="machineStage" class="hidden" aria-hidden="true">
         <!-- base machine (always LaserMachineWithoutLines) -->
         <img id="machineImg" src="assets/LaserMachineWithoutLines.png" alt="">
-        <!-- LaserMachine.png overlay — tutorial guide lines only -->
-        <img id="tutorialOverlay" src="assets/LaserMachine.png" alt="" aria-hidden="true">
-        <img id="guideLineHighlight" src="assets/LaserMachine.png" alt="" aria-hidden="true">
+        <!-- inline LaserMachine.svg for 3rd-attempt highlight (hidden by default) -->
+        <div id="machineSvgLayer" aria-hidden="true"></div>
+        <!-- LaserMachine.svg overlay — tutorial guide lines only -->
+        <img id="tutorialOverlay" src="assets/LaserMachine.svg" alt="" aria-hidden="true">
+        <img id="guideLineHighlight" src="assets/LaserMachine.svg" alt="" aria-hidden="true">
         <!-- Beam.svg — hidden by default, only shown on CUT -->
         <img id="beamImg" src="assets/Beam.svg" alt="" aria-hidden="true">
         <!-- Laser.png rotating sprite -->
@@ -4502,7 +4536,6 @@
         pieceForSlot: [1, 0],
         visualFitScale: 1.0,
         fitPieceScale: { left: { x: 1.18, y: 1.22 }, right: { x: 1.16, y: 1.23 } },
-        diagSlotFillInset: { left: 2.6, right: 7.8 },
         fitSettleDelay: 1450,
         happyConnectorNudge: 9,
         happyPodXOffset: { left: 12, right: 17 },
@@ -4558,9 +4591,8 @@
         pieceForSlot: [0, 1],
         visualFitScale: 1.0,
         fitPieceScale: { left: { x: 1.18, y: 1.24 }, right: { x: 1.16, y: 1.18 } },
-        diagSlotFillInset: { left: 2.4, right: 2.7 },
         fitSettleDelay: 1450,
-        happyConnectorNudge: 22,
+        happyConnectorNudge: 9,
         happyPodXOffset: { left: 1, right: 18 },
         botWIntro: 220,
         botWReady: 235,
@@ -4634,6 +4666,7 @@
       playButtonImg: document.getElementById("playButtonImg"),
       machineStage: document.getElementById("machineStage"),
       machineImg: document.getElementById("machineImg"),
+      machineSvgLayer: document.getElementById("machineSvgLayer"),
       tutorialOverlay: document.getElementById("tutorialOverlay"),
       guideLineHighlight: document.getElementById("guideLineHighlight"),
       laserImg: document.getElementById("laserImg"),
@@ -4679,6 +4712,33 @@
       els.guideLineHighlight.classList.remove("show");
       els.guideLineHighlight.style.clipPath = "";
       els.cutLine.classList.remove("show", "correct-guide");
+      if (els.machineSvgLayer) {
+        els.machineSvgLayer.classList.remove("show");
+      }
+      if (els.machineImg) {
+        els.machineImg.style.display = "";
+      }
+    }
+
+    var _laserMachineSvgPromise = null;
+    function loadLaserMachineSvg() {
+      if (!_laserMachineSvgPromise) {
+        _laserMachineSvgPromise = fetch(ASSETS + "LaserMachine.svg")
+          .then(function (r) { return r.text(); });
+      }
+      return _laserMachineSvgPromise;
+    }
+
+    /* Map a target angle (deg, 0..360) to the index of the corresponding <line>
+       in LaserMachine.svg: vertical, horizontal, slash-up, backslash-down. */
+    function machineSvgLineIndexForAngle(deg) {
+      var snap = Math.round(((deg % 180) + 180) % 180 / 45) * 45;
+      if (snap === 180) snap = 0;
+      if (snap === 0) return 1;   // horizontal
+      if (snap === 90) return 0;  // vertical
+      if (snap === 45) return 2;  // slash (/)
+      if (snap === 135) return 3; // backslash (\)
+      return -1;
     }
 
     function applyAttemptGuides() {
@@ -5024,6 +5084,42 @@
       }
       var fill = side === "right" ? els.rightFill : els.leftFill;
       if (!fill) { return false; }
+
+      // Diagonal-circle: outline the SAME calibrated hollow shape the fill uses,
+      // anchored to the pod box, so the cyan highlight traces the hollow exactly
+      // (instead of the old slot-relative, hand-offset path that drifted inside it).
+      if (r.variant === "circle-diagonal") {
+        var dgeo = DIAG_HOLLOW_GEOMETRY[podBasename(side === "right" ? r.podRight : r.podLeft)];
+        var dpod = side === "right" ? els.rightPod : els.leftPod;
+        if (dgeo && dpod) {
+          var fPodW = r.podW || 132;
+          var fPodH = diagPodH(r, side);
+          // The left/right pods are different assets with hollows ~6% different in size.
+          // The cue uses ONE uniform radius so both sides look equal; biased slightly small
+          // so it never spills out of the smaller hollow (at most a hair inside the larger).
+          var fcx = dgeo.fx * fPodW, fcy = dgeo.fy * fPodW, frr = DIAG_FOCUS_RADIUS_FRAC * fPodW;
+          var fd = semicircleSegmentPath(fcx, fcy, frr, dgeo.diamAng, dgeo.keepDir, DIAG_FILL_FLATPAD);
+          var fns = "http://www.w3.org/2000/svg";
+          var fsvg = document.createElementNS(fns, "svg");
+          fsvg.setAttribute("viewBox", "0 0 " + fPodW + " " + fPodH);
+          fsvg.classList.add("pod-hollow-focus-frame", "semicircle-focus", r.variant, "slot-" + side);
+          fsvg.setAttribute("aria-hidden", "true");
+          fsvg.style.top = (parseFloat(dpod.style.top) || 0) + "px";
+          fsvg.style.width = fPodW + "px";
+          fsvg.style.height = fPodH + "px";
+          fsvg.style.marginLeft = (parseFloat(dpod.style.marginLeft) || 0) + "px";
+          fsvg.style.transform = "translateX(-50%)"; // centre on the pod even before the pulse animation starts
+          fsvg.style.transformOrigin = fcx + "px " + fcy + "px"; // pulse scales around the hollow, not the tall box
+          ["semicircle-focus-aura", "semicircle-focus-rim"].forEach(function (className) {
+            var fp = document.createElementNS(fns, "path");
+            fp.setAttribute("class", className);
+            fp.setAttribute("d", fd);
+            fsvg.appendChild(fp);
+          });
+          slotEl.insertBefore(fsvg, fill.nextSibling);
+          return true;
+        }
+      }
 
       var baseW = parseFloat(fill.style.width) || targetSlotSizeForRound(r).width;
       var baseH = parseFloat(fill.style.height) || targetSlotSizeForRound(r).height;
@@ -6852,11 +6948,26 @@
     }
 
     function showMachineGuideLine(deg) {
-      els.machineImg.src = ASSETS + "LaserMachineWithoutLines.png";
       els.tutorialOverlay.classList.remove("show", "supportive-guide", "line-guide");
       els.guideLineHighlight.classList.remove("show");
       els.guideLineHighlight.style.clipPath = "";
-      showCutLine(deg);
+      els.cutLine.classList.remove("show", "correct-guide");
+      var idx = machineSvgLineIndexForAngle(deg);
+      loadLaserMachineSvg().then(function (svgText) {
+        if ((state.wrongAttempts || 0) < 2) { return; }
+        els.machineSvgLayer.innerHTML = svgText;
+        var svg = els.machineSvgLayer.querySelector("svg");
+        if (svg) {
+          svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+          var lines = svg.querySelectorAll("line");
+          lines.forEach(function (ln) { ln.classList.remove("correct-line-glow"); });
+          if (idx >= 0 && lines[idx]) {
+            lines[idx].classList.add("correct-line-glow");
+          }
+        }
+        els.machineSvgLayer.classList.add("show");
+        els.machineImg.style.display = "none";
+      });
     }
 
     function hideBeam() {
@@ -7026,46 +7137,243 @@
       );
     }
 
-    function makeDiagonalCircleSlotPiece(r, side, size) {
+    /* ──────────────────────────────────────────────────────────────────────
+       Semicircle hollow-fit system - last two flows (circle-diagonal rounds).
+
+       Each diagonal-circle pod PNG is a half-disc with an OPAQUE dark hollow
+       and a light rim. The orange fill is drawn ON TOP of that dark interior
+       and sized to exactly cover it, so only the rim stays visible. The
+       half-disc shape itself is the clip; the orange is intentionally
+       overscaled and pushed past the flat edge so its excess tucks UNDER the
+       rim and is cleanly masked away. One function drives both rounds and both
+       sides - there are no per-side eyeballed offsets.
+
+       Geometry was measured from the hollow PNGs (fractions of pod image width):
+         fx,fy - disc centre        fR - disc radius
+         diamAng - flat-edge angle  keepDir - direction into the filled half  */
+    var DIAG_HOLLOW_GEOMETRY = {
+      "45angleCircleHollow.png":     { fx: 0.6132, fy: 0.4026, fR: 0.3670, diamAng: 42.5,   keepDir: 135.37 },
+      "135anglecutCircleHollow.png": { fx: 0.3861, fy: 0.6050, fR: 0.3586, diamAng: 44.40,  keepDir: -43.08 },
+      "CircleLastFlowHollow1.png":   { fx: 0.6308, fy: 0.6373, fR: 0.3732, diamAng: 134.50, keepDir: -135.26 },
+      "CircleLastFlowHollow2.png":   { fx: 0.4199, fy: 0.3817, fR: 0.3501, diamAng: 136.5,  keepDir: 45.21 }
+    };
+    var DIAG_FILL_OVERSCALE = 1.01; // covers the hollow; original pod art masks the visible stroke
+    var DIAG_FILL_FLATPAD   = 0.095; // small overlap across the diagonal hollow, hidden by pod art
+    var DIAG_POD_SHELL_CUT_SCALE = 0.985;
+    var DIAG_POD_SHELL_CUT_FLATPAD = 0.015;
+    var DIAG_POD_SHELL_OUTER_SCALE = 1.165;
+    var DIAG_POD_SHELL_OUTER_FLATPAD = 0.11;
+    var DIAG_FOCUS_RADIUS_FRAC = 0.365; // slot-instruct cyan cue: ONE size for both sides (equal); biased small to avoid spill
+
+    function podBasename(src) {
+      return String(src || "").split("/").pop();
+    }
+
+    function angDiffAbs(a, b) {
+      var d = ((a - b) % 360 + 540) % 360 - 180;
+      return Math.abs(d);
+    }
+
+    /* A circular-segment path slightly larger than a semicircle, in the SVG's
+       own coordinates. The flat chord is pushed `flatPad*r` toward the non-keep
+       side so the orange tucks under the rim along the diameter edge too. */
+    function semicircleSegmentPath(cx, cy, r, diamAng, keepDir, flatPad) {
+      var rad = Math.PI / 180;
+      var sign = angDiffAbs(diamAng + 90, keepDir) < angDiffAbs(diamAng - 90, keepDir) ? 1 : -1;
+      var keepN = diamAng + sign * 90;
+      var off = r * flatPad;
+      var foot = { x: cx - Math.cos(keepN * rad) * off, y: cy - Math.sin(keepN * rad) * off };
+      var halfChord = Math.sqrt(Math.max(0, r * r - off * off));
+      var t = { x: Math.cos(diamAng * rad), y: Math.sin(diamAng * rad) };
+      var A = { x: foot.x + t.x * halfChord, y: foot.y + t.y * halfChord };
+      var B = { x: foot.x - t.x * halfChord, y: foot.y - t.y * halfChord };
+      var aA = Math.atan2(A.y - cy, A.x - cx);
+      var aB = Math.atan2(B.y - cy, B.x - cx);
+      var span = aB - aA;
+      if (sign > 0) { while (span < 0) { span += Math.PI * 2; } }
+      else { while (span > 0) { span -= Math.PI * 2; } }
+      var steps = 48;
+      var path = "M" + A.x.toFixed(2) + "," + A.y.toFixed(2);
+      for (var i = 1; i <= steps; i++) {
+        var a = aA + span * (i / steps);
+        path += " L" + (cx + Math.cos(a) * r).toFixed(2) + "," + (cy + Math.sin(a) * r).toFixed(2);
+      }
+      return path + " Z";
+    }
+
+    function diagPodH(r, side) {
+      return (r.podW || 132) * (side === "right" ? (r.podAspectRight || r.podAspectLeft || 2.3)
+                                                 : (r.podAspectLeft || 2.3));
+    }
+
+    function addOriginalDiagPodShell(svg, r, side, geo, cx, cy, podW, podH) {
+      var ns = "http://www.w3.org/2000/svg";
+      var defs = svg.querySelector("defs") || document.createElementNS(ns, "defs");
+      if (!defs.parentNode) {
+        svg.insertBefore(defs, svg.firstChild);
+      }
+
+      var maskId = "diag-pod-shell-mask-" + Math.random().toString(36).substr(2, 9);
+      var mask = document.createElementNS(ns, "mask");
+      mask.setAttribute("id", maskId);
+      mask.setAttribute("maskUnits", "userSpaceOnUse");
+      mask.setAttribute("x", "0");
+      mask.setAttribute("y", "0");
+      mask.setAttribute("width", podW);
+      mask.setAttribute("height", podH);
+
+      var shellKeep = document.createElementNS(ns, "path");
+      shellKeep.setAttribute("d", semicircleSegmentPath(
+        cx,
+        cy,
+        geo.fR * podW * DIAG_POD_SHELL_OUTER_SCALE,
+        geo.diamAng,
+        geo.keepDir,
+        DIAG_POD_SHELL_OUTER_FLATPAD
+      ));
+      shellKeep.setAttribute("fill", "white");
+      mask.appendChild(shellKeep);
+
+      var hollowCut = document.createElementNS(ns, "path");
+      hollowCut.setAttribute("d", semicircleSegmentPath(
+        cx,
+        cy,
+        geo.fR * podW * DIAG_POD_SHELL_CUT_SCALE,
+        geo.diamAng,
+        geo.keepDir,
+        DIAG_POD_SHELL_CUT_FLATPAD
+      ));
+      hollowCut.setAttribute("fill", "black");
+      mask.appendChild(hollowCut);
+      defs.appendChild(mask);
+
+      var shell = document.createElementNS(ns, "image");
+      var podSrc = side === "right" ? (r.podRight || r.pod) : (r.podLeft || r.pod);
+      shell.setAttributeNS("http://www.w3.org/1999/xlink", "href", podSrc);
+      shell.setAttribute("href", podSrc);
+      shell.setAttribute("x", "0");
+      shell.setAttribute("y", "0");
+      shell.setAttribute("width", podW);
+      shell.setAttribute("height", podH);
+      shell.setAttribute("preserveAspectRatio", "none");
+      shell.setAttribute("mask", "url(#" + maskId + ")");
+      shell.style.pointerEvents = "none";
+      svg.appendChild(shell);
+    }
+
+    /* Builds the orange semicircle-segment SVG for a diagonal-circle pod, sized to the
+       pod box (podW × podH). Shared by the in-slot fill AND the fly-in piece, so the two
+       are pixel-identical and the hand-off shows no shape/rotation/border change.
+       Returns { svg, cx, cy, rr } (disc centre + radius in the SVG's coordinates). */
+    function buildDiagSemicircleSvg(r, side, podW, podH, includePodShell) {
+      var geo = DIAG_HOLLOW_GEOMETRY[podBasename(side === "right" ? r.podRight : r.podLeft)];
+      if (!geo) { return null; }
+      var cx = geo.fx * podW;
+      var cy = geo.fy * podW;
+      var rr = geo.fR * podW * DIAG_FILL_OVERSCALE;
+      var d = semicircleSegmentPath(cx, cy, rr, geo.diamAng, geo.keepDir, DIAG_FILL_FLATPAD);
+      var outerD = semicircleSegmentPath(
+        cx,
+        cy,
+        geo.fR * podW * DIAG_POD_SHELL_OUTER_SCALE,
+        geo.diamAng,
+        geo.keepDir,
+        DIAG_POD_SHELL_OUTER_FLATPAD
+      );
+
       var ns = "http://www.w3.org/2000/svg";
       var svg = document.createElementNS(ns, "svg");
-      var clipId = "slot-circle-clip-" + Math.random().toString(36).substr(2, 9);
-      svg.setAttribute("viewBox", "0 0 " + size + " " + size);
-      svg.setAttribute("width", size);
-      svg.setAttribute("height", size);
-      svg.style.display = "block";
-      svg.style.width = "100%";
-      svg.style.height = "100%";
+      svg.setAttribute("viewBox", "0 0 " + podW + " " + podH);
+      svg.setAttribute("width", podW);
+      svg.setAttribute("height", podH);
+      svg.style.overflow = "visible";
+      svg.style.pointerEvents = "none";
 
+      var clipId = "diag-hollow-clip-" + Math.random().toString(36).substr(2, 9);
+      var outerClipId = "diag-pod-head-clip-" + Math.random().toString(36).substr(2, 9);
       var defs = document.createElementNS(ns, "defs");
       var clip = document.createElementNS(ns, "clipPath");
-      var path = document.createElementNS(ns, "path");
       clip.setAttribute("id", clipId);
-      var insetCfg = r.diagSlotFillInset;
-      var inset;
-      if (insetCfg === undefined) {
-        inset = 8;
-      } else if (typeof insetCfg === "object" && insetCfg !== null) {
-        inset = side === "right" ? insetCfg.right : insetCfg.left;
-        if (inset === undefined) { inset = 8; }
-      } else {
-        inset = insetCfg;
-      }
-      var innerSize = Math.max(1, size - inset * 2);
-      path.setAttribute("d", diagonalSemicircleFocusPath(r, side, innerSize, innerSize, inset));
+      var path = document.createElementNS(ns, "path");
+      path.setAttribute("d", d);
       clip.appendChild(path);
       defs.appendChild(clip);
+      var outerClip = document.createElementNS(ns, "clipPath");
+      outerClip.setAttribute("id", outerClipId);
+      var outerPath = document.createElementNS(ns, "path");
+      outerPath.setAttribute("d", outerD);
+      outerClip.appendChild(outerPath);
+      defs.appendChild(outerClip);
+      svg.appendChild(defs);
 
+      var blockSize = rr * 2.4; // orange block comfortably covers the clip region
       var image = document.createElementNS(ns, "image");
+      image.setAttributeNS("http://www.w3.org/1999/xlink", "href", r.blockSrc);
       image.setAttribute("href", r.blockSrc);
-      image.setAttribute("width", size);
-      image.setAttribute("height", size);
+      image.setAttribute("x", cx - blockSize / 2);
+      image.setAttribute("y", cy - blockSize / 2);
+      image.setAttribute("width", blockSize);
+      image.setAttribute("height", blockSize);
       image.setAttribute("preserveAspectRatio", "none");
       image.setAttribute("clip-path", "url(#" + clipId + ")");
+      var clippedFill = document.createElementNS(ns, "g");
+      clippedFill.setAttribute("clip-path", "url(#" + outerClipId + ")");
+      clippedFill.appendChild(image);
+      svg.appendChild(clippedFill);
+      if (includePodShell) {
+        addOriginalDiagPodShell(svg, r, side, geo, cx, cy, podW, podH);
+      }
+      return { svg: svg, cx: cx, cy: cy, rr: rr };
+    }
 
-      svg.appendChild(defs);
-      svg.appendChild(image);
-      return svg;
+    /* Game-space centre of a diagonal-circle hollow at the ready/charging layout, so the
+       fly-in half can travel directly to its final aligned spot (no post-landing fix-up). */
+    function diagHollowGameCenter(r, side) {
+      var geo = DIAG_HOLLOW_GEOMETRY[podBasename(side === "right" ? r.podRight : r.podLeft)];
+      if (!geo) { return null; }
+      var podW = r.podW || 132;
+      var botSlotLeft = side === "right" ? (1280 - 80 - 260) : 80; // layout-ready bot-slot
+      var podCenterX = botSlotLeft + 130 + podXOffsetForRound(r, side);
+      var podTop = podTopForRound(r, "layout-ready", side);
+      return { x: podCenterX - podW / 2 + geo.fx * podW, y: podTop + geo.fy * podW };
+    }
+
+    /* Single source of truth for fitting the orange piece into a diagonal-circle
+       hollow. The overlay is anchored to the pod box (read live from the pod/fill
+       layout, which move together) and clipped to the measured hollow shape. */
+    function fitSemicircleIntoHollow(r, side, fill) {
+      var podEl = side === "right" ? els.rightPod : els.leftPod;
+      var podW = r.podW || 132;
+      var built = buildDiagSemicircleSvg(r, side, podW, diagPodH(r, side), true);
+      if (!built || !podEl) { return false; }
+
+      // The fill tracks the pod with a constant offset through every layout/
+      // transition, so positioning the overlay relative to the pod box (read
+      // from the live inline styles) keeps it locked to the hollow.
+      var podML = parseFloat(podEl.style.marginLeft) || 0;
+      var podTop = parseFloat(podEl.style.top) || 0;
+      var fillML = parseFloat(fill.style.marginLeft) || 0;
+      var fillTop = parseFloat(fill.style.top) || 0;
+      var fillW = parseFloat(fill.style.width) || podW;
+      var svg = built.svg;
+      svg.style.position = "absolute";
+      svg.style.left = ((podML - fillML) + (fillW - podW) / 2) + "px";
+      svg.style.top = (podTop - fillTop) + "px";
+
+      var shell = document.createElement("div");
+      shell.className = "fit-piece";
+      shell.style.position = "absolute";
+      shell.style.left = "0";
+      shell.style.top = "0";
+      shell.style.width = "0";
+      shell.style.height = "0";
+      shell.style.overflow = "visible";
+      shell.appendChild(svg);
+
+      fill.innerHTML = "";
+      fill.appendChild(shell);
+      fill.classList.add("filled");
+      return true;
     }
 
     function fillSlotWithPiece(fill, r, index, angle) {
@@ -7098,20 +7406,9 @@
         return;
       }
       if (r.name === "circle" && r.variant === "circle-diagonal" && r.slotFocus) {
-        var maskSize = Math.min(w, h);
-        var shell = document.createElement("div");
-        shell.className = "fit-piece";
-        shell.style.width = maskSize + "px";
-        shell.style.height = maskSize + "px";
-        shell.style.overflow = "visible";
-        shell.style.transformOrigin = "center center";
-        shell.style.transform = "translateZ(0)";
-        shell.style.filter = "none";
-        shell.appendChild(makeDiagonalCircleSlotPiece(r, side, maskSize));
-        fill.innerHTML = "";
-        fill.appendChild(shell);
-        fill.classList.add("filled");
-        return;
+        if (fitSemicircleIntoHollow(r, side, fill)) {
+          return;
+        }
       }
       var piece = makeCutPiece(r, index, r.blockW, r.blockH, angle);
       var home = cutPieceHome(r.blockW, r.blockH, angle, index, 0, 0);
@@ -7252,6 +7549,38 @@
 
       [0, 1].forEach(function (slotIdx) {
         var pieceIdx = pieceIndexForSlot(r, slotIdx);
+        var side = slotIdx === 0 ? "left" : "right";
+
+        // Diagonal-circle rounds: fly the SAME semicircle SVG the slot fill uses, straight
+        // into the hollow's final spot. The hand-off to the in-slot overlay is then
+          // pixel-identical (same shape, angle, size, position) - no landing fix-up.
+        if (r.name === "circle" && r.variant === "circle-diagonal" &&
+          DIAG_HOLLOW_GEOMETRY[podBasename(side === "right" ? r.podRight : r.podLeft)]) {
+          var dPodW = r.podW || 132;
+          var dPodH = diagPodH(r, side);
+          var built = buildDiagSemicircleSvg(r, side, dPodW, dPodH);
+          var hc = diagHollowGameCenter(r, side);
+          var dFly = document.createElement("div");
+          dFly.className = "flying-half";
+          dFly.style.width = dPodW + "px";
+          dFly.style.height = dPodH + "px";
+          dFly.style.left = (center.x - built.cx) + "px"; // hollow disc centre starts at machine centre
+          dFly.style.top = (center.y - built.cy) + "px";
+          dFly.style.transformOrigin = built.cx + "px " + built.cy + "px";
+          dFly.style.transition = "transform .9s cubic-bezier(.18,.89,.32,1.08),opacity .9s ease";
+          dFly.style.transform = "translate(0px,0px) scale(1)";
+          dFly.appendChild(built.svg);
+          layer.appendChild(dFly);
+          (function (el, tx, ty, delay) {
+            setTimeout(function () {
+              requestAnimationFrame(function () {
+                el.style.transform = "translate(" + tx + "px," + ty + "px) scale(1)";
+              });
+            }, delay);
+          })(dFly, hc.x - center.x, hc.y - center.y, slotIdx * 100);
+          return;
+        }
+
         var home = cutPieceHome(r.blockW, r.blockH, angle, pieceIdx, center.x, center.y);
         if (centerOverride) {
           var startOffsets = splitOffsetForOrientation(
