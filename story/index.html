@@ -3512,8 +3512,7 @@
 
     <section id="completeStage" class="hidden" aria-live="polite">
       <div class="complete-copy">
-        <div class="complete-title">Great job!</div>
-        <div class="complete-sub">You finished the lesson.</div>
+        <div class="complete-title">Bots Powered Up!</div>
       </div>
       <div id="completeConfetti" class="complete-confetti" aria-hidden="true">
         <span style="--x:8%;--y:17%;--c:#4dbeff;--r:24deg;--d:.1s"></span>
@@ -3626,7 +3625,7 @@
     var _plugConnectMediaSrc = "";
     var _laserCutAudio = null;
     var _plugConnectPrimed = false;
-    var SUCCESS_CHARGED_TEXT = "Yay! The robots are charged!";
+    var SUCCESS_CHARGED_TEXT = "Yay! The bots are charged!";
     var INSTRUCTION_AUDIO = {
       "Let us charge the bots.": "audios/Let us charge the bots..ogg",
       "The bots are ready to get charged.": "audios/The bots are ready to get charged!.ogg",
@@ -3641,7 +3640,7 @@
       "Use the laser to cut the block.": "audios/Use the laser to cut the block..ogg",
       "Cut the block into two equal parts.": "audios/Cut the block into two equal parts.ogg",
       "Make sure both parts fit into the slots.": "audios/Make sure both parts fit into the slots.ogg",
-      [SUCCESS_CHARGED_TEXT]: "audios/Yay The robots are charged.ogg",
+      [SUCCESS_CHARGED_TEXT]: "audios/Yay! The bots are charged.ogg",
       "Oops! The parts don't fit in the slots.": "audios/Oops! The parts don’t fit in the slots..ogg"
     };
     var _instructionAudioCache = {};
@@ -3994,6 +3993,19 @@
         }
       } catch (e) { }
     }
+    var _confettiAudio = null;
+    function sndConfetti() {
+      try {
+        if (!_confettiAudio) {
+          _confettiAudio = new Audio("audios/confettiSound.ogg");
+          _confettiAudio.preload = "auto";
+        }
+        _confettiAudio.currentTime = 0;
+        var p = _confettiAudio.play();
+        if (p && typeof p.catch === "function") { p.catch(function () {}); }
+      } catch (e) {}
+    }
+
     function playPlugMp3() {
       if (!_plugConnectAudio) { return null; }
       try {
@@ -4408,6 +4420,12 @@
         pod: ASSETS + "SemiCircleHollowleft.png",
         podLeft: ASSETS + "SemiCircleHollowleft.png",
         podRight: ASSETS + "SemiCircleHollowright.png",
+        /* LEFT pod asset has a cream "neck" taper (asset y≈272–289 of 1098)
+           between the dome's arc tip and the cable. The orange piece's narrow
+           apex can't cover that taper, so it reads as an asymmetric thick rim
+           next to the right pod. Mask hides this band so the cable visually
+           emerges from the orange's apex. */
+        podMaskBand: { left: { start: 0.247, end: 0.264 } },
         podW: 132,
         botAspect: 893 / 896,
         podAspectLeft: 1098 / 520,
@@ -4978,6 +4996,30 @@
       });
     }
 
+    /* Hides a horizontal band of the pod-img via a CSS mask. Used to remove the
+       "neck" taper in the circle-horizontal LEFT pod asset, where the asset's
+       narrow arc tip transitions through a wide cream taper into the cable —
+       the orange piece's narrow apex can't cover that taper, so the cream
+       reads as an asymmetric "thick rim" next to the other pod. Hiding the
+       band makes the cable visually emerge from the orange's apex like the
+       other side. `band` is `{start, end}` as fractions of the pod-img height,
+       or null/undefined to clear. */
+    function applyPodMaskBand(podEl, band) {
+      if (!podEl) { return; }
+      if (!band) {
+        podEl.style.webkitMaskImage = "";
+        podEl.style.maskImage = "";
+        return;
+      }
+      var startPct = (band.start * 100).toFixed(3) + "%";
+      var endPct = (band.end * 100).toFixed(3) + "%";
+      var grad = "linear-gradient(to bottom, black 0%, black " + startPct +
+                 ", transparent " + startPct + ", transparent " + endPct +
+                 ", black " + endPct + ", black 100%)";
+      podEl.style.webkitMaskImage = grad;
+      podEl.style.maskImage = grad;
+    }
+
     function connectorStemCoverForRound(r, side, podW) {
       if (!r || !r.connectorStemCover) { return null; }
       var cfg = side === "right" ? r.connectorStemCover.right : r.connectorStemCover.left;
@@ -5273,6 +5315,8 @@
       els.rightPod.src = r.podRight || r.pod;
       els.leftPod.style.transform = r.podFlipLeft ? "translateX(-50%) scaleX(-1)" : "translateX(-50%)";
       els.rightPod.style.transform = r.podFlipRight ? "translateX(-50%) scaleX(-1)" : "translateX(-50%)";
+      applyPodMaskBand(els.leftPod, r.podMaskBand && r.podMaskBand.left);
+      applyPodMaskBand(els.rightPod, r.podMaskBand && r.podMaskBand.right);
       var botW = botWidthForLayout(r, layout);
       els.leftBot.style.width = botW + "px";
       els.rightBot.style.width = botW + "px";
@@ -6745,15 +6789,6 @@
       els.iraChar.style.transform = "translateX(1200px)";
       els.iraGlowRing.classList.remove("show");
       seedPlayMagic();
-      show(els.playStage);
-
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          els.iraChar.style.transition = "transform 0.72s cubic-bezier(0.25, 1.1, 0.4, 1)";
-          els.iraChar.style.transform = "translateX(0)";
-          later(function () { els.iraGlowRing.classList.add("show"); }, 680);
-        });
-      });
 
       function revealPlayButton() {
         els.iraChar.style.transition = "";
@@ -6763,17 +6798,41 @@
         els.playButton.classList.add("play-ready");
       }
 
-      // After Ira finishes sliding in, play "You are all set." then "Let's play.",
-      // then reveal the Play button.
-      later(function () {
-        var first = playInstructionAudio("You are all set.");
-        whenInstructionAudioEnds(first, function () {
-          var second = playInstructionAudio("Let's play.");
-          whenInstructionAudioEnds(second, function () {
-            revealPlayButton();
+      function startPreplaySequence() {
+        // Guard against state changes that may have occurred while we waited
+        // for the new background to finish decoding.
+        if (FLOW[state.step] && FLOW[state.step].scene !== "preplay") { return; }
+        show(els.playStage);
+
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            els.iraChar.style.transition = "transform 0.72s cubic-bezier(0.25, 1.1, 0.4, 1)";
+            els.iraChar.style.transform = "translateX(0)";
+            later(function () { els.iraGlowRing.classList.add("show"); }, 680);
           });
         });
-      }, 760);
+
+        // After Ira finishes sliding in, play "You are all set." then "Let's play.",
+        // then reveal the Play button.
+        later(function () {
+          var first = playInstructionAudio("You are all set.");
+          whenInstructionAudioEnds(first, function () {
+            var second = playInstructionAudio("Let's play.");
+            whenInstructionAudioEnds(second, function () {
+              revealPlayButton();
+            });
+          });
+        }, 760);
+      }
+
+      // Wait for the new LetsPlayBG.png to finish decoding before unhiding the
+      // stage; otherwise the <img> keeps painting the previously-decoded
+      // GameStartScreen.png for a frame, flashing the start screen.
+      if (typeof els.playBg.decode === "function") {
+        els.playBg.decode().then(startPreplaySequence, startPreplaySequence);
+      } else {
+        startPreplaySequence();
+      }
     }
 
     function setupLaserIntro(text) {
@@ -7143,10 +7202,10 @@
          fx,fy - disc centre        fR - disc radius
          diamAng - flat-edge angle  keepDir - direction into the filled half  */
     var DIAG_HOLLOW_GEOMETRY = {
-      "45angleCircleHollow.png":     { fx: 0.6132, fy: 0.4026, fR: 0.3670, diamAng: 42.5,   keepDir: 135.37, fillScale: 1.0, fillFlatPad: 0.125, shellCutScale: 1.075, shellCutFlatPad: 0.115 },
+      "45angleCircleHollow.png":     { fx: 0.6132, fy: 0.4026, fR: 0.3670, diamAng: 42.5,   keepDir: 135.37, fillScale: 1.03, fillFlatPad: 0.30, shellCutScale: 1.13, shellCutFlatPad: 0.24, shellOuterFlatPad: 0.30 },
       "135anglecutCircleHollow.png": { fx: 0.3861, fy: 0.6050, fR: 0.3586, diamAng: 44.40,  keepDir: -43.08 },
       "CircleLastFlowHollow1.png":   { fx: 0.6308, fy: 0.6373, fR: 0.3732, diamAng: 134.50, keepDir: -135.26 },
-      "CircleLastFlowHollow2.png":   { fx: 0.4199, fy: 0.3817, fR: 0.3501, diamAng: 136.5,  keepDir: 45.21, fillScale: 1.085, fillFlatPad: 0.125, fillAngleOffset: -0.75, shellCutScale: 1.075, shellCutFlatPad: 0.115 }
+      "CircleLastFlowHollow2.png":   { fx: 0.4199, fy: 0.3817, fR: 0.3501, diamAng: 136.5,  keepDir: 45.21, fillScale: 1.105, fillFlatPad: 0.30, fillAngleOffset: -0.75, shellCutScale: 1.13, shellCutFlatPad: 0.24, shellOuterFlatPad: 0.30 }
     };
     var DIAG_FILL_OVERSCALE = 1.01; // default fill size; selected pod assets override this just under the rim
     var DIAG_FILL_FLATPAD   = 0.095; // small overlap across the diagonal hollow, hidden by pod art
@@ -7220,7 +7279,7 @@
         geo.fR * podW * DIAG_POD_SHELL_OUTER_SCALE,
         geo.diamAng,
         geo.keepDir,
-        DIAG_POD_SHELL_OUTER_FLATPAD
+        geo.shellOuterFlatPad !== undefined ? geo.shellOuterFlatPad : DIAG_POD_SHELL_OUTER_FLATPAD
       ));
       shellKeep.setAttribute("fill", "white");
       mask.appendChild(shellKeep);
@@ -7263,6 +7322,7 @@
       var cy = geo.fy * podW;
       var fillScale = geo.fillScale || DIAG_FILL_OVERSCALE;
       var fillFlatPad = geo.fillFlatPad || DIAG_FILL_FLATPAD;
+      var shellOuterFlatPad = geo.shellOuterFlatPad !== undefined ? geo.shellOuterFlatPad : DIAG_POD_SHELL_OUTER_FLATPAD;
       var fillAngle = geo.diamAng + (geo.fillAngleOffset || 0);
       var fillKeepDir = geo.keepDir + (geo.fillAngleOffset || 0);
       var rr = geo.fR * podW * fillScale;
@@ -7273,7 +7333,7 @@
         geo.fR * podW * DIAG_POD_SHELL_OUTER_SCALE,
         geo.diamAng,
         geo.keepDir,
-        DIAG_POD_SHELL_OUTER_FLATPAD
+        shellOuterFlatPad
       );
 
       var ns = "http://www.w3.org/2000/svg";
@@ -7308,13 +7368,19 @@
          settled in the hollow) — the flying piece during the cut animation
          must not carry this halo. */
       if (includePodShell) {
+        /* Backstop layer: sized to the rim's OUTER edge (not its inner edge),
+           so any hand-drawn drift in the pod-art's actual rim inner edge can't
+           leak the dark hollow underneath through a thin slit. The rim mask
+           is painted on top of this, so the rim's white stroke still shows
+           where it should. Color matches the rim so any visible band reads
+           as part of the stroke. */
         var cutFillD = semicircleSegmentPath(
           cx,
           cy,
-          geo.fR * podW * (geo.shellCutScale || DIAG_POD_SHELL_CUT_SCALE),
+          geo.fR * podW * DIAG_POD_SHELL_OUTER_SCALE,
           geo.diamAng,
           geo.keepDir,
-          geo.shellCutFlatPad || DIAG_POD_SHELL_CUT_FLATPAD
+          shellOuterFlatPad
         );
         var cutFill = document.createElementNS(ns, "path");
         cutFill.setAttribute("d", cutFillD);
@@ -7962,6 +8028,7 @@
       setInstruction("");
       renderCompleteConfetti();
       show(els.completeStage);
+      sndConfetti();
       sndKidsCheer();
       try {
         parent.postMessage({ type: "activity_complete" }, "*");
@@ -8113,5 +8180,6 @@
   </svg>
 
 </body>
-
+<script src="debug-jump.js"></script>
 </html>
+
