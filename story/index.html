@@ -7293,7 +7293,7 @@
       "CircleLastFlowHollow1.png":   { fx: 0.6308, fy: 0.6373, fR: 0.3732, diamAng: 134.50, keepDir: -135.26 },
       "CircleLastFlowHollow2.png":   { fx: 0.4199, fy: 0.3817, fR: 0.3501, diamAng: 136.5,  keepDir: 45.21, fillFlatPad: 0.20, fillAngleOffset: -0.75 }
     };
-    var DIAG_FILL_OVERSCALE = 1; // keep the fill at the hollow size; the pod image supplies the rim/stroke
+    var DIAG_FILL_OVERSCALE = 1.03; // overscale ~3% so the arc edge overlaps the pod rim and hides AA slivers
     var DIAG_FILL_FLATPAD   = 0.075; // chord-only tuck; does not increase the circular radius
     var DIAG_FOCUS_RADIUS_FRAC = 0.365; // slot-instruct cyan cue: ONE size for both sides (equal); biased small to avoid spill
 
@@ -7306,16 +7306,21 @@
       return Math.abs(d);
     }
 
-    /* A circular-segment path in the SVG's own coordinates. Optional flatPad
-       can push only the chord outward; the orange fill keeps radius scale 1
-       so the circular edge stays at the hollow boundary. */
-    function semicircleSegmentPath(cx, cy, r, diamAng, keepDir, flatPad) {
+    /* A circular-segment path in the SVG's own coordinates. flatPad pushes
+       the chord outward (keeps the chord further from the disc centre, so
+       the flat edge stays tucked past the diameter line). expandPx adds N
+       SVG units to the ARC radius without moving the chord — this is how
+       the orange fill grows past the hollow's measured rim by exactly N px
+       to cover anti-aliased white slivers, instead of growing via uniform
+       transform scale (which also distorts the chord). */
+    function semicircleSegmentPath(cx, cy, r, diamAng, keepDir, flatPad, expandPx) {
       var rad = Math.PI / 180;
       var sign = angDiffAbs(diamAng + 90, keepDir) < angDiffAbs(diamAng - 90, keepDir) ? 1 : -1;
       var keepN = diamAng + sign * 90;
       var off = r * flatPad;
       var foot = { x: cx - Math.cos(keepN * rad) * off, y: cy - Math.sin(keepN * rad) * off };
-      var halfChord = Math.sqrt(Math.max(0, r * r - off * off));
+      var rArc = r + (expandPx || 0);
+      var halfChord = Math.sqrt(Math.max(0, rArc * rArc - off * off));
       var t = { x: Math.cos(diamAng * rad), y: Math.sin(diamAng * rad) };
       var A = { x: foot.x + t.x * halfChord, y: foot.y + t.y * halfChord };
       var B = { x: foot.x - t.x * halfChord, y: foot.y - t.y * halfChord };
@@ -7328,7 +7333,7 @@
       var path = "M" + A.x.toFixed(2) + "," + A.y.toFixed(2);
       for (var i = 1; i <= steps; i++) {
         var a = aA + span * (i / steps);
-        path += " L" + (cx + Math.cos(a) * r).toFixed(2) + "," + (cy + Math.sin(a) * r).toFixed(2);
+        path += " L" + (cx + Math.cos(a) * rArc).toFixed(2) + "," + (cy + Math.sin(a) * rArc).toFixed(2);
       }
       return path + " Z";
     }
@@ -7353,15 +7358,24 @@
       var fillAngle = geo.diamAng + (geo.fillAngleOffset || 0);
       var fillKeepDir = geo.keepDir + (geo.fillAngleOffset || 0);
       var rr = geo.fR * podW * fillScale;
-      var d = semicircleSegmentPath(cx, cy, rr, fillAngle, fillKeepDir, fillFlatPad);
+      /* +1px arc expansion (in SVG/CSS units, since width:podW == viewBox:podW)
+         covers any remaining AA sliver on the curved rim without scaling the
+         whole shape. Chord position is preserved — only the arc edge grows. */
+      var d = semicircleSegmentPath(cx, cy, rr, fillAngle, fillKeepDir, fillFlatPad, 1);
 
       var ns = "http://www.w3.org/2000/svg";
       var svg = document.createElementNS(ns, "svg");
       svg.setAttribute("viewBox", "0 0 " + podW + " " + podH);
       svg.setAttribute("width", podW);
       svg.setAttribute("height", podH);
+      svg.setAttribute("shape-rendering", "geometricPrecision");
       svg.style.overflow = "visible";
       svg.style.pointerEvents = "none";
+      svg.style.transform = "translateZ(0)";
+      svg.style.transformBox = "fill-box";
+      svg.style.transformOrigin = "center center";
+      svg.style.backfaceVisibility = "hidden";
+      svg.style.willChange = "transform";
 
       var clipId = "diag-hollow-clip-" + Math.random().toString(36).substr(2, 9);
       var defs = document.createElementNS(ns, "defs");
@@ -7369,6 +7383,8 @@
       clip.setAttribute("id", clipId);
       var path = document.createElementNS(ns, "path");
       path.setAttribute("d", d);
+      path.setAttribute("vector-effect", "non-scaling-stroke");
+      path.setAttribute("shape-rendering", "geometricPrecision");
       clip.appendChild(path);
       defs.appendChild(clip);
       svg.appendChild(defs);
@@ -7418,8 +7434,11 @@
       var fillW = parseFloat(fill.style.width) || podW;
       var svg = built.svg;
       svg.style.position = "absolute";
-      svg.style.left = ((podML - fillML) + (fillW - podW) / 2) + "px";
-      svg.style.top = (podTop - fillTop) + "px";
+      /* Snap to integer pixels so the SVG's internal path raster is consistent
+         frame to frame and the disc centre lands on a whole-pixel boundary —
+         subpixel positioning was a residual source of AA shimmer on the rim. */
+      svg.style.left = Math.round((podML - fillML) + (fillW - podW) / 2) + "px";
+      svg.style.top = Math.round(podTop - fillTop) + "px";
 
       var shell = document.createElement("div");
       shell.className = "fit-piece";
@@ -7646,8 +7665,11 @@
           dFly.className = "flying-half";
           dFly.style.width = dPodW + "px";
           dFly.style.height = dPodH + "px";
-          dFly.style.left = (center.x - built.cx) + "px"; // hollow disc centre starts at machine centre
-          dFly.style.top = (center.y - built.cy) + "px";
+          /* Start position snapped to integer pixels — subpixel left/top
+             shifts the AA pattern relative to the path interior and produces
+             a visible hairline at the rim. */
+          dFly.style.left = Math.round(center.x - built.cx) + "px";
+          dFly.style.top = Math.round(center.y - built.cy) + "px";
           dFly.style.transformOrigin = built.cx + "px " + built.cy + "px";
           dFly.style.transition = "transform .9s cubic-bezier(.18,.89,.32,1.08),opacity .9s ease";
           dFly.style.transform = "translate(0px,0px) scale(1)";
@@ -7659,6 +7681,14 @@
                 el.style.transform = "translate(" + tx + "px," + ty + "px) scale(1)";
               });
             }, delay);
+            /* Once the fly transition settles, re-lock the transform to whole
+               pixels so the rasterised rim cannot drift by a subpixel as the
+               browser composits the final frame. */
+            el.addEventListener("transitionend", function lockToInteger(e) {
+              if (e.propertyName && e.propertyName !== "transform") { return; }
+              el.removeEventListener("transitionend", lockToInteger);
+              el.style.transform = "translate(" + Math.round(tx) + "px," + Math.round(ty) + "px) scale(1)";
+            });
           })(dFly, hc.x - center.x, hc.y - center.y, slotIdx * 100);
           return;
         }
