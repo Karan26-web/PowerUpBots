@@ -7293,7 +7293,7 @@
       "CircleLastFlowHollow1.png":   { fx: 0.6308, fy: 0.6373, fR: 0.3732, diamAng: 134.50, keepDir: -135.26 },
       "CircleLastFlowHollow2.png":   { fx: 0.4199, fy: 0.3817, fR: 0.3501, diamAng: 136.5,  keepDir: 45.21, fillFlatPad: 0.20, fillAngleOffset: -0.75 }
     };
-    var DIAG_FILL_OVERSCALE = 1.03; // overscale ~3% so the arc edge overlaps the pod rim and hides AA slivers
+    var DIAG_FILL_OVERSCALE = 1.02; // overscale ~2% — arc still seals AA slivers, leaves room for the explicit SVG rim above it
     var DIAG_FILL_FLATPAD   = 0.075; // chord-only tuck; does not increase the circular radius
     var DIAG_FOCUS_RADIUS_FRAC = 0.365; // slot-instruct cyan cue: ONE size for both sides (equal); biased small to avoid spill
 
@@ -7358,10 +7358,12 @@
       var fillAngle = geo.diamAng + (geo.fillAngleOffset || 0);
       var fillKeepDir = geo.keepDir + (geo.fillAngleOffset || 0);
       var rr = geo.fR * podW * fillScale;
-      /* +1px arc expansion (in SVG/CSS units, since width:podW == viewBox:podW)
-         covers any remaining AA sliver on the curved rim without scaling the
-         whole shape. Chord position is preserved — only the arc edge grows. */
-      var d = semicircleSegmentPath(cx, cy, rr, fillAngle, fillKeepDir, fillFlatPad, 1);
+      /* Sub-pixel arc expansion (in SVG/CSS units): just enough to seal AA
+         slivers from rasterisation without covering the pod PNG's white rim.
+         1.0px covered the rim entirely; 0.4px leaves ~2–3px of rim visible
+         on top while still hiding the AA gap. Chord position is unchanged —
+         only the curved edge nudges outward. */
+      var d = semicircleSegmentPath(cx, cy, rr, fillAngle, fillKeepDir, fillFlatPad, 0.4);
 
       var ns = "http://www.w3.org/2000/svg";
       var svg = document.createElementNS(ns, "svg");
@@ -7400,7 +7402,37 @@
       image.setAttribute("preserveAspectRatio", "none");
       image.setAttribute("clip-path", "url(#" + clipId + ")");
       svg.appendChild(image);
-      return { svg: svg, cx: cx, cy: cy, rr: rr };
+
+      /* Dedicated rim stroke layer ABOVE the orange fill — uses the EXACT
+         same `d` as the clip path, so the rim hugs the orange edge with
+         zero drift. vector-effect:non-scaling-stroke keeps the rim at a
+         constant 2.5px regardless of any parent scale. The stroke is
+         centered on the path, so the orange covers the inner half from
+         below while the outer half sits over the PNG's natural hollow
+         band — the visible result is a clean 2.5px embedded rim. The
+         hollow geometry is well inside the pod outline (~3–7px inset on
+         the chord, similarly on the arc), so a 1.25px overshoot can't
+         reach the pod boundary.
+
+         Rim starts hidden (opacity 0) and is activated by the caller —
+         the fly-in path fades it in as motion begins; the in-slot path
+         shows it briefly then settles to a subtle level. Animation is
+         pure opacity (no scaling) so the geometry never drifts. */
+      var rim = document.createElementNS(ns, "path");
+      rim.setAttribute("d", d);
+      rim.setAttribute("fill", "none");
+      rim.setAttribute("stroke", "#ffffff");
+      rim.setAttribute("stroke-width", "2.5");
+      rim.setAttribute("stroke-linejoin", "round");
+      rim.setAttribute("stroke-linecap", "round");
+      rim.setAttribute("vector-effect", "non-scaling-stroke");
+      rim.setAttribute("shape-rendering", "geometricPrecision");
+      rim.style.transformBox = "fill-box";
+      rim.style.transformOrigin = "center center";
+      rim.style.opacity = "0";
+      rim.style.transition = "opacity .55s cubic-bezier(.4,0,.2,1)";
+      svg.appendChild(rim);
+      return { svg: svg, cx: cx, cy: cy, rr: rr, rim: rim };
     }
 
     /* Game-space centre of a diagonal-circle hollow at the ready/charging layout, so the
@@ -7453,6 +7485,24 @@
       fill.innerHTML = "";
       fill.appendChild(shell);
       fill.classList.add("filled");
+
+      /* Rim handoff: the fly-in piece ended at opacity 0.92 right before
+         it was removed. Snap the in-slot rim to the same level on its
+         first mounted frame (no transition, so there's no flash), then
+         gently fade down to a subtle settled level on the next frame.
+         Net effect: the socket "activates" during movement, then relaxes
+         once the piece is home. */
+      if (built.rim) {
+        var rimEl = built.rim;
+        rimEl.style.transition = "opacity 0s";
+        rimEl.style.opacity = "0.92";
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            rimEl.style.transition = "opacity .55s cubic-bezier(.4,0,.2,1)";
+            rimEl.style.opacity = "0.42";
+          });
+        });
+      }
       return true;
     }
 
@@ -7675,10 +7725,14 @@
           dFly.style.transform = "translate(0px,0px) scale(1)";
           dFly.appendChild(built.svg);
           layer.appendChild(dFly);
-          (function (el, tx, ty, delay) {
+          (function (el, rimEl, tx, ty, delay) {
             setTimeout(function () {
               requestAnimationFrame(function () {
                 el.style.transform = "translate(" + tx + "px," + ty + "px) scale(1)";
+                /* Activate the socket rim only when motion begins — the
+                   idle state shows no rim. Same frame as the fly transform
+                   so the rim fades in across the flight. */
+                if (rimEl) { rimEl.style.opacity = "0.92"; }
               });
             }, delay);
             /* Once the fly transition settles, re-lock the transform to whole
@@ -7689,7 +7743,7 @@
               el.removeEventListener("transitionend", lockToInteger);
               el.style.transform = "translate(" + Math.round(tx) + "px," + Math.round(ty) + "px) scale(1)";
             });
-          })(dFly, hc.x - center.x, hc.y - center.y, slotIdx * 100);
+          })(dFly, built.rim, hc.x - center.x, hc.y - center.y, slotIdx * 100);
           return;
         }
 
@@ -8235,5 +8289,5 @@
   </svg>
 
 </body>
-
+<script src="debug-jump.js"></script>
 </html>
