@@ -7289,7 +7289,7 @@
          diamAng - flat-edge angle  keepDir - direction into the filled half  */
     var DIAG_HOLLOW_GEOMETRY = {
       "45angleCircleHollow.png":     { fx: 0.6132, fy: 0.4026, fR: 0.3670, diamAng: 42.5,   keepDir: 135.37, fillFlatPad: 0.20 },
-      "135anglecutCircleHollow.png": { fx: 0.3861, fy: 0.6050, fR: 0.3586, diamAng: 44.40,  keepDir: -43.08 },
+      "135anglecutCircleHollow.png": { fx: 0.3861, fy: 0.6050, fR: 0.3586, diamAng: 44.40,  keepDir: -43.08, fillExpandPx: 1.7 },
       "CircleLastFlowHollow1.png":   { fx: 0.6308, fy: 0.6373, fR: 0.3732, diamAng: 134.50, keepDir: -135.26 },
       "CircleLastFlowHollow2.png":   { fx: 0.4199, fy: 0.3817, fR: 0.3501, diamAng: 136.5,  keepDir: 45.21, fillFlatPad: 0.20, fillAngleOffset: -0.75 }
     };
@@ -7358,12 +7358,22 @@
       var fillAngle = geo.diamAng + (geo.fillAngleOffset || 0);
       var fillKeepDir = geo.keepDir + (geo.fillAngleOffset || 0);
       var rr = geo.fR * podW * fillScale;
-      /* Sub-pixel arc expansion (in SVG/CSS units): just enough to seal AA
-         slivers from rasterisation without covering the pod PNG's white rim.
-         1.0px covered the rim entirely; 0.4px leaves ~2–3px of rim visible
-         on top while still hiding the AA gap. Chord position is unchanged —
-         only the curved edge nudges outward. */
-      var d = semicircleSegmentPath(cx, cy, rr, fillAngle, fillKeepDir, fillFlatPad, 0.4);
+      /* Local arc-only expansion (in SVG/CSS units): nudges ONLY the curved
+         rim outward to seal sub-pixel AA slivers. The chord side is
+         untouched — flatPad places it against the original radius `rr`,
+         not `rArc`, so the flat edge stays tucked exactly where it was
+         and can't spill past the pod's diagonal cut. The explicit SVG rim
+         above the fill now owns the visible rim, so the arc can fully
+         cover the AA gap without exposing the PNG's hollow band.
+
+         Default 1.0 closed the hairline on three of four pods. The fourth
+         (135anglecutCircleHollow.png) has the smallest measured radius
+         (fR 0.3586) and the default 0.075 chord tuck, so it had the least
+         arc cushion and still left a tiny visible hole — overridden via
+         geo.fillExpandPx so only that pod expands further, leaving the
+         clean pods exactly as they were. */
+      var arcExpandPx = geo.fillExpandPx !== undefined ? geo.fillExpandPx : 1.0;
+      var d = semicircleSegmentPath(cx, cy, rr, fillAngle, fillKeepDir, fillFlatPad, arcExpandPx);
 
       var ns = "http://www.w3.org/2000/svg";
       var svg = document.createElementNS(ns, "svg");
@@ -8289,5 +8299,5 @@
   </svg>
 
 </body>
-
+<script src="debug-jump.js"></script>
 </html>
