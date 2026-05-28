@@ -7280,26 +7280,21 @@
        Semicircle hollow-fit system - last two flows (circle-diagonal rounds).
 
        Each diagonal-circle pod PNG is a half-disc with an OPAQUE dark hollow
-       and a light rim. The orange fill is drawn on top of that dark interior,
-       then the original pod art is masked back over it so the visible stroke is
-       still the pod's own artwork. A couple of asymmetric assets need a slightly
-       larger fill/cut under that rim so no dark hollow sliver can peek through.
+       and a light rim. The orange fill is drawn at the measured hollow radius;
+       a small chord-only tuck hides the dark hollow along the flat edge without
+       growing the circular arc or the visible stroke.
 
        Geometry was measured from the hollow PNGs (fractions of pod image width):
          fx,fy - disc centre        fR - disc radius
          diamAng - flat-edge angle  keepDir - direction into the filled half  */
     var DIAG_HOLLOW_GEOMETRY = {
-      "45angleCircleHollow.png":     { fx: 0.6132, fy: 0.4026, fR: 0.3670, diamAng: 42.5,   keepDir: 135.37, fillScale: 1.03, fillFlatPad: 0.30, shellCutScale: 1.13, shellCutFlatPad: 0.24, shellOuterFlatPad: 0.30 },
+      "45angleCircleHollow.png":     { fx: 0.6132, fy: 0.4026, fR: 0.3670, diamAng: 42.5,   keepDir: 135.37, fillFlatPad: 0.20 },
       "135anglecutCircleHollow.png": { fx: 0.3861, fy: 0.6050, fR: 0.3586, diamAng: 44.40,  keepDir: -43.08 },
       "CircleLastFlowHollow1.png":   { fx: 0.6308, fy: 0.6373, fR: 0.3732, diamAng: 134.50, keepDir: -135.26 },
-      "CircleLastFlowHollow2.png":   { fx: 0.4199, fy: 0.3817, fR: 0.3501, diamAng: 136.5,  keepDir: 45.21, fillScale: 1.105, fillFlatPad: 0.30, fillAngleOffset: -0.75, shellCutScale: 1.13, shellCutFlatPad: 0.24, shellOuterFlatPad: 0.30 }
+      "CircleLastFlowHollow2.png":   { fx: 0.4199, fy: 0.3817, fR: 0.3501, diamAng: 136.5,  keepDir: 45.21, fillFlatPad: 0.20, fillAngleOffset: -0.75 }
     };
-    var DIAG_FILL_OVERSCALE = 1.01; // default fill size; selected pod assets override this just under the rim
-    var DIAG_FILL_FLATPAD   = 0.095; // small overlap across the diagonal hollow, hidden by pod art
-    var DIAG_POD_SHELL_CUT_SCALE = 1.045;
-    var DIAG_POD_SHELL_CUT_FLATPAD = 0.075;
-    var DIAG_POD_SHELL_OUTER_SCALE = 1.165;
-    var DIAG_POD_SHELL_OUTER_FLATPAD = 0.11;
+    var DIAG_FILL_OVERSCALE = 1; // keep the fill at the hollow size; the pod image supplies the rim/stroke
+    var DIAG_FILL_FLATPAD   = 0.075; // chord-only tuck; does not increase the circular radius
     var DIAG_FOCUS_RADIUS_FRAC = 0.365; // slot-instruct cyan cue: ONE size for both sides (equal); biased small to avoid spill
 
     function podBasename(src) {
@@ -7311,9 +7306,9 @@
       return Math.abs(d);
     }
 
-    /* A circular-segment path slightly larger than a semicircle, in the SVG's
-       own coordinates. The flat chord is pushed `flatPad*r` toward the non-keep
-       side so the orange tucks under the rim along the diameter edge too. */
+    /* A circular-segment path in the SVG's own coordinates. Optional flatPad
+       can push only the chord outward; the orange fill keeps radius scale 1
+       so the circular edge stays at the hollow boundary. */
     function semicircleSegmentPath(cx, cy, r, diamAng, keepDir, flatPad) {
       var rad = Math.PI / 180;
       var sign = angDiffAbs(diamAng + 90, keepDir) < angDiffAbs(diamAng - 90, keepDir) ? 1 : -1;
@@ -7343,85 +7338,22 @@
                                                  : (r.podAspectLeft || 2.3));
     }
 
-    function addOriginalDiagPodShell(svg, r, side, geo, cx, cy, podW, podH) {
-      var ns = "http://www.w3.org/2000/svg";
-      var defs = svg.querySelector("defs") || document.createElementNS(ns, "defs");
-      if (!defs.parentNode) {
-        svg.insertBefore(defs, svg.firstChild);
-      }
-
-      var maskId = "diag-pod-shell-mask-" + Math.random().toString(36).substr(2, 9);
-      var mask = document.createElementNS(ns, "mask");
-      mask.setAttribute("id", maskId);
-      mask.setAttribute("maskUnits", "userSpaceOnUse");
-      mask.setAttribute("x", "0");
-      mask.setAttribute("y", "0");
-      mask.setAttribute("width", podW);
-      mask.setAttribute("height", podH);
-
-      var shellKeep = document.createElementNS(ns, "path");
-      shellKeep.setAttribute("d", semicircleSegmentPath(
-        cx,
-        cy,
-        geo.fR * podW * DIAG_POD_SHELL_OUTER_SCALE,
-        geo.diamAng,
-        geo.keepDir,
-        geo.shellOuterFlatPad !== undefined ? geo.shellOuterFlatPad : DIAG_POD_SHELL_OUTER_FLATPAD
-      ));
-      shellKeep.setAttribute("fill", "white");
-      mask.appendChild(shellKeep);
-
-      var hollowCut = document.createElementNS(ns, "path");
-      hollowCut.setAttribute("d", semicircleSegmentPath(
-        cx,
-        cy,
-        geo.fR * podW * (geo.shellCutScale || DIAG_POD_SHELL_CUT_SCALE),
-        geo.diamAng,
-        geo.keepDir,
-        geo.shellCutFlatPad || DIAG_POD_SHELL_CUT_FLATPAD
-      ));
-      hollowCut.setAttribute("fill", "black");
-      mask.appendChild(hollowCut);
-      defs.appendChild(mask);
-
-      var shell = document.createElementNS(ns, "image");
-      var podSrc = side === "right" ? (r.podRight || r.pod) : (r.podLeft || r.pod);
-      shell.setAttributeNS("http://www.w3.org/1999/xlink", "href", podSrc);
-      shell.setAttribute("href", podSrc);
-      shell.setAttribute("x", "0");
-      shell.setAttribute("y", "0");
-      shell.setAttribute("width", podW);
-      shell.setAttribute("height", podH);
-      shell.setAttribute("preserveAspectRatio", "none");
-      shell.setAttribute("mask", "url(#" + maskId + ")");
-      shell.style.pointerEvents = "none";
-      svg.appendChild(shell);
-    }
-
     /* Builds the orange semicircle-segment SVG for a diagonal-circle pod, sized to the
-       pod box (podW × podH). Shared by the in-slot fill AND the fly-in piece, so the two
-       are pixel-identical and the hand-off shows no shape/rotation/border change.
+       pod box (podW × podH). Shared by the in-slot fill AND the fly-in piece,
+       so the two are pixel-identical and the hand-off shows no shape/rotation
+       change.
        Returns { svg, cx, cy, rr } (disc centre + radius in the SVG's coordinates). */
-    function buildDiagSemicircleSvg(r, side, podW, podH, includePodShell) {
+    function buildDiagSemicircleSvg(r, side, podW, podH) {
       var geo = DIAG_HOLLOW_GEOMETRY[podBasename(side === "right" ? r.podRight : r.podLeft)];
       if (!geo) { return null; }
       var cx = geo.fx * podW;
       var cy = geo.fy * podW;
-      var fillScale = geo.fillScale || DIAG_FILL_OVERSCALE;
-      var fillFlatPad = geo.fillFlatPad || DIAG_FILL_FLATPAD;
-      var shellOuterFlatPad = geo.shellOuterFlatPad !== undefined ? geo.shellOuterFlatPad : DIAG_POD_SHELL_OUTER_FLATPAD;
+      var fillScale = DIAG_FILL_OVERSCALE;
+      var fillFlatPad = geo.fillFlatPad !== undefined ? geo.fillFlatPad : DIAG_FILL_FLATPAD;
       var fillAngle = geo.diamAng + (geo.fillAngleOffset || 0);
       var fillKeepDir = geo.keepDir + (geo.fillAngleOffset || 0);
       var rr = geo.fR * podW * fillScale;
       var d = semicircleSegmentPath(cx, cy, rr, fillAngle, fillKeepDir, fillFlatPad);
-      var outerD = semicircleSegmentPath(
-        cx,
-        cy,
-        geo.fR * podW * DIAG_POD_SHELL_OUTER_SCALE,
-        geo.diamAng,
-        geo.keepDir,
-        shellOuterFlatPad
-      );
 
       var ns = "http://www.w3.org/2000/svg";
       var svg = document.createElementNS(ns, "svg");
@@ -7432,7 +7364,6 @@
       svg.style.pointerEvents = "none";
 
       var clipId = "diag-hollow-clip-" + Math.random().toString(36).substr(2, 9);
-      var outerClipId = "diag-pod-head-clip-" + Math.random().toString(36).substr(2, 9);
       var defs = document.createElementNS(ns, "defs");
       var clip = document.createElementNS(ns, "clipPath");
       clip.setAttribute("id", clipId);
@@ -7440,41 +7371,7 @@
       path.setAttribute("d", d);
       clip.appendChild(path);
       defs.appendChild(clip);
-      var outerClip = document.createElementNS(ns, "clipPath");
-      outerClip.setAttribute("id", outerClipId);
-      var outerPath = document.createElementNS(ns, "path");
-      outerPath.setAttribute("d", outerD);
-      outerClip.appendChild(outerPath);
-      defs.appendChild(outerClip);
       svg.appendChild(defs);
-
-      /* Fill the cut hole (where the pod art is masked out) with the rim
-         colour so the gap between the orange and the rim's inner edge reads
-         as part of the stroke instead of leaking the game background.
-         Only applied when the pod shell is included (i.e. the piece is
-         settled in the hollow) — the flying piece during the cut animation
-         must not carry this halo. */
-      if (includePodShell) {
-        /* Backstop layer: sized to the rim's OUTER edge (not its inner edge),
-           so any hand-drawn drift in the pod-art's actual rim inner edge can't
-           leak the dark hollow underneath through a thin slit. The rim mask
-           is painted on top of this, so the rim's white stroke still shows
-           where it should. Color matches the rim so any visible band reads
-           as part of the stroke. */
-        var cutFillD = semicircleSegmentPath(
-          cx,
-          cy,
-          geo.fR * podW * DIAG_POD_SHELL_OUTER_SCALE,
-          geo.diamAng,
-          geo.keepDir,
-          shellOuterFlatPad
-        );
-        var cutFill = document.createElementNS(ns, "path");
-        cutFill.setAttribute("d", cutFillD);
-        cutFill.setAttribute("fill", "#e8e8e8");
-        cutFill.style.pointerEvents = "none";
-        svg.appendChild(cutFill);
-      }
 
       var blockSize = rr * 2.4; // orange block comfortably covers the clip region
       var image = document.createElementNS(ns, "image");
@@ -7486,13 +7383,7 @@
       image.setAttribute("height", blockSize);
       image.setAttribute("preserveAspectRatio", "none");
       image.setAttribute("clip-path", "url(#" + clipId + ")");
-      var clippedFill = document.createElementNS(ns, "g");
-      clippedFill.setAttribute("clip-path", "url(#" + outerClipId + ")");
-      clippedFill.appendChild(image);
-      svg.appendChild(clippedFill);
-      if (includePodShell) {
-        addOriginalDiagPodShell(svg, r, side, geo, cx, cy, podW, podH);
-      }
+      svg.appendChild(image);
       return { svg: svg, cx: cx, cy: cy, rr: rr };
     }
 
@@ -7514,7 +7405,7 @@
     function fitSemicircleIntoHollow(r, side, fill) {
       var podEl = side === "right" ? els.rightPod : els.leftPod;
       var podW = r.podW || 132;
-      var built = buildDiagSemicircleSvg(r, side, podW, diagPodH(r, side), true);
+      var built = buildDiagSemicircleSvg(r, side, podW, diagPodH(r, side));
       if (!built || !podEl) { return false; }
 
       // The fill tracks the pod with a constant offset through every layout/
@@ -8314,6 +8205,5 @@
   </svg>
 
 </body>
-<script src="debug-jump.js"></script>
-</html>
 
+</html>
