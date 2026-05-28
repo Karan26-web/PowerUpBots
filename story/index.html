@@ -4436,8 +4436,13 @@
         readyPodTop: 258,
         slotSize: { width: 100, height: 49 },
         slotOffset: { left: 19, right: 22 },
-        visualFitScale: 1.05,
-        fitPieceScale: { x: 1.04, y: 1.15 },
+        /* Match the orange piece to the bowl hollow only — drop the 5% +
+           15% Y over-scale that pushed the piece outside the rim and
+           thickened the visible stroke. slotSize already mirrors the
+           hollow's measured interior, so scale 1.0 lands the piece
+           exactly inside the rim. */
+        visualFitScale: 1.0,
+        fitPieceScale: { x: 1.0, y: 1.0 },
         happyConnectorNudge: 22,
         slotFocus: {
           left: "ellipse(50% 100% at 50% 0)",
@@ -4844,6 +4849,31 @@
       els.sceneBg.src = ASSETS + "Mainbg.png";
       state.teachingActive = false;
       els.game.classList.remove("teaching-active", "laser-intro");
+      /* Clear inline transitions/transforms left over by the previous round's
+         success animation (switchBotsToHappy sets `transition: top 0.4s ease,
+         margin-left 0.4s ease` on pods/fills and `bottom` on bots). Without
+         this, the next round's setupBots writes new top/marginLeft/width
+         values that *animate* from the previous round's positions over 0.4s
+         — visible as the "alignment broken initially → suddenly corrects
+         itself" glitch on question transitions. Safe because every code
+         path that needs a transition on these elements re-applies its own
+         inline transition explicitly. */
+      [els.leftPod, els.rightPod].forEach(function (el) {
+        if (!el) { return; }
+        el.style.transition = "";
+        el.classList.remove("charged-focus");
+      });
+      [els.leftFill, els.rightFill].forEach(function (el) {
+        if (!el) { return; }
+        el.style.transition = "";
+        el.classList.remove("charged-focus");
+      });
+      [els.leftBot, els.rightBot].forEach(function (el) {
+        if (!el) { return; }
+        el.style.bottom = "";
+        el.style.marginLeft = "";
+        el.classList.remove("happy");
+      });
       hide(els.shapeStage);
       hide(els.teachStage);
       hide(els.playStage);
@@ -5306,6 +5336,16 @@
       clearPodIntroLayers();
       clearHollowFocusLayers();
       clearConnectorStemCovers();
+      /* Defensive: setupBots is also called outside the renderStep path
+         (showSuccess, showFail, tryAgain, restoreMachineForRetry). If a
+         stale inline transition from a previous switchBotsToHappy survived
+         to this point, the new top/marginLeft we're about to write below
+         would animate over ~0.4s — visible as a slide/snap. Snap inline
+         transitions to none before we write the new geometry; CSS-class
+         driven animations (powerCableConnect etc.) still fire normally. */
+      [els.leftPod, els.rightPod, els.leftFill, els.rightFill].forEach(function (el) {
+        if (el) { el.style.transition = ""; }
+      });
       els.leftBot.parentNode.classList.remove("celebrate-jump");
       els.rightBot.parentNode.classList.remove("celebrate-jump");
       els.bots.className = className;
@@ -5315,8 +5355,18 @@
       els.rightPod.src = r.podRight || r.pod;
       els.leftPod.style.transform = r.podFlipLeft ? "translateX(-50%) scaleX(-1)" : "translateX(-50%)";
       els.rightPod.style.transform = r.podFlipRight ? "translateX(-50%) scaleX(-1)" : "translateX(-50%)";
-      applyPodMaskBand(els.leftPod, r.podMaskBand && r.podMaskBand.left);
-      applyPodMaskBand(els.rightPod, r.podMaskBand && r.podMaskBand.right);
+      /* Defer pod-mask application until fillSlotWithPiece runs. The mask
+         (used by round 7 LEFT pod to hide the cream "neck" taper that the
+         orange piece's apex can't cover) creates a visible *cable cut*
+         between the bowl and the connector when the slot is still empty —
+         because the masked band sits in the bowl-to-cable transition of
+         the asset. Clearing the mask in the empty state lets the cable
+         render whole; fillSlotWithPiece re-applies the mask once the
+         orange piece is in the bowl and hiding the taper is actually
+         desired. Safe: the mask is a pure visual filter on the pod IMG,
+         not a layout property. */
+      applyPodMaskBand(els.leftPod, null);
+      applyPodMaskBand(els.rightPod, null);
       var botW = botWidthForLayout(r, layout);
       els.leftBot.style.width = botW + "px";
       els.rightBot.style.width = botW + "px";
@@ -5780,8 +5830,25 @@
       /* Remove clipPath from wrap so drop-shadow works correctly on its children */
 
       if (r.blockSrc) {
-        /* Bypass CSS clip-path Chromium bugs by rendering the clipped image as a true SVG */
-        var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        /* Build the clipped image as a true SVG, constructed via the DOM API
+           (createElementNS) instead of `svg.innerHTML = ...`. Setting
+           innerHTML on an SVG element has a known Chromium first-paint
+           glitch where the inner `<image>` paints UNCLIPPED for one frame
+           before the `<defs>/<clipPath>` reference is resolved — visible as
+           an oversized rectangle (rectangle block) or full circle (circle
+           block) right before the half snaps into its real shape. Building
+           the same tree node-by-node forces the clip-path linkage to be
+           live on the very first paint. Safe: produces a structurally
+           identical SVG, no visual or geometric change.
+
+           Why this matters during question transitions: renderResultSplitScreen
+           (success/fail) and renderWhole(cue="halves") both call makeCutPiece
+           right after a freshly-cleared scene, so the new piece is paint-1
+           rather than paint-N. innerHTML was the worst case for the SVG
+           parser; DOM construction skips that path entirely. */
+        var ns = "http://www.w3.org/2000/svg";
+        var xlinkNs = "http://www.w3.org/1999/xlink";
+        var svg = document.createElementNS(ns, "svg");
         svg.setAttribute("width", width);
         svg.setAttribute("height", height);
         svg.style.position = "absolute";
@@ -5791,18 +5858,38 @@
         svg.classList.add("half-inner");
 
         var clipId = "clip-" + Math.random().toString(36).substr(2, 9);
-        var defs = "<defs><clipPath id=\"" + clipId + "\"><polygon points=\"" + g.absPolygon + "\" /></clipPath>";
-        var gNode = "<g>";
+        var defs = document.createElementNS(ns, "defs");
+        var clip = document.createElementNS(ns, "clipPath");
+        clip.setAttribute("id", clipId);
+        var poly = document.createElementNS(ns, "polygon");
+        poly.setAttribute("points", g.absPolygon);
+        clip.appendChild(poly);
+        defs.appendChild(clip);
 
+        var groupEl = document.createElementNS(ns, "g");
         if (r.name === "circle") {
           var circleClipId = "circleClip-" + Math.random().toString(36).substr(2, 9);
-          defs += "<clipPath id=\"" + circleClipId + "\"><circle cx=\"" + (width / 2) + "\" cy=\"" + (height / 2) + "\" r=\"" + (width / 2) + "\" /></clipPath>";
-          gNode = "<g clip-path=\"url(#" + circleClipId + ")\">";
+          var circleClip = document.createElementNS(ns, "clipPath");
+          circleClip.setAttribute("id", circleClipId);
+          var circleEl = document.createElementNS(ns, "circle");
+          circleEl.setAttribute("cx", width / 2);
+          circleEl.setAttribute("cy", height / 2);
+          circleEl.setAttribute("r", width / 2);
+          circleClip.appendChild(circleEl);
+          defs.appendChild(circleClip);
+          groupEl.setAttribute("clip-path", "url(#" + circleClipId + ")");
         }
-        defs += "</defs>";
+        svg.appendChild(defs);
 
-        var imgNode = "<image href=\"" + r.blockSrc + "\" width=\"" + width + "\" height=\"" + height + "\" clip-path=\"url(#" + clipId + ")\" preserveAspectRatio=\"none\" />";
-        svg.innerHTML = defs + gNode + imgNode + "</g>";
+        var imageEl = document.createElementNS(ns, "image");
+        imageEl.setAttributeNS(xlinkNs, "xlink:href", r.blockSrc);
+        imageEl.setAttribute("href", r.blockSrc);
+        imageEl.setAttribute("width", width);
+        imageEl.setAttribute("height", height);
+        imageEl.setAttribute("clip-path", "url(#" + clipId + ")");
+        imageEl.setAttribute("preserveAspectRatio", "none");
+        groupEl.appendChild(imageEl);
+        svg.appendChild(groupEl);
         wrap.appendChild(svg);
       } else {
         /* Fallback for css-square which has no blockSrc */
@@ -7463,6 +7550,16 @@
       var w = parseFloat(fill.style.width || "0");
       var h = parseFloat(fill.style.height || "0");
       var side = fill === els.rightFill ? "right" : "left";
+      /* Re-apply the pod mask-band (now skipped in setupBots so the empty
+         pod doesn't show a "cable cut") so the cream neck taper stays
+         hidden behind the orange piece. Only the round/side combinations
+         that actually declare a mask-band get one — others stay
+         unmasked. The mask is set BEFORE the fill DOM is rebuilt so the
+         pod and the fill paint coherently on the same frame. */
+      if (r && r.podMaskBand) {
+        var maskPodEl = side === "right" ? els.rightPod : els.leftPod;
+        applyPodMaskBand(maskPodEl, r.podMaskBand[side]);
+      }
       if (r.name === "circle" && r.variant === "circle-vertical") {
         var diameter = h;
         var shell = document.createElement("div");
@@ -7620,6 +7717,17 @@
         void slot.offsetWidth;
         slot.classList.add("celebrate-jump");
       });
+      /* Clear the inline transitions once the happy-position animation has
+         settled, so they cannot leak into the next round's setupBots (which
+         would re-animate pod/fill positions during a question change).
+         resetScene also clears these defensively; this is the matched
+         cleanup at the source. 480ms = the 400ms transition + a small
+         safety buffer. */
+      setTimeout(function () {
+        [els.leftPod, els.rightPod, els.leftFill, els.rightFill].forEach(function (el) {
+          if (el) { el.style.transition = ""; }
+        });
+      }, 480);
     }
 
     /* ── fly the two half-pieces from a result/machine center to bot charging slots ── */
@@ -8108,6 +8216,32 @@
       var img = new Image();
       img.src = ASSETS + src;
     });
+
+    /* Preload every round's pod, bot and block PNGs at startup. Without
+       this, the first time the player enters a new round the IMG/SVG-image
+       elements start loading from network/disk on the same paint that
+       reveals them, so the new scene can show stale-sized or empty image
+       boxes for a frame before snapping to the loaded asset. Preloading
+       guarantees these PNGs are in the browser's cache before any
+       question transition uses them. The decode() promise primes the
+       decoded bitmap too, so first-paint after src= is hot. Safe: pure
+       cache warming, no DOM or visual change. */
+    (function preloadRoundAssets() {
+      if (typeof ROUNDS === "undefined" || !ROUNDS) { return; }
+      var seen = {};
+      ROUNDS.forEach(function (r) {
+        if (!r) { return; }
+        [r.sadBot, r.happyBot, r.pod, r.podLeft, r.podRight, r.blockSrc].forEach(function (src) {
+          if (!src || seen[src]) { return; }
+          seen[src] = true;
+          var img = new Image();
+          img.src = src;
+          if (typeof img.decode === "function") {
+            img.decode().catch(function () { /* not fatal */ });
+          }
+        });
+      });
+    })();
 
     renderStep();
   </script>
