@@ -1075,22 +1075,7 @@
     }
 
     .target-fill.charged-focus::before {
-      content: "";
-      position: absolute;
-      inset: -8px;
-      border-radius: var(--slot-focus-radius, 9px);
-      clip-path: var(--slot-focus-clip, inset(0 round 9px));
-      background:
-        radial-gradient(ellipse at 50% 50%,
-          rgba(91, 255, 118, .36) 0%,
-          rgba(91, 255, 118, .16) 48%,
-          transparent 78%);
-      filter: blur(10px);
-      z-index: 0;
-      border: 0;
-      box-shadow: none;
-      animation: chargedSocketPulse 1.15s ease-in-out infinite;
-      pointer-events: none;
+      display: none;
     }
 
     .pod-img.charged-focus {
@@ -4245,11 +4230,11 @@
         botWLaser: 150,
         readyPodTop: 167,
         podHeadContactDrop: 8,
-        slotSize: { width: 70, height: 70 },
-        slotOffset: { left: 3, right: 3 },
+        slotSize: { width: 70, height: 74 },
+        slotOffset: { left: 2, right: 2 },
         slotOverflow: "hidden",
         visualFitScale: 1.0,
-        fitPieceScale: { x: 1, y: 1.03 },
+        fitPieceScale: { x: 1, y: 1.06 },
         focusFrameSize: { wRatio: 0.55, hRatio: 0.56 },
         focusFrameOffset: { top: 3 },
         hollowFocusClip: "inset(1% 22% 76% 22% round 9px)",
@@ -4286,10 +4271,11 @@
         botWLaser: 150,
         readyPodTop: 122,
         podHeadContactDrop: 8,
-        slotSize: { width: 74, height: 166 },
-        slotOffset: { left: 6, right: 6 },
+        slotSize: { width: 74, height: 170 },
+        slotOffset: { left: 3, right: 3 },
         slotOverflow: "hidden",
         visualFitScale: 1,
+        fitPieceScale: { x: 1.05, y: 1.02 },
         focusFrameSize: { wRatio: 0.56, hRatio: 1.30 },
         previewFitScale: 0.92,
         happyBotAspect: 838 / 620,
@@ -4326,9 +4312,10 @@
         readyPodTop: 184,
         podHeadContactDrop: 8,
         podXOffset: { left: -5, right: -5 },
-        slotSize: { width: 162, height: 72 },
-        slotOffset: { left: 2, right: 2 },
+        slotSize: { width: 162, height: 71 },
+        slotOffset: { left: 3, right: 3 },
         visualFitScale: 1.0,
+        fitPieceScale: { x: 1, y: 1.03 },
         focusFrameSize: { wRatio: 0.97, hRatio: 0.46 },
         focusFrameOffset: { top: 2 },
         previewFitScale: 0.92,
@@ -4362,6 +4349,7 @@
         slotSize: { width: 166, height: 68 },
         slotOffset: { left: 7, right: 7 },
         visualFitScale: 0.95,
+        fitPieceScale: { x: 1.04, y: 1.1 },
         focusFrameSize: { wRatio: 0.98, hRatio: 0.30 },
         focusFrameOffset: { top: 15 },
         hollowFocusClip: "inset(6% 1% 73% 1% round 10px)",
@@ -4428,8 +4416,8 @@
         connectorOverlapBoost: 28,
         readyConnectorOverlapBoost: 48,
         readyPodTop: 258,
-        slotSize: { width: 96, height: 48 },
-        slotOffset: { left: 21, right: 23 },
+        slotSize: { width: 100, height: 49 },
+        slotOffset: { left: 19, right: 22 },
         visualFitScale: 1.05,
         fitPieceScale: { x: 1.04, y: 1.15 },
         happyConnectorNudge: 22,
@@ -4473,8 +4461,8 @@
         readyConnectorOverlapBoost: 46,
         laserConnectorOverlapBoost: 14,
         readyPodTop: 119,
-        slotSize: { width: 80, height: 130 },
-        slotOffset: { left: 28, right: 28 },
+        slotSize: { width: 80, height: 140 },
+        slotOffset: { left: 21, right: 21 },
         slotXOffset: { left: -10, right: 10 },
         slotFocus: {
           left: "ellipse(100% 50% at 100% 50%)",
@@ -4539,6 +4527,7 @@
         fitSettleDelay: 1450,
         happyConnectorNudge: 9,
         happyPodXOffset: { left: 12, right: 17 },
+        happyBotXOffset: { left: -6, right: -7 },
         botWIntro: 220,
         botWReady: 235,
         botWLaser: 180,
@@ -4808,6 +4797,8 @@
       els.nextButton.classList.remove("is-success");
       els.nextButton.querySelector("img").src = "assets/nextButton.png";
       later(function () {
+        els.nextButton.classList.remove("is-success");
+        els.nextButton.querySelector("img").src = "assets/nextButton.png";
         show(els.nextButton);
       }, TIMING.TEACH_NEXT_BUTTON);
     }
@@ -4841,6 +4832,8 @@
       hide(els.machineStage);
       hide(els.tryAgain);
       hide(els.nextButton);
+      els.nextButton.classList.remove("is-success");
+      els.nextButton.querySelector("img").src = "assets/nextButton.png";
       hide(els.completeStage);
       state.nextAction = null;
       els.shapeStage.innerHTML = "";
@@ -7141,23 +7134,21 @@
        Semicircle hollow-fit system - last two flows (circle-diagonal rounds).
 
        Each diagonal-circle pod PNG is a half-disc with an OPAQUE dark hollow
-       and a light rim. The orange fill is drawn ON TOP of that dark interior
-       and sized to exactly cover it, so only the rim stays visible. The
-       half-disc shape itself is the clip; the orange is intentionally
-       overscaled and pushed past the flat edge so its excess tucks UNDER the
-       rim and is cleanly masked away. One function drives both rounds and both
-       sides - there are no per-side eyeballed offsets.
+       and a light rim. The orange fill is drawn on top of that dark interior,
+       then the original pod art is masked back over it so the visible stroke is
+       still the pod's own artwork. A couple of asymmetric assets need a slightly
+       larger fill/cut under that rim so no dark hollow sliver can peek through.
 
        Geometry was measured from the hollow PNGs (fractions of pod image width):
          fx,fy - disc centre        fR - disc radius
          diamAng - flat-edge angle  keepDir - direction into the filled half  */
     var DIAG_HOLLOW_GEOMETRY = {
-      "45angleCircleHollow.png":     { fx: 0.6132, fy: 0.4026, fR: 0.3670, diamAng: 42.5,   keepDir: 135.37 },
+      "45angleCircleHollow.png":     { fx: 0.6132, fy: 0.4026, fR: 0.3670, diamAng: 42.5,   keepDir: 135.37, fillScale: 1.0, fillFlatPad: 0.125, shellCutScale: 1.075, shellCutFlatPad: 0.115 },
       "135anglecutCircleHollow.png": { fx: 0.3861, fy: 0.6050, fR: 0.3586, diamAng: 44.40,  keepDir: -43.08 },
       "CircleLastFlowHollow1.png":   { fx: 0.6308, fy: 0.6373, fR: 0.3732, diamAng: 134.50, keepDir: -135.26 },
-      "CircleLastFlowHollow2.png":   { fx: 0.4199, fy: 0.3817, fR: 0.3501, diamAng: 136.5,  keepDir: 45.21 }
+      "CircleLastFlowHollow2.png":   { fx: 0.4199, fy: 0.3817, fR: 0.3501, diamAng: 136.5,  keepDir: 45.21, fillScale: 1.085, fillFlatPad: 0.125, fillAngleOffset: -0.75, shellCutScale: 1.075, shellCutFlatPad: 0.115 }
     };
-    var DIAG_FILL_OVERSCALE = 1.01; // covers the hollow; original pod art masks the visible stroke
+    var DIAG_FILL_OVERSCALE = 1.01; // default fill size; selected pod assets override this just under the rim
     var DIAG_FILL_FLATPAD   = 0.095; // small overlap across the diagonal hollow, hidden by pod art
     var DIAG_POD_SHELL_CUT_SCALE = 1.045;
     var DIAG_POD_SHELL_CUT_FLATPAD = 0.075;
@@ -7238,10 +7229,10 @@
       hollowCut.setAttribute("d", semicircleSegmentPath(
         cx,
         cy,
-        geo.fR * podW * DIAG_POD_SHELL_CUT_SCALE,
+        geo.fR * podW * (geo.shellCutScale || DIAG_POD_SHELL_CUT_SCALE),
         geo.diamAng,
         geo.keepDir,
-        DIAG_POD_SHELL_CUT_FLATPAD
+        geo.shellCutFlatPad || DIAG_POD_SHELL_CUT_FLATPAD
       ));
       hollowCut.setAttribute("fill", "black");
       mask.appendChild(hollowCut);
@@ -7270,8 +7261,12 @@
       if (!geo) { return null; }
       var cx = geo.fx * podW;
       var cy = geo.fy * podW;
-      var rr = geo.fR * podW * DIAG_FILL_OVERSCALE;
-      var d = semicircleSegmentPath(cx, cy, rr, geo.diamAng, geo.keepDir, DIAG_FILL_FLATPAD);
+      var fillScale = geo.fillScale || DIAG_FILL_OVERSCALE;
+      var fillFlatPad = geo.fillFlatPad || DIAG_FILL_FLATPAD;
+      var fillAngle = geo.diamAng + (geo.fillAngleOffset || 0);
+      var fillKeepDir = geo.keepDir + (geo.fillAngleOffset || 0);
+      var rr = geo.fR * podW * fillScale;
+      var d = semicircleSegmentPath(cx, cy, rr, fillAngle, fillKeepDir, fillFlatPad);
       var outerD = semicircleSegmentPath(
         cx,
         cy,
@@ -7305,6 +7300,28 @@
       outerClip.appendChild(outerPath);
       defs.appendChild(outerClip);
       svg.appendChild(defs);
+
+      /* Fill the cut hole (where the pod art is masked out) with the rim
+         colour so the gap between the orange and the rim's inner edge reads
+         as part of the stroke instead of leaking the game background.
+         Only applied when the pod shell is included (i.e. the piece is
+         settled in the hollow) — the flying piece during the cut animation
+         must not carry this halo. */
+      if (includePodShell) {
+        var cutFillD = semicircleSegmentPath(
+          cx,
+          cy,
+          geo.fR * podW * (geo.shellCutScale || DIAG_POD_SHELL_CUT_SCALE),
+          geo.diamAng,
+          geo.keepDir,
+          geo.shellCutFlatPad || DIAG_POD_SHELL_CUT_FLATPAD
+        );
+        var cutFill = document.createElementNS(ns, "path");
+        cutFill.setAttribute("d", cutFillD);
+        cutFill.setAttribute("fill", "#e8e8e8");
+        cutFill.style.pointerEvents = "none";
+        svg.appendChild(cutFill);
+      }
 
       var blockSize = rr * 2.4; // orange block comfortably covers the clip region
       var image = document.createElementNS(ns, "image");
@@ -7983,6 +8000,8 @@
     function handleNextButton() {
       sndTap();
       hide(els.nextButton);
+      els.nextButton.classList.remove("is-success");
+      els.nextButton.querySelector("img").src = "assets/nextButton.png";
       var action = state.nextAction;
       state.nextAction = null;
       if (typeof action === "function") {
