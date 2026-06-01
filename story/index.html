@@ -1563,10 +1563,48 @@
       gap: 50px;
       box-sizing: border-box;
       position: relative;
-      background: url('assets/TeachingScreen.png') center/100% 100% no-repeat;
       border: none;
-      box-shadow: none;
       border-radius: 34px;
+      /* Neon panel drawn in pure CSS (vector) so the border stays razor-sharp
+         at every viewport scale and DPI. It previously used a 2542x1522
+         TeachingScreen.png stretched to 1100x560, then upscaled again by the
+         #game transform — a double resample that softened the thin neon line
+         and read as "not smooth" on load. Vector has no resample, no decode. */
+      background:
+        radial-gradient(120% 120% at 50% 42%, rgba(60, 140, 210, .45) 0%, rgba(20, 70, 125, 0) 60%),
+        repeating-linear-gradient(0deg, rgba(150, 200, 255, .09) 0 1px, transparent 1px 23px),
+        repeating-linear-gradient(90deg, rgba(150, 200, 255, .09) 0 1px, transparent 1px 23px),
+        linear-gradient(160deg, #1a558f 0%, #133f72 55%, #102f5c 100%);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, .9) inset,
+        0 0 7px 2px rgba(120, 225, 255, .85) inset,
+        0 0 22px 4px rgba(70, 150, 255, .30) inset;
+    }
+
+    /* Gradient neon ring (cyan → magenta) tracing the rounded border. */
+    .teach-frame::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 34px;
+      pointer-events: none;
+      padding: 3px;
+      background: linear-gradient(135deg, #7fe9ff 0%, #bcdcff 32%, #cbb0ff 62%, #ef84ff 100%);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      filter: drop-shadow(0 0 5px rgba(120, 220, 255, .9)) drop-shadow(0 0 5px rgba(225, 130, 255, .55));
+    }
+
+    /* Soft outer halo around the panel. */
+    .teach-frame::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 34px;
+      pointer-events: none;
+      box-shadow: 0 0 26px 4px rgba(70, 150, 255, .45), 0 0 50px 8px rgba(60, 120, 230, .22);
     }
 
     .teach-frame-left {
@@ -4420,12 +4458,12 @@
         pod: ASSETS + "SemiCircleHollowleft.png",
         podLeft: ASSETS + "SemiCircleHollowleft.png",
         podRight: ASSETS + "SemiCircleHollowright.png",
-        /* LEFT pod asset has a cream "neck" taper (asset y≈272–289 of 1098)
-           between the dome's arc tip and the cable. The orange piece's narrow
-           apex can't cover that taper, so it reads as an asymmetric thick rim
-           next to the right pod. Mask hides this band so the cable visually
-           emerges from the orange's apex. */
-        podMaskBand: { left: { start: 0.247, end: 0.264 } },
+        /* No pod mask band on the LEFT pod: an earlier mask blanked a
+           horizontal strip (asset y≈272–289) to hide a cream neck taper, but
+           that punched a transparent gap between the bowl and its cable — the
+           cable read as "cut" off from the pod. The taper it was hiding is
+           negligible once the orange piece is seated, so dropping the mask
+           keeps the cable visually attached to the bowl. */
         podW: 132,
         botAspect: 893 / 896,
         podAspectLeft: 1098 / 520,
@@ -4443,7 +4481,12 @@
            exactly inside the rim. */
         visualFitScale: 1.0,
         fitPieceScale: { x: 1.0, y: 1.0 },
-        happyConnectorNudge: 22,
+        /* Charged-state vertical nudge for the pod/cable. At 22 the charger
+           plug was pushed ~20px down into the bot's head and hidden behind it.
+           At 2 the plug comes to rest right on the crown — the connector reads
+           as seated on top of the head, with its base tucking naturally behind
+           the head outline (pod stays at its normal z-order, no overlay). */
+        happyConnectorNudge: 2,
         slotFocus: {
           left: "ellipse(50% 100% at 50% 0)",
           right: "ellipse(50% 100% at 50% 100%)",
@@ -6713,8 +6756,22 @@
       state.tutCutVOPlayed = false;
       state.locked = false;
       state.angle = TUTORIAL_START_ANGLE;
+      /* Decode-gate the tutorial background swap. resetScene already left
+         sceneBg at display:none with src=Mainbg.png; if we flip src to
+         BgForTutorial and show it before the new bitmap is decoded, the
+         element repaints its last-decoded frame (Mainbg) for a frame — the
+         reported "wrong background for a sec" flash. Keep it hidden, swap the
+         src, then reveal only once the new bitmap is ready. The asset is
+         warm-cached at startup, so decode() resolves on the next microtask
+         and the reveal is effectively instant with no Mainbg frame. */
+      els.sceneBg.style.display = "none";
       els.sceneBg.src = ASSETS + "BgForTutorial.png";
-      els.sceneBg.style.display = "block";
+      var revealTutorialBg = function () { els.sceneBg.style.display = "block"; };
+      if (typeof els.sceneBg.decode === "function") {
+        els.sceneBg.decode().then(revealTutorialBg, revealTutorialBg);
+      } else {
+        revealTutorialBg();
+      }
       setupBots("layout-laser");
       setInstruction("");
       /* LaserMachine.png as tutorial overlay; LaserMachineWithoutLines stays as base */
@@ -8197,10 +8254,49 @@
     els.nextButton.addEventListener("click", handleNextButton);
     els.finishButton.addEventListener("click", function () { sndTap(); finishGame(); });
 
-    ["LetsPlayBG.png", "GameStartScreen.png"].forEach(function (src) {
+    /* ── Critical-asset warm cache ──────────────────────────────────────────
+       Every screen background and UI sprite is preloaded AND decoded at
+       startup, with a hard reference kept in _assetCache so the browser can't
+       evict the decoded bitmap before it's used. Two concrete glitches this
+       removes:
+         • Tutorial background flash — `setupTutorial` swaps `sceneBg.src` to
+           BgForTutorial.png; if it isn't decoded the previously-decoded
+           Mainbg.png paints for a frame. Pre-decoding makes the swap hot.
+       Safe: pure cache warming, no DOM/visual/logic change. */
+    var _assetCache = {};
+    function preloadAsset(src) {
+      if (!src || _assetCache[src]) { return _assetCache[src] && _assetCache[src]._p; }
       var img = new Image();
-      img.src = ASSETS + src;
-    });
+      _assetCache[src] = img;
+      img.src = src;
+      var p;
+      if (typeof img.decode === "function") {
+        p = img.decode().catch(function () { /* not fatal — still cached */ });
+      } else {
+        p = new Promise(function (resolve) {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      }
+      img._p = p;
+      return p;
+    }
+    (function preloadCriticalAssets() {
+      [
+        "Mainbg.png", "BgForTutorial.png",
+        "GameStartScreen.png", "LetsPlayBG.png",
+        "instructionPannel.png", "Ira.png",
+        "LaserMachineWithoutLines.png", "LaserMachine.svg", "Beam.svg",
+        "Laser.png", "laserlight.png",
+        "LeftButton.png", "RightButton.png", "CutButton.png",
+        "LeftButtonClicked.png", "RightButtonClicked.png", "ClickedCutButton.png",
+        "TappedCutButton.png",
+        "InstruictionTutorialLeft.png", "InstructionTutorialRight.png",
+        "InstructionTutorialCutButton.png",
+        "nextButton.png", "NextButton2.png", "TryAgainButton.png",
+        "LetsGoButton.png", "PlayButton.png"
+      ].forEach(function (name) { preloadAsset(ASSETS + name); });
+    })();
 
     /* Preload every round's pod, bot and block PNGs at startup. Without
        this, the first time the player enters a new round the IMG/SVG-image
@@ -8219,11 +8315,7 @@
         [r.sadBot, r.happyBot, r.pod, r.podLeft, r.podRight, r.blockSrc].forEach(function (src) {
           if (!src || seen[src]) { return; }
           seen[src] = true;
-          var img = new Image();
-          img.src = src;
-          if (typeof img.decode === "function") {
-            img.decode().catch(function () { /* not fatal */ });
-          }
+          preloadAsset(src);
         });
       });
     })();
