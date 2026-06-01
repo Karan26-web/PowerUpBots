@@ -7796,19 +7796,27 @@
             setTimeout(function () {
               requestAnimationFrame(function () {
                 el.style.transform = "translate(" + tx + "px," + ty + "px) scale(1)";
-                /* Activate the socket rim only when motion begins — the
-                   idle state shows no rim. Same frame as the fly transform
-                   so the rim fades in across the flight. */
-                if (rimEl) { rimEl.style.opacity = "0.92"; }
+                /* The white rim stays OFF for the whole flight — the piece
+                   travels as a plain orange semicircle. It only lights up
+                   once the piece reaches the hollow (transitionend below). */
               });
             }, delay);
             /* Once the fly transition settles, re-lock the transform to whole
                pixels so the rasterised rim cannot drift by a subpixel as the
-               browser composits the final frame. */
+               browser composits the final frame, AND light the socket rim now
+               that the piece has arrived in the hollow. The quick .3s fade
+               completes well before the in-slot hand-off (fitSettleDelay
+               1450ms vs flight 900ms), so the rim is already at 0.92 when the
+               in-slot overlay snaps to the same level — no flash, no rim
+               visible mid-flight. */
             el.addEventListener("transitionend", function lockToInteger(e) {
               if (e.propertyName && e.propertyName !== "transform") { return; }
               el.removeEventListener("transitionend", lockToInteger);
               el.style.transform = "translate(" + Math.round(tx) + "px," + Math.round(ty) + "px) scale(1)";
+              if (rimEl) {
+                rimEl.style.transition = "opacity .3s cubic-bezier(.4,0,.2,1)";
+                rimEl.style.opacity = "0.92";
+              }
             });
           })(dFly, built.rim, hc.x - center.x, hc.y - center.y, slotIdx * 100);
           return;
@@ -8389,6 +8397,6 @@
       </filter>
     </defs>
   </svg>
-
+<script src="debug-jump.js"></script>
 </body>
 </html>
