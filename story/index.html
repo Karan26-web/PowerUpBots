@@ -343,17 +343,17 @@
       opacity: 1;
     }
 
-    /* Charger plug seated on each bot head when the circuit energises (charging
-       screen only). Built entirely in CSS/SVG — no image asset. Mirrors the
-       reference art: blue top knob, white domed body with a cyan lightning
-       outline, and a blue visor panel housing two glowing eyes. Appended into
-       each .bot-slot by attachHeadPlugs(); removed in resetScene(). */
+    /* Charging connector clamped onto each bot head when the circuit energises
+       (charging screen only). Built entirely in CSS/SVG — no image asset. A
+       compact white cap with a blue top knob (where the wire meets) and a cyan
+       lightning outline — no face/visor, so it reads as a plug on the crown.
+       Appended into each .bot-slot by seatHeadPlug(); removed in resetScene(). */
     .head-plug {
       position: absolute;
       left: 50%;
-      bottom: 198px;
+      bottom: 216px;
       width: 96px;
-      height: 86px;
+      height: 64px;
       transform: translateX(-50%) scale(.44);
       transform-origin: 50% 100%;
       opacity: 0;
@@ -401,11 +401,11 @@
     .head-plug .hp-body {
       position: absolute;
       left: 0;
-      top: 13px;
+      top: 12px;
       width: 100%;
       height: 52px;
-      border-radius: 26px 26px 15px 15px;
-      background: linear-gradient(180deg, #ffffff 0%, #f2faff 55%, #e1eff9 100%);
+      border-radius: 30px 30px 24px 24px;
+      background: linear-gradient(180deg, #ffffff 0%, #f2faff 55%, #e6f2fb 100%);
       box-shadow:
         inset 0 3px 4px rgba(255, 255, 255, .92),
         inset 0 -5px 8px rgba(150, 190, 220, .38);
@@ -415,60 +415,11 @@
     .head-plug .hp-bolt {
       position: absolute;
       left: 50%;
-      top: 21px;
+      top: 24px;
       width: 21px;
-      height: 30px;
+      height: 28px;
       transform: translateX(-50%);
       z-index: 3;
-    }
-
-    .head-plug .hp-visor {
-      position: absolute;
-      left: 50%;
-      bottom: 0;
-      width: 80%;
-      height: 33px;
-      transform: translateX(-50%);
-      border-radius: 15px;
-      background: linear-gradient(180deg, #62d6f7 0%, #34c0f2 100%);
-      box-shadow:
-        inset 0 2px 3px rgba(255, 255, 255, .5),
-        inset 0 -3px 6px rgba(8, 92, 142, .42),
-        0 2px 4px rgba(20, 80, 130, .3);
-      z-index: 4;
-    }
-
-    .head-plug .hp-screen {
-      position: absolute;
-      inset: 5px 7px;
-      border-radius: 10px;
-      background: linear-gradient(180deg, #cdf3ff 0%, #84ddf6 100%);
-      box-shadow: inset 0 2px 4px rgba(8, 92, 142, .32);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 7px;
-    }
-
-    .head-plug .hp-eye {
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      background: radial-gradient(circle, #ffffff 0 38%, #dff8ff 72%, rgba(223, 248, 255, 0) 100%);
-      box-shadow: 0 0 6px 2px rgba(255, 255, 255, .9);
-      animation: headPlugEye 1.6s ease-in-out infinite;
-    }
-
-    @keyframes headPlugEye {
-
-      0%,
-      100% {
-        opacity: .85;
-      }
-
-      50% {
-        opacity: 1;
-      }
     }
 
     @keyframes podGlow {
@@ -3990,7 +3941,7 @@
       SHORT_SCREEN: 3800,
       LONG_SCREEN: 5400,
       PREPLAY_SCREEN: 4000,
-      PLUG_SCREEN: 4400,   /* let the wire-draw + energy beads (finish ~3.8s) complete with a beat */
+      PLUG_SCREEN: 5200,   /* let the wire-draw + plug connect + energy beads (finish ~3.8s) settle with a beat */
       READY_TEXT_SCREEN: 3300,
       MOVE_SCREEN: 1500,
       HALVES_DEMO_SCREEN: 12500,
@@ -6135,8 +6086,26 @@
       return wrap;
     }
 
-    /* Correct grid cut = one vertical + one horizontal centre cut → 4 equal squares. */
-    function gridCutIsEqual(a1, a2) {
+    /* FOUR EQUAL PARTS: the two centre cuts are perpendicular, so each of the
+       four sectors is congruent. Two valid pairings:
+         • vertical + horizontal → 4 equal rectangles/squares (any block)
+         • both diagonals        → 4 equal triangles (square block only; on a
+                                    non-square the diagonals give 2 unequal pairs)
+       This is the geometric truth used for the teaching label — distinct from
+       whether the parts fit the square chargers (see gridCutFitsChargers). */
+    function gridCutIsEqualParts(a1, a2) {
+      var o1 = cutOrientation(a1), o2 = cutOrientation(a2);
+      var axisPair = (o1 === "vertical" && o2 === "horizontal") || (o1 === "horizontal" && o2 === "vertical");
+      var diagPair = (o1 === "backslash" && o2 === "slash") || (o1 === "slash" && o2 === "backslash");
+      var r = currentRound();
+      var isSquare = r && Math.abs((r.blockW || 0) - (r.blockH || 0)) < 1;
+      return axisPair || (diagPair && isSquare);
+    }
+
+    /* The parts only seat in the SQUARE charger hollows when they are squares —
+       i.e. one vertical + one horizontal cut. Equal triangles are equal, but
+       they don't fit the square sockets, so this is the win condition. */
+    function gridCutFitsChargers(a1, a2) {
       var o1 = cutOrientation(a1), o2 = cutOrientation(a2);
       return (o1 === "vertical" && o2 === "horizontal") || (o1 === "horizontal" && o2 === "vertical");
     }
@@ -6788,11 +6757,20 @@
       var pad = gap + 14;
       var lblPad = 70;   /* horizontal room for the side "Quater" labels */
       var geos = gridSectorPieces(w, h, a1, a2);
+      /* Both-diagonals cut → 4 triangles fanning out from the centre. Their
+         labels go in a diamond (above/below/left/right) instead of the square
+         grid's left/right columns, where the top & bottom triangles (both at
+         centroid.x ≈ w/2) would otherwise stack on one side. */
+      var o1 = cutOrientation(a1), o2 = cutOrientation(a2);
+      var diagonalCut = (o1 === "backslash" || o1 === "slash") && (o2 === "backslash" || o2 === "slash");
       var box = document.createElement("div");
       box.className = "teach-halves-box";
+      /* The diagonal X-cut places labels above/below the block, so it needs
+         extra vertical room; the square grid keeps its tight inset. */
+      var vPad = diagonalCut ? 70 : pad;
       var container = document.createElement("div");
       container.style.cssText = "position:relative;width:" + (w + pad * 2 + lblPad * 2) +
-        "px;height:" + (h + pad * 2) + "px;";
+        "px;height:" + (h + vPad * 2) + "px;";
 
       var ox = pad + lblPad;   /* piece origin x inside the padded container */
       var pieces = [], labels = [];
@@ -6803,7 +6781,7 @@
         p.style.transition = "transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)";
         p.style.position = "absolute";
         p.style.left = (ox + geo.minX) + "px";
-        p.style.top = (pad + geo.minY) + "px";
+        p.style.top = (vPad + geo.minY) + "px";
         var cx = geo.centroid.x - w / 2, cy = geo.centroid.y - h / 2;
         var len = Math.max(1, Math.sqrt(cx * cx + cy * cy));
         p.dataset.gapX = ((cx / len) * gap).toFixed(1);
@@ -6812,19 +6790,38 @@
         pieces.push(p);
 
         if (correct) {
-          /* Anchor each label by its INNER edge just outside the piece so the
-             wide "Quater" text never overlaps the block: left-column labels are
-             right-aligned to the left of the piece, right-column labels are
-             left-aligned to its right. */
-          var leftCol = geo.centroid.x < w / 2;
-          var anchorX = leftCol ? "-100%" : "0%";
-          var lx = leftCol ? (ox + geo.minX - 16) : (ox + geo.minX + geo.width + 16);
+          var anchorX, lx, ly;
+          if (diagonalCut) {
+            /* Place each triangle's label just outside the block on the side it
+               points toward: left/right triangles beside it, top/bottom above
+               and below — so the four "Quarter" labels never collide. */
+            var dx = geo.centroid.x - w / 2, dy = geo.centroid.y - h / 2;
+            if (Math.abs(dx) >= Math.abs(dy)) {
+              anchorX = dx >= 0 ? "0%" : "-100%";
+              lx = dx >= 0 ? (ox + w + 26) : (ox - 26);
+              ly = vPad + h / 2;
+            } else {
+              anchorX = "-50%";
+              lx = ox + w / 2;
+              /* clear the 13px outward nudge + a comfortable gap above/below */
+              ly = dy >= 0 ? (vPad + h + 47) : (vPad - 47);
+            }
+          } else {
+            /* Square grid: anchor each label by its INNER edge just outside the
+               piece so the wide "Quater" text never overlaps the block —
+               left-column labels right-aligned to the piece's left, right-column
+               labels left-aligned to its right. */
+            var leftCol = geo.centroid.x < w / 2;
+            anchorX = leftCol ? "-100%" : "0%";
+            lx = leftCol ? (ox + geo.minX - 16) : (ox + geo.minX + geo.width + 16);
+            ly = vPad + geo.centroid.y;
+          }
           var lbl = document.createElement("span");
           lbl.className = "t-half-lbl";
           lbl.textContent = "Quarter";
           lbl.dataset.anchorX = anchorX;
           lbl.style.cssText = "position:absolute;white-space:nowrap;left:" + lx + "px;top:" +
-            (pad + geo.centroid.y) + "px;transform:translate(" + anchorX + ",-50%) translateY(10px);" +
+            ly + "px;transform:translate(" + anchorX + ",-50%) translateY(10px);" +
             "opacity:0;transition:opacity .5s ease,transform .5s ease;";
           container.appendChild(lbl);
           labels.push(lbl);
@@ -7161,14 +7158,14 @@
         beads.push({ motion: motion, delay: 1500 + i * 150, bot: p.bot }); /* energy travels after the wire is drawn */
       });
 
-      var DUR = 1100;   /* bead travel time (matches motion dur 1.1s) */
-
       /* Kick each bead off relative to NOW (beginElement) so the staggered
-         timing is correct no matter how long the page has been open, and seat
-         this bot's charger plug the instant its energy reaches the head. */
+         timing is correct no matter how long the page has been open. The wire
+         finishes drawing into the head at be.delay (its draw-delay + 1s draw),
+         so seat this bot's plug at that exact moment — line and plug connect to
+         the head together. */
       beads.forEach(function (be) {
         later(function () { try { be.motion.beginElement(); } catch (e) {} }, be.delay);
-        later(function () { seatHeadPlug(be.bot); }, be.delay + DUR);
+        later(function () { seatHeadPlug(be.bot); }, be.delay);
       });
 
       /* Bots glow softly once the circuit has energised. */
@@ -7189,10 +7186,7 @@
         '<svg class="hp-bolt" viewBox="0 0 22 31" aria-hidden="true">' +
           '<path d="M13 2 L5 17 L10.5 17 L9 30 L18 11 L12 11 Z" fill="none" ' +
           'stroke="#2bc3f2" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>' +
-        "</svg>" +
-        '<div class="hp-visor"><div class="hp-screen">' +
-          '<span class="hp-eye"></span><span class="hp-eye"></span>' +
-        "</div></div>";
+        "</svg>";
     }
 
     function seatHeadPlug(bot) {
@@ -8174,17 +8168,20 @@
             startIdleHint();
           }, 700);
         } else {
-          /* Second cut → block becomes the real pieces. Teach, then fit. */
+          /* Second cut → block becomes the real pieces. Teach by EQUALITY (the
+             diagonals make 4 equal triangles too), but only a square-fitting cut
+             WINS — equal triangles are honest but don't seat in the chargers. */
           angles.push(lineAngle);
           orients.push(cutOrientation(state.angle));
-          var correct = gridCutIsEqual(angles[0], angles[1]);
+          var isEqual = gridCutIsEqualParts(angles[0], angles[1]);
+          var fits = gridCutFitsChargers(angles[0], angles[1]);
           splitMachineBlockGrid(angles[0], angles[1]);
           later(function () {
-            renderTeachingGrid(angles[0], angles[1], correct, function () {
+            renderTeachingGrid(angles[0], angles[1], isEqual, function () {
               hide(els.teachStage);
               state.teachingActive = false;
               els.game.classList.remove("teaching-active");
-              gridFitFlow(correct);
+              gridFitFlow(fits ? "win" : (isEqual ? "equal-misfit" : "unequal"));
             });
           }, 950);
         }
@@ -8197,7 +8194,7 @@
        odd sectors, etc. */
     function splitMachineBlockGrid(a1, a2) {
       var r = currentRound();
-      var W = r.blockW, H = r.blockH, gap = 14;
+      var W = r.blockW, H = r.blockH, gap = 4;   /* minimal outward nudge so the pieces barely separate */
       var trans = "transform 0.45s cubic-bezier(.34,1.3,.64,1)";
       var geos = gridSectorPieces(W, H, a1, a2);
       var container = document.createElement("div");
@@ -8351,7 +8348,10 @@
       setTimeout(onDone, 1750);
     }
 
-    function gridFitFlow(success) {
+    /* status: "win" (squares fit the chargers), "equal-misfit" (4 equal parts
+       but not square — e.g. diagonal triangles), or "unequal". */
+    function gridFitFlow(status) {
+      var success = status === "win";
       var r = currentRound();
       setInstruction("");
       /* Fit screen shows the bots, so it uses the studio room (Mainbg) and is
@@ -8388,7 +8388,9 @@
           var angles = state.gridCutAngles || [0, 90];
           flySectorsToCornersVibrate(r, center, angles[0], angles[1], function () {
             hide(els.machineStage);
-            setInstruction("Oops! Cut one line straight down and one across.");
+            setInstruction(status === "equal-misfit"
+              ? "Yes, 4 equal parts! But the chargers need square parts — cut one line down and one across."
+              : "Oops! Cut one line straight down and one across.");
             later(function () {
               /* leave the wrong-shaped pieces sitting on the hollows — they
                  only clear when the player taps Try Again (in tryAgain). */
@@ -9025,6 +9027,7 @@
       var row = document.createElement("div");
       row.className = "halves-row";
       row.style.flexDirection = orientation === "vertical" ? "row" : "column";
+      row.style.gap = "3px";   /* minimal cut-line gap (override the .halves-row 18px) */
       row.appendChild(h0);
       row.appendChild(h1);
       els.machineBlock.appendChild(row);
@@ -9033,11 +9036,11 @@
           h0.style.transition = trans;
           h1.style.transition = trans;
           if (orientation === "vertical") {
-            h0.style.transform = "translateX(-25px)";
-            h1.style.transform = "translateX(25px)";
+            h0.style.transform = "translateX(-4px)";
+            h1.style.transform = "translateX(4px)";
           } else {
-            h0.style.transform = "translateY(-18px)";
-            h1.style.transform = "translateY(18px)";
+            h0.style.transform = "translateY(-4px)";
+            h1.style.transform = "translateY(4px)";
           }
         });
       });
