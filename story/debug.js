@@ -41,7 +41,7 @@
     "#instruction", "#instructionText",
     "#leftBot", "#rightBot", "#midLeftBot", "#midRightBot",
     "#leftPod", "#rightPod",
-    ".corner-slot",
+    ".corner-slot", ".head-plug",
     "#machineImg", "#machineBlock", "#laserImg", "#beamImg",
     "#blockCover", "#cutLine", "#wrongSlash",
     "#btnLeft", "#btnRight", "#btnCut", "#cutOverlay", "#handGesture",

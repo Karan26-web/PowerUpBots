@@ -343,6 +343,134 @@
       opacity: 1;
     }
 
+    /* Charger plug seated on each bot head when the circuit energises (charging
+       screen only). Built entirely in CSS/SVG — no image asset. Mirrors the
+       reference art: blue top knob, white domed body with a cyan lightning
+       outline, and a blue visor panel housing two glowing eyes. Appended into
+       each .bot-slot by attachHeadPlugs(); removed in resetScene(). */
+    .head-plug {
+      position: absolute;
+      left: 50%;
+      bottom: 198px;
+      width: 96px;
+      height: 86px;
+      transform: translateX(-50%) scale(.44);
+      transform-origin: 50% 100%;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 9;
+      filter: drop-shadow(0 5px 7px rgba(20, 70, 120, .3));
+    }
+
+    .head-plug.connected {
+      animation: headPlugConnect .5s cubic-bezier(.2, 1.25, .4, 1) both;
+    }
+
+    @keyframes headPlugConnect {
+      0% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-12px) scale(.3);
+      }
+
+      62% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(2px) scale(.5);
+      }
+
+      100% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0) scale(.44);
+      }
+    }
+
+    .head-plug .hp-knob {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 22px;
+      height: 19px;
+      transform: translateX(-50%);
+      border-radius: 7px 7px 5px 5px;
+      background: linear-gradient(180deg, #6cd9f7 0%, #34c0f2 58%, #15a4dd 100%);
+      box-shadow:
+        inset 0 2px 2px rgba(255, 255, 255, .55),
+        inset 0 -3px 4px rgba(8, 92, 142, .42);
+      z-index: 1;
+    }
+
+    .head-plug .hp-body {
+      position: absolute;
+      left: 0;
+      top: 13px;
+      width: 100%;
+      height: 52px;
+      border-radius: 26px 26px 15px 15px;
+      background: linear-gradient(180deg, #ffffff 0%, #f2faff 55%, #e1eff9 100%);
+      box-shadow:
+        inset 0 3px 4px rgba(255, 255, 255, .92),
+        inset 0 -5px 8px rgba(150, 190, 220, .38);
+      z-index: 2;
+    }
+
+    .head-plug .hp-bolt {
+      position: absolute;
+      left: 50%;
+      top: 21px;
+      width: 21px;
+      height: 30px;
+      transform: translateX(-50%);
+      z-index: 3;
+    }
+
+    .head-plug .hp-visor {
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      width: 80%;
+      height: 33px;
+      transform: translateX(-50%);
+      border-radius: 15px;
+      background: linear-gradient(180deg, #62d6f7 0%, #34c0f2 100%);
+      box-shadow:
+        inset 0 2px 3px rgba(255, 255, 255, .5),
+        inset 0 -3px 6px rgba(8, 92, 142, .42),
+        0 2px 4px rgba(20, 80, 130, .3);
+      z-index: 4;
+    }
+
+    .head-plug .hp-screen {
+      position: absolute;
+      inset: 5px 7px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #cdf3ff 0%, #84ddf6 100%);
+      box-shadow: inset 0 2px 4px rgba(8, 92, 142, .32);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 7px;
+    }
+
+    .head-plug .hp-eye {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #ffffff 0 38%, #dff8ff 72%, rgba(223, 248, 255, 0) 100%);
+      box-shadow: 0 0 6px 2px rgba(255, 255, 255, .9);
+      animation: headPlugEye 1.6s ease-in-out infinite;
+    }
+
+    @keyframes headPlugEye {
+
+      0%,
+      100% {
+        opacity: .85;
+      }
+
+      50% {
+        opacity: 1;
+      }
+    }
+
     @keyframes podGlow {
 
       0%,
@@ -2282,10 +2410,12 @@
     }
 
     #playStage.start-mode #playButton {
-      left: 495px;
+      left: 477px;
       right: auto;
-      top: 522px;
+      top: 478px;
       bottom: auto;
+      width: 349px;
+      height: 92px;
       /* Glossy gold pill: top sheen over the gold body with a soft depth shadow.
          (Glow halo + bright rim removed.) */
       background:
@@ -4834,13 +4964,16 @@
         if (!el) { return; }
         el.style.bottom = "";
         el.style.marginLeft = "";
-        el.classList.remove("happy");
-        /* Clear the grid-round entrance/celebrate styles from the bot-slots. */
+        el.classList.remove("happy", "pod-charged-glow");
+        /* Clear the grid-round entrance/celebrate styles from the bot-slots,
+           and remove any charger plug seated during the charging screen. */
         if (el.parentNode) {
           el.parentNode.style.transition = "";
           el.parentNode.style.transform = "";
           el.parentNode.style.opacity = "";
           el.parentNode.classList.remove("celebrate-jump");
+          var seatedPlug = el.parentNode.querySelector(".head-plug");
+          if (seatedPlug) { el.parentNode.removeChild(seatedPlug); }
         }
       });
       if (els.cornerSlots) {
@@ -6688,7 +6821,7 @@
           var lx = leftCol ? (ox + geo.minX - 16) : (ox + geo.minX + geo.width + 16);
           var lbl = document.createElement("span");
           lbl.className = "t-half-lbl";
-          lbl.textContent = "Quater";
+          lbl.textContent = "Quarter";
           lbl.dataset.anchorX = anchorX;
           lbl.style.cssText = "position:absolute;white-space:nowrap;left:" + lx + "px;top:" +
             (pad + geo.centroid.y) + "px;transform:translate(" + anchorX + ",-50%) translateY(10px);" +
@@ -7016,19 +7149,26 @@
         motion.setAttribute("path", d);
         motion.setAttribute("dur", "1.1s");
         motion.setAttribute("begin", "indefinite"); /* triggered in JS so it ignores the page-load timeline */
-        motion.setAttribute("repeatCount", "indefinite");
+        /* Energy travels the wire exactly once, then rests at the bot head
+           (fill=freeze) — the charge is "delivered" and the head glows. */
+        motion.setAttribute("repeatCount", "1");
+        motion.setAttribute("fill", "freeze");
         motion.setAttribute("calcMode", "spline");
         motion.setAttribute("keyTimes", "0;1");
         motion.setAttribute("keySplines", "0.22 1 0.36 1");
         bead.appendChild(motion);
         svg.appendChild(bead);
-        beads.push({ motion: motion, delay: 1500 + i * 150 }); /* energy travels after the wire is drawn */
+        beads.push({ motion: motion, delay: 1500 + i * 150, bot: p.bot }); /* energy travels after the wire is drawn */
       });
 
+      var DUR = 1100;   /* bead travel time (matches motion dur 1.1s) */
+
       /* Kick each bead off relative to NOW (beginElement) so the staggered
-         timing is correct no matter how long the page has been open. */
+         timing is correct no matter how long the page has been open, and seat
+         this bot's charger plug the instant its energy reaches the head. */
       beads.forEach(function (be) {
         later(function () { try { be.motion.beginElement(); } catch (e) {} }, be.delay);
+        later(function () { seatHeadPlug(be.bot); }, be.delay + DUR);
       });
 
       /* Bots glow softly once the circuit has energised. */
@@ -7037,6 +7177,34 @@
           if (bt) { bt.classList.add("pod-charged-glow"); }
         });
       }, 2000);
+    }
+
+    /* Charger plug (CSS/SVG only, mirrors the reference art) seated on top of a
+       bot's head the moment its wire's energy bead arrives. Appended into the
+       bot-slot so it tracks the bot; removed in resetScene() on the next screen. */
+    function headPlugMarkup() {
+      return "" +
+        '<div class="hp-knob"></div>' +
+        '<div class="hp-body"></div>' +
+        '<svg class="hp-bolt" viewBox="0 0 22 31" aria-hidden="true">' +
+          '<path d="M13 2 L5 17 L10.5 17 L9 30 L18 11 L12 11 Z" fill="none" ' +
+          'stroke="#2bc3f2" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>' +
+        "</svg>" +
+        '<div class="hp-visor"><div class="hp-screen">' +
+          '<span class="hp-eye"></span><span class="hp-eye"></span>' +
+        "</div></div>";
+    }
+
+    function seatHeadPlug(bot) {
+      if (!bot || !bot.parentNode) { return; }
+      var slot = bot.parentNode;
+      if (slot.querySelector(".head-plug")) { return; }   /* already seated */
+      var plug = document.createElement("div");
+      plug.className = "head-plug";
+      plug.innerHTML = headPlugMarkup();
+      slot.appendChild(plug);
+      /* next frame so the connect animation plays from its start state */
+      requestAnimationFrame(function () { plug.classList.add("connected"); });
     }
 
     function setupPlugReady(text) {
