@@ -1,546 +1,785 @@
 /*
- * Layout Debug Overlay for PowerUp Bots.
+ * Layout alignment overlay for PowerUp Bots.
  * ----------------------------------------------------------------------------
- * A self-contained, zero-dependency visual alignment tool. It is loaded ONLY
- * when the page URL contains `?debug=1` (see the conditional loader at the
- * bottom of index.html), so it is purely additive — removing that loader (or
- * the query flag) fully restores the original game with no overlay and no
- * interference with game input.
+ * Loads only with ?debug=1. Lets you jump to any round + screen (including the
+ * static "blocks fit into slots" view), then DRAG and RESIZE the energy block,
+ * the four quarter pieces and the four corner hollows until they sit exactly
+ * where they should — and export a Layout JSON of every moved/resized element
+ * to hand back to Claude, who bakes the values into the source.
  *
- * What it does
- *   • Instruments every named, visible asset on the CURRENT screen with:
- *       - a draggable body (move freely within the 1280×720 game space)
- *       - 8 resize handles (corners + edge midpoints, min 10×10)
- *       - a live label:  id | x, y | w × h   (game-space pixels)
- *   • A floating panel lists every instrumented asset with its live x/y/w/h,
- *     a per-asset Reset, and a "Download Layout JSON" button.
- *   • Auto re-scans when the game changes screen (FLOW step changes).
+ * Purely additive: it only reads/positions existing elements and never changes
+ * game logic. Remove the ?debug=1 script tag and the game is untouched.
  *
- * Exported JSON schema (filename: layout_[screen]_[timestamp].json):
- *   { "screen": "laser", "assets": [ { "id": "leftBot", "x": 246, "y": 360,
- *     "w": 134, "h": 160 }, ... ] }
+ * Coordinate space: #game is a 1280x720 logical surface scaled to fit via a CSS
+ * transform. Every exported x/y/w/h is in that 1280x720 game space, so the
+ * numbers map straight onto the source's hardcoded coordinates.
  *
- * The companion "apply layout JSON" pass (feeding this file back to Claude to
- * bake the coordinates into index.html) is a separate, manual step.
- *
- * Coordinate space: all x/y/w/h are in the game's native 1280×720 space, the
- * same units used by the hardcoded CSS/JS positions in index.html, so the
- * exported numbers can be applied to source directly.
+ * Sibling: debugScreens.js is the tiny always-on scene pill. This is the richer,
+ * ?debug=1-only alignment tool — move assets here, navigate scenes there.
  */
 (function () {
   "use strict";
 
-  if (window.location.search.indexOf("debug=1") === -1) { return; }
-  if (window.__layoutDebugLoaded) { return; }
-  window.__layoutDebugLoaded = true;
+  if (window.__layoutOverlayLoaded) { return; }
+  window.__layoutOverlayLoaded = true;
 
-  /* Candidate assets to instrument. Unique ids are used verbatim; class-only
-     elements (the corner slots) fall back to their distinguishing class. Only
-     the ones actually visible on the current screen get handles. */
-  var CANDIDATES = [
-    "#instruction", "#instructionText",
-    "#leftBot", "#rightBot", "#midLeftBot", "#midRightBot",
-    "#leftPod", "#rightPod",
-    ".corner-slot", ".head-plug",
-    "#machineImg", "#machineBlock", "#laserImg", "#beamImg",
-    "#blockCover", "#cutLine", "#wrongSlash",
-    "#btnLeft", "#btnRight", "#btnCut", "#cutOverlay", "#handGesture",
+  var GAME_W = 1280, GAME_H = 720;
+
+  function ready() {
+    return window.FLOW && window.state && typeof window.renderStep === "function" && window.ROUNDS;
+  }
+  function whenReady(fn) {
+    if (ready()) { fn(); return; }
+    var tries = 0;
+    var id = setInterval(function () {
+      if (ready() || ++tries > 120) { clearInterval(id); if (ready()) { fn(); } }
+    }, 50);
+  }
+
+  function gameEl() { return document.getElementById("game"); }
+
+  /* Pixels-on-screen → logical game pixels (divide out the #game scale). */
+  function scaleX() { var r = gameEl().getBoundingClientRect(); return GAME_W / r.width; }
+  function scaleY() { var r = gameEl().getBoundingClientRect(); return GAME_H / r.height; }
+
+  /* An element's rect in game space (matches the game's own gameSpaceCenter). */
+  function gameRect(el) {
+    var sr = gameEl().getBoundingClientRect();
+    var er = el.getBoundingClientRect();
+    var sx = GAME_W / sr.width, sy = GAME_H / sr.height;
+    return {
+      left: (er.left - sr.left) * sx,
+      top: (er.top - sr.top) * sy,
+      w: er.width * sx,
+      h: er.height * sy,
+      cx: (er.left - sr.left + er.width / 2) * sx,
+      cy: (er.top - sr.top + er.height / 2) * sy
+    };
+  }
+
+  function round1(n) { return Math.round(n * 10) / 10; }
+
+  /* ── selection state ──────────────────────────────────────────────────── */
+  var registry = [];     /* [{ el, id }] */
+  var selected = null;   /* an entry from registry */
+  var handles = [];      /* floating 8-point resize grips for the selection */
+  var frozen = true;     /* freeze the picked screen (cancel its auto-advance) */
+
+  var BG_IDS = { sceneBg: 1, playBg: 1, playFx: 1, completeConfetti: 1, focusDim: 1, botSpotlight: 1 };
+
+  function isBackground(el) {
+    if (BG_IDS[el.id]) { return true; }
+    if (/\bbg\b/i.test(el.className || "")) { return true; }
+    var r = gameRect(el);
+    return r.w >= GAME_W * 0.97 && r.h >= GAME_H * 0.97;   /* full-frame guard */
+  }
+
+  function idFor(el) {
+    if (el.getAttribute("data-dbg-id")) { return el.getAttribute("data-dbg-id"); }
+    if (el.classList.contains("corner-slot")) {
+      if (el.classList.contains("cs-tl")) { return "slot-tl"; }
+      if (el.classList.contains("cs-tr")) { return "slot-tr"; }
+      if (el.classList.contains("cs-bl")) { return "slot-bl"; }
+      if (el.classList.contains("cs-br")) { return "slot-br"; }
+    }
+    if (el.classList.contains("whole-block")) { return "whole-block"; }
+    if (el.id) { return el.id; }
+    return el.className.split(" ")[0] || "el";
+  }
+
+  /* Move ANY asset on ANY screen without disturbing its own layout. Rather than
+     converting to left/top (which double-applies a pre-existing CSS transform —
+     the old "scatter on re-scan" bug, and the reason most screens weren't
+     editable), we move by PREPENDING a game-space translate to the element's own
+     transform: `translate(dx,dy) <its rotate/scale>`. The leading translate is
+     applied in parent (game 1280×720) space, so rotated/scaled assets (the
+     corner hollows, etc.) move correctly and keep their orientation.
+     dx/dy live on the entry; baseXf is the element's pristine transform, captured
+     ONCE (so a re-scan or re-grab never compounds it). */
+  function pristineTransform(el) {
+    if (el.getAttribute("data-dbg-basexf") === null) {
+      var inline = (el.style.transform || "").replace(/^\s*translate\([^)]*\)\s*/, "").trim();
+      /* "none" is NOT a transform we can prepend a translate to — treat it as
+         empty, else applyXform builds "translate(..) none" (invalid CSS, dropped)
+         and the move/resize anchoring silently breaks. */
+      if (inline === "none") { inline = ""; }
+      var xf = inline;
+      if (!xf) { var cs = getComputedStyle(el).transform; xf = (cs && cs !== "none") ? cs : ""; }
+      el.setAttribute("data-dbg-basexf", xf);
+    }
+    return el.getAttribute("data-dbg-basexf");
+  }
+  function applyXform(entry) {
+    var base = (entry.baseXf && entry.baseXf !== "none") ? entry.baseXf : "";
+    var t = (entry.dx || entry.dy) ? "translate(" + round1(entry.dx) + "px," + round1(entry.dy) + "px) " : "";
+    var xf = (t + base).trim();
+    entry.el.style.transform = xf || "none";
+  }
+  /* True if the element's computed transform includes a rotation (matrix b/c
+     terms), e.g. the corner hollows. Pure scale/translate is NOT rotation. */
+  function isRotated(el) {
+    var cs = getComputedStyle(el).transform;
+    var mm = /matrix\(([^)]+)\)/.exec(cs || "");
+    if (!mm) { return false; }
+    var n = mm[1].split(",").map(parseFloat);
+    return Math.abs(n[1]) > 0.01 || Math.abs(n[2]) > 0.01;
+  }
+  /* True if the element carries a CSS scale (≠1). Such elements need BOX mode so
+     resize stays 1:1; everything else can move via a translate (no reposition). */
+  function isScaled(el) {
+    var cs = getComputedStyle(el).transform;
+    var mm = /matrix\(([^)]+)\)/.exec(cs || "");
+    if (!mm) { return false; }
+    var n = mm[1].split(",").map(parseFloat);
+    var sx = Math.hypot(n[0], n[1]), sy = Math.hypot(n[2], n[3]);
+    return Math.abs(sx - 1) > 0.01 || Math.abs(sy - 1) > 0.01;
+  }
+  function makePositionable(el, entry) {
+    /* flight pieces ship pointer-events:none so play clicks fall through — re-enable
+       hits on whatever we manage so it can be grabbed directly. */
+    el.style.pointerEvents = "auto";
+    /* BOX mode ONLY for a scaled-but-not-rotated element (the success pieces'
+       fly-in scale): flatten the scale into plain left/top/width/height so resize
+       can't double. Its left/top become #game-relative, which is correct only
+       because those pieces live directly in #game / #flightLayer.
+       Everything else — bots, corner hollows, buttons — uses XFORM mode: keep the
+       element's own layout + transform and move it by a PREPENDED game-space
+       translate. That never rewrites left/top, so elements nested in positioned
+       containers (#bots, #cornerSlots) no longer fly off-screen on Re-scan. */
+    if (isScaled(el) && !isRotated(el)) {
+      var r = gameRect(el);
+      entry.mode = "box";
+      el.style.position = "absolute";
+      el.style.right = "auto"; el.style.bottom = "auto"; el.style.margin = "0";
+      el.style.transformOrigin = "top left";
+      el.style.transform = "none";
+      el.style.left = round1(r.left) + "px";
+      el.style.top = round1(r.top) + "px";
+      el.style.width = round1(r.w) + "px";
+      el.style.height = round1(r.h) + "px";
+    } else {
+      entry.mode = "xform";
+      entry.baseXf = pristineTransform(el);
+      var m = /^\s*translate\(\s*(-?[\d.]+)px\s*,\s*(-?[\d.]+)px/.exec(el.style.transform || "");
+      entry.dx = m ? parseFloat(m[1]) : 0;
+      entry.dy = m ? parseFloat(m[2]) : 0;
+    }
+  }
+
+  function clearRegistry() {
+    registry.forEach(function (e) {
+      e.el.classList.remove("dbg-selected");
+      if (e.group && e.paths) {
+        e.paths.forEach(function (p) { p.removeEventListener("pointerdown", e.onDown); });
+      } else {
+        e.el.removeEventListener("pointerdown", e.onDown);
+      }
+    });
+    registry = [];
+    selected = null;
+    placeHandles();
+  }
+
+  /* ── charging-wire bundle (one draggable group) ───────────────────────────
+     The connectors are a full-frame, pointer-events:none SVG of game-space
+     paths. Grab any wire stroke (or arrow-nudge) to translate the WHOLE bundle;
+     the SVG itself stays click-through so it never blocks the hollows under it.
+     Exported as pod-connectors {x,y} → bake into CONNECTOR_NUDGE in index.html. */
+  function registerConnectorGroup() {
+    var svg = document.getElementById("podConnectors");
+    if (!svg || svg.offsetParent === null) { return; }
+    var paths = Array.prototype.slice.call(svg.querySelectorAll("path"));
+    if (!paths.length) { return; }
+    var entry = { el: svg, id: "pod-connectors", group: true, paths: paths, baseXf: "" };
+    var m = /^\s*translate\(\s*(-?[\d.]+)px\s*,\s*(-?[\d.]+)px/.exec(svg.style.transform || "");
+    entry.dx = m ? parseFloat(m[1]) : 0;
+    entry.dy = m ? parseFloat(m[2]) : 0;
+    entry.onDown = function (ev) { startDrag(ev, entry); };
+    paths.forEach(function (p) {
+      p.style.pointerEvents = "stroke";
+      p.style.cursor = "move";
+      p.addEventListener("pointerdown", entry.onDown);
+    });
+    registry.push(entry);
+  }
+
+  /* ── per-wire head-endpoint handles ───────────────────────────────────────
+     Each charging wire ends on a bot's head. These cyan dots sit on those four
+     head endpoints; drag one and the wire re-routes live (the game exposes
+     __connectorHeads / __setConnectorHead). Exported as connectorHeads
+     [{i,x,y}] → bake into CONNECTOR_HEADS in index.html. */
+  var connHeads = [];   /* [{ el, i, gx, gy }] gx/gy = head point in game space (path coords) */
+  var chDrag = null;
+
+  function clearConnHeads() {
+    connHeads.forEach(function (h) { if (h.el.parentNode) { h.el.parentNode.removeChild(h.el); } });
+    connHeads = [];
+  }
+  function placeConnHead(h) {
+    var nudge = (typeof window.__connectorNudge === "function") ? window.__connectorNudge() : { x: 0, y: 0 };
+    var sr = gameEl().getBoundingClientRect();
+    var px = sr.left + (h.gx + nudge.x) * (sr.width / GAME_W);
+    var py = sr.top + (h.gy + nudge.y) * (sr.height / GAME_H);
+    h.el.style.left = (px - 9) + "px";
+    h.el.style.top = (py - 9) + "px";
+  }
+  function placeConnHeads() { connHeads.forEach(placeConnHead); }
+  function registerConnectorHeads() {
+    clearConnHeads();
+    if (typeof window.__connectorHeads !== "function") { return; }
+    var svg = document.getElementById("podConnectors");
+    if (!svg || svg.offsetParent === null) { return; }
+    var heads = window.__connectorHeads();
+    if (!heads || !heads.length) { return; }
+    var names = ["TL", "TR", "BL", "BR"];
+    heads.forEach(function (hd) {
+      var el = document.createElement("div");
+      el.className = "dbg-conn-head";
+      el.textContent = names[hd.i] || hd.i;
+      el.title = "Drag this wire's head endpoint (" + (names[hd.i] || hd.i) + "→head)";
+      document.body.appendChild(el);
+      var h = { el: el, i: hd.i, gx: hd.x, gy: hd.y };
+      connHeads.push(h);
+      placeConnHead(h);
+      el.addEventListener("pointerdown", function (ev) { startConnHeadDrag(ev, h); });
+    });
+  }
+  function startConnHeadDrag(ev, h) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    chDrag = { h: h, sx: ev.clientX, sy: ev.clientY, gx: h.gx, gy: h.gy };
+    window.addEventListener("pointermove", onConnHeadMove);
+    window.addEventListener("pointerup", onConnHeadUp);
+  }
+  function onConnHeadMove(ev) {
+    if (!chDrag) { return; }
+    var h = chDrag.h;
+    h.gx = round1(chDrag.gx + (ev.clientX - chDrag.sx) * scaleX());
+    h.gy = round1(chDrag.gy + (ev.clientY - chDrag.sy) * scaleY());
+    if (typeof window.__setConnectorHead === "function") { window.__setConnectorHead(h.i, h.gx, h.gy); }
+    placeConnHead(h);
+    renderInspector();
+  }
+  function onConnHeadUp() {
+    chDrag = null;
+    window.removeEventListener("pointermove", onConnHeadMove);
+    window.removeEventListener("pointerup", onConnHeadUp);
+  }
+
+  /* Every alignable asset, across every screen. Containers (#bots, #playStage,
+     #machineStage, …) and full-bleed backgrounds are excluded; their meaningful
+     children are listed instead. Only the ones actually visible on the current
+     screen get registered (offsetParent + size + background guards below). */
+  var ASSET_SELECTORS = [
+    /* fit / cut pieces + hollows */
+    "#flightLayer .flying-half", "#cornerSlots .corner-slot", ".whole-block", ".block-demo",
+    /* instruction panel */
+    "#instruction",
+    /* play screen */
+    "#iraChar", "#iraGlowRing", "#playButton", "#labGate",
+    /* charge / connect screens */
+    ".bot-img", ".pod-img", ".head-plug",
+    /* laser / machine screen */
+    "#machineImg", "#laserImg", "#beamImg", "#machineBlock", "#cutLine",
     "#bubbleLeft", "#bubbleRight", "#bubbleCut",
-    "#playButton", "#iraChar"
+    "#btnLeft", "#btnRight", "#btnCut", "#handGesture",
+    /* teaching */
+    "#teachContent",
+    /* flow buttons */
+    "#tryAgain", "#nextButton", "#finishButton"
   ];
 
-  /* Background layers must never be draggable/resizable — they are full-bleed
-     and not positioned assets. Excluded by id/class and by a full-frame guard. */
-  var BG_IDS = { sceneBg: 1, playBg: 1, completeBg: 1 };
-  function isBackground(el) {
-    if (el.id && BG_IDS[el.id]) { return true; }
-    var cls = (el.className && el.className.baseVal !== undefined) ? el.className.baseVal : (el.className || "");
-    if (/\bbg\b/.test(String(cls))) { return true; }
-    var gr = document.getElementById("game").getBoundingClientRect();
-    var r = el.getBoundingClientRect();
-    /* covers (almost) the entire game frame → treat as a background */
-    if (r.width >= gr.width * 0.97 && r.height >= gr.height * 0.97) { return true; }
-    return false;
+  /* Visible on the CURRENT screen — .hidden is opacity:0 (not display:none), so
+     check the element and its ancestors for opacity/visibility/display, not just
+     offsetParent. Keeps the overlay from grabbing invisible off-screen assets. */
+  function isVisible(el) {
+    if (el.offsetParent === null) { return false; }
+    var n = el;
+    while (n && n !== document.body && n !== document.documentElement) {
+      var cs = getComputedStyle(n);
+      if (cs.display === "none" || cs.visibility === "hidden" || parseFloat(cs.opacity) < 0.05) { return false; }
+      n = n.parentElement;
+    }
+    return true;
   }
 
-  function ready(cb) {
-    if (window.state && window.FLOW && document.getElementById("game")) { cb(); }
-    else { setTimeout(function () { ready(cb); }, 120); }
-  }
-
-  ready(function () { boot(); });
-
-  function boot() {
-    var game = document.getElementById("game");
-
-    /* ── overlay layer (viewport-space; holds the per-asset handle boxes) ── */
-    var layer = document.createElement("div");
-    layer.id = "layoutDebugLayer";
-    layer.style.cssText =
-      "position:fixed;inset:0;z-index:2147483000;pointer-events:none;";
-    document.body.appendChild(layer);
-
-    var STYLE = document.createElement("style");
-    STYLE.textContent = [
-      "#layoutDebugLayer .ld-box{position:fixed;border:1.5px solid #38f0ff;" +
-        "box-shadow:0 0 0 1px rgba(0,0,0,.35);pointer-events:auto;cursor:move;" +
-        "box-sizing:border-box;}",
-      "#layoutDebugLayer .ld-box.ld-selected{border-color:#ffd23b;" +
-        "box-shadow:0 0 0 1px rgba(0,0,0,.45),0 0 10px rgba(255,210,59,.6);}",
-      "#layoutDebugLayer .ld-label{position:absolute;left:0;top:-19px;" +
-        "font:10px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#06121f;" +
-        "background:#38f0ff;padding:0 5px;border-radius:3px;white-space:nowrap;" +
-        "pointer-events:none;font-weight:700;}",
-      "#layoutDebugLayer .ld-box.ld-selected .ld-label{background:#ffd23b;}",
-      "#layoutDebugLayer .ld-h{position:absolute;width:10px;height:10px;" +
-        "background:#fff;border:1.5px solid #1782ff;border-radius:2px;" +
-        "box-sizing:border-box;pointer-events:auto;}",
-      "#layoutDebugLayer .ld-h.nw{left:-6px;top:-6px;cursor:nwse-resize;}",
-      "#layoutDebugLayer .ld-h.n{left:50%;top:-6px;margin-left:-5px;cursor:ns-resize;}",
-      "#layoutDebugLayer .ld-h.ne{right:-6px;top:-6px;cursor:nesw-resize;}",
-      "#layoutDebugLayer .ld-h.e{right:-6px;top:50%;margin-top:-5px;cursor:ew-resize;}",
-      "#layoutDebugLayer .ld-h.se{right:-6px;bottom:-6px;cursor:nwse-resize;}",
-      "#layoutDebugLayer .ld-h.s{left:50%;bottom:-6px;margin-left:-5px;cursor:ns-resize;}",
-      "#layoutDebugLayer .ld-h.sw{left:-6px;bottom:-6px;cursor:nesw-resize;}",
-      "#layoutDebugLayer .ld-h.w{left:-6px;top:50%;margin-top:-5px;cursor:ew-resize;}"
-    ].join("");
-    document.head.appendChild(STYLE);
-
-    /* ── floating control panel ── */
-    var panel = document.createElement("div");
-    panel.id = "layoutDebugPanel";
-    panel.style.cssText = [
-      "position:fixed", "top:8px", "right:8px", "z-index:2147483647",
-      "background:rgba(16,24,44,.94)", "color:#fff",
-      "font:11px/1.45 -apple-system,Segoe UI,Roboto,sans-serif",
-      "padding:8px 10px", "border-radius:8px", "width:268px",
-      "box-shadow:0 6px 24px rgba(0,0,0,.45)", "user-select:none",
-      "backdrop-filter:blur(6px)"
-    ].join(";");
-    document.body.appendChild(panel);
-
-    var scale = 1;
-    function refreshScale() {
-      var gr = game.getBoundingClientRect();
-      scale = gr.width / 1280 || 1;
-      return gr;
-    }
-
-    /* Game-space metrics for an element from its on-screen rect. */
-    function metrics(el) {
-      var gr = refreshScale();
-      var r = el.getBoundingClientRect();
-      return {
-        x: Math.round((r.left - gr.left) / scale),
-        y: Math.round((r.top - gr.top) / scale),
-        w: Math.round(r.width / scale),
-        h: Math.round(r.height / scale),
-        screen: r
-      };
-    }
-
-    function isVisible(el) {
-      if (!el || el.offsetParent === null && el !== document.body) {
-        /* offsetParent is null for display:none OR position:fixed; the game's
-           assets are absolutely positioned, so null here means hidden. */
-        if (!el) { return false; }
-      }
-      var r = el.getBoundingClientRect();
-      if (r.width < 2 || r.height < 2) { return false; }
-      var cs = getComputedStyle(el);
-      if (cs.display === "none" || cs.visibility === "hidden" || parseFloat(cs.opacity) < 0.02) { return false; }
-      /* must be inside the game frame */
-      var gr = game.getBoundingClientRect();
-      if (r.right < gr.left || r.left > gr.right || r.bottom < gr.top || r.top > gr.bottom) { return false; }
-      return true;
-    }
-
-    function assetIdFor(el, seenCounts) {
-      if (el.id) { return el.id; }
-      var cls = (el.className && el.className.baseVal !== undefined)
-        ? el.className.baseVal : (el.className || "");
-      /* corner slots: use the cs-* class */
-      var m = String(cls).match(/cs-(tl|tr|bl|br)/);
-      if (m) { return "corner-" + m[1]; }
-      var base = String(cls).trim().split(/\s+/)[0] || el.tagName.toLowerCase();
-      seenCounts[base] = (seenCounts[base] || 0) + 1;
-      return base + "-" + seenCounts[base];
-    }
-
-    var tracked = [];   /* { el, id, box, label, origStyle } */
-    var selected = null;
-
-    function clearTracked() {
-      tracked.forEach(function (t) { if (t.box.parentNode) { t.box.parentNode.removeChild(t.box); } });
-      tracked = [];
-      selected = null;
-    }
-
-    function currentScreenName() {
-      try {
-        var scene = window.FLOW[window.state.step] && window.FLOW[window.state.step].scene;
-        var r = window.ROUNDS && window.ROUNDS[window.state.round];
-        var rn = r ? (r.variant || r.name || r.label || ("round" + window.state.round)) : ("round" + window.state.round);
-        return (scene || "screen") + "_" + rn;
-      } catch (e) { return "screen"; }
-    }
-
-    function scan() {
-      clearTracked();
-      var seen = {};
-      var seenEls = [];
-      CANDIDATES.forEach(function (sel) {
-        var nodes = game.querySelectorAll(sel);
-        Array.prototype.forEach.call(nodes, function (el) {
-          if (seenEls.indexOf(el) !== -1) { return; }
-          if (!isVisible(el)) { return; }
-          if (isBackground(el)) { return; }   /* never instrument the main background */
-          seenEls.push(el);
-          instrument(el, assetIdFor(el, seen));
-        });
-      });
-      syncAll();
-      renderList();
-    }
-
-    function instrument(el, id) {
-      var box = document.createElement("div");
-      box.className = "ld-box";
-      var label = document.createElement("div");
-      label.className = "ld-label";
-      box.appendChild(label);
-      ["nw", "n", "ne", "e", "se", "s", "sw", "w"].forEach(function (dir) {
-        var h = document.createElement("div");
-        h.className = "ld-h " + dir;
-        h.dataset.dir = dir;
-        box.appendChild(h);
-      });
-      layer.appendChild(box);
-
-      var t = {
-        el: el, id: id, box: box, label: label,
-        origStyle: {
-          left: el.style.left, top: el.style.top,
-          width: el.style.width, height: el.style.height,
-          right: el.style.right, bottom: el.style.bottom,
-          transform: el.style.transform, position: el.style.position,
-          margin: el.style.margin, marginLeft: el.style.marginLeft
-        }
-      };
-      tracked.push(t);
-
-      box.addEventListener("pointerdown", function (e) {
-        if (e.target.classList.contains("ld-h")) { return; } /* resize handled below */
-        startDrag(t, e);
-      });
-      box.querySelectorAll(".ld-h").forEach(function (h) {
-        h.addEventListener("pointerdown", function (e) { startResize(t, h.dataset.dir, e); });
-      });
-      box.addEventListener("pointerdown", function () { select(t); });
-    }
-
-    /* Pin the element to explicit game-space left/top/width/height so dragging
-       and resizing are predictable regardless of its original CSS anchoring. */
-    function pin(t) {
-      var m = metrics(t.el);
-      t.el.style.position = "absolute";
-      t.el.style.left = m.x + "px";
-      t.el.style.top = m.y + "px";
-      t.el.style.right = "auto";
-      t.el.style.bottom = "auto";
-      t.el.style.margin = "0";
-      t.el.style.marginLeft = "0";
-      /* keep only a translate-free transform; preserve rotation-free assets */
-      t.el.style.transform = "none";
-      t.el.style.width = m.w + "px";
-      t.el.style.height = m.h + "px";
-      return m;
-    }
-
-    function startDrag(t, e) {
-      e.preventDefault();
-      select(t);
-      pin(t);
-      refreshScale();
-      var startX = e.clientX, startY = e.clientY;
-      var x0 = parseFloat(t.el.style.left), y0 = parseFloat(t.el.style.top);
-      function move(ev) {
-        var dx = (ev.clientX - startX) / scale;
-        var dy = (ev.clientY - startY) / scale;
-        t.el.style.left = Math.round(x0 + dx) + "px";
-        t.el.style.top = Math.round(y0 + dy) + "px";
-        syncOne(t); updateRow(t);
-      }
-      function up() {
-        window.removeEventListener("pointermove", move);
-        window.removeEventListener("pointerup", up);
-      }
-      window.addEventListener("pointermove", move);
-      window.addEventListener("pointerup", up);
-    }
-
-    function startResize(t, dir, e) {
-      e.preventDefault();
-      e.stopPropagation();
-      select(t);
-      pin(t);
-      refreshScale();
-      var startX = e.clientX, startY = e.clientY;
-      var x0 = parseFloat(t.el.style.left), y0 = parseFloat(t.el.style.top);
-      var w0 = parseFloat(t.el.style.width), h0 = parseFloat(t.el.style.height);
-      var west = dir.indexOf("w") !== -1, east = dir.indexOf("e") !== -1;
-      var north = dir.indexOf("n") !== -1, south = dir.indexOf("s") !== -1;
-      function move(ev) {
-        var dx = (ev.clientX - startX) / scale;
-        var dy = (ev.clientY - startY) / scale;
-        var x = x0, y = y0, w = w0, h = h0;
-        if (east) { w = Math.max(10, w0 + dx); }
-        if (west) { w = Math.max(10, w0 - dx); x = x0 + (w0 - w); }
-        if (south) { h = Math.max(10, h0 + dy); }
-        if (north) { h = Math.max(10, h0 - dy); y = y0 + (h0 - h); }
-        t.el.style.left = Math.round(x) + "px";
-        t.el.style.top = Math.round(y) + "px";
-        t.el.style.width = Math.round(w) + "px";
-        t.el.style.height = Math.round(h) + "px";
-        syncOne(t); updateRow(t);
-      }
-      function up() {
-        window.removeEventListener("pointermove", move);
-        window.removeEventListener("pointerup", up);
-      }
-      window.addEventListener("pointermove", move);
-      window.addEventListener("pointerup", up);
-    }
-
-    function select(t) {
-      selected = t;
-      tracked.forEach(function (o) { o.box.classList.toggle("ld-selected", o === t); });
-      renderList();
-    }
-
-    function syncOne(t) {
-      var r = t.el.getBoundingClientRect();
-      t.box.style.left = r.left + "px";
-      t.box.style.top = r.top + "px";
-      t.box.style.width = r.width + "px";
-      t.box.style.height = r.height + "px";
-      var m = metrics(t.el);
-      t.label.textContent = t.id + "  |  " + m.x + "," + m.y + "  |  " + m.w + "×" + m.h;
-    }
-
-    function syncAll() { tracked.forEach(syncOne); }
-
-    function resetOne(t) {
-      var o = t.origStyle;
-      t.el.style.left = o.left; t.el.style.top = o.top;
-      t.el.style.width = o.width; t.el.style.height = o.height;
-      t.el.style.right = o.right; t.el.style.bottom = o.bottom;
-      t.el.style.transform = o.transform; t.el.style.position = o.position;
-      t.el.style.margin = o.margin; t.el.style.marginLeft = o.marginLeft;
-      syncOne(t); updateRow(t);
-    }
-
-    /* ── screen / round navigation ───────────────────────────────────────────
-       Jump straight to any round + scene so every screen can be opened and
-       aligned without playing through the game. Reaches into the game globals
-       the main (non-IIFE) script exposes on window. */
-    function currentScene() {
-      try { return window.FLOW[window.state.step].scene; } catch (e) { return null; }
-    }
-    function flowScenes() {
-      var seen = {}, out = [];
-      (window.FLOW || []).forEach(function (s) {
-        if (s && s.scene && !seen[s.scene]) { seen[s.scene] = 1; out.push(s.scene); }
-      });
-      return out;
-    }
-    function findStep(scene) {
-      for (var i = 0; i < window.FLOW.length; i++) { if (window.FLOW[i].scene === scene) { return i; } }
-      return -1;
-    }
-    function quietGame() {
-      try { window.setInstruction && window.setInstruction("", { forceAudioStop: true }); } catch (e) {}
-      try { window.stopInstructionAudio && window.stopInstructionAudio(true); } catch (e) {}
-      try { window.clearTimers && window.clearTimers(); } catch (e) {}
-      try {
-        if (window._themeAudio && typeof window.THEME_BASE_VOLUME === "number") {
-          window._themeAudio.volume = window.THEME_BASE_VOLUME;
-        }
-      } catch (e) {}
-    }
-    function jumpTo(roundIdx, scene) {
-      if (!window.ROUNDS || !window.ROUNDS[roundIdx]) { return; }
-      var step = findStep(scene);
-      if (step < 0) { return; }
-      quietGame();
-      var s = window.state;
-      s.round = roundIdx; s.step = step;
-      s.locked = false; s.tutActive = false; s.teachingActive = false; s.nextAction = null;
-      try { window.renderStep(); } catch (e) { console.warn("[layout-debug] jump failed:", e); }
-      setTimeout(function () { scan(); buildNav(); }, 280);
-    }
-    function buildNav() {
-      var roundsEl = panel.querySelector("#ldRounds");
-      var scenesEl = panel.querySelector("#ldScenes");
-      if (!roundsEl || !scenesEl) { return; }
-      roundsEl.innerHTML = ""; scenesEl.innerHTML = "";
-      (window.ROUNDS || []).forEach(function (r, idx) {
-        var b = document.createElement("button");
-        b.textContent = idx;
-        b.title = (r.label || r.name) + (r.variant ? " · " + r.variant : "");
-        var cur = window.state.round === idx;
-        b.style.cssText = "background:" + (cur ? "#ffd23b;color:#06121f" : "#2a4378;color:#fff") +
-          ";border:0;border-radius:4px;cursor:pointer;font:inherit;font-weight:700;padding:3px 8px";
-        b.addEventListener("click", function () { jumpTo(idx, currentScene() || "laser"); });
-        roundsEl.appendChild(b);
-      });
-      flowScenes().forEach(function (scene) {
-        var a = document.createElement("button");
-        a.textContent = scene;
-        var cur = currentScene() === scene;
-        a.style.cssText = "background:" + (cur ? "#ffd23b;color:#06121f" : "#16284a;color:#9fe9ff") +
-          ";border:1px solid #3b5694;border-radius:4px;cursor:pointer;font:inherit;padding:2px 7px;text-decoration:underline";
-        a.addEventListener("click", function () { jumpTo(window.state.round, scene); });
-        scenesEl.appendChild(a);
-      });
-    }
-
-    /* ── panel rendering ── */
-    function buildPanel() {
-      panel.innerHTML =
-        '<div style="display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:6px">' +
-          '<span>🛠 Layout Debug</span>' +
-          '<button id="ldClose" style="background:transparent;border:0;color:#fff;cursor:pointer;font-size:14px;padding:0 4px">✕</button>' +
-        "</div>" +
-        '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">' +
-          '<span id="ldScreen" style="flex:1;color:#9fe9ff;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>' +
-          '<button id="ldRescan" style="background:#2a4378;color:#fff;border:0;border-radius:4px;cursor:pointer;font:inherit;padding:3px 7px">Re-scan</button>' +
-        "</div>" +
-        '<div style="border-top:1px solid #2a3a60;padding-top:5px">' +
-          '<div id="ldNavToggle" style="cursor:pointer;font-weight:700;color:#ffd23b;margin-bottom:5px">▴ Jump to screen</div>' +
-          '<div id="ldNav">' +
-            '<div style="color:#8fb;margin-bottom:3px">Round (shape)</div>' +
-            '<div id="ldRounds" style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:7px"></div>' +
-            '<div style="color:#8fb;margin-bottom:3px">Screen</div>' +
-            '<div id="ldScenes" style="display:flex;flex-wrap:wrap;gap:3px"></div>' +
-          "</div>" +
-        "</div>" +
-        '<div id="ldList" style="max-height:230px;overflow:auto;border-top:1px solid #2a3a60;margin-top:6px;padding-top:4px"></div>' +
-        '<button id="ldDownload" style="width:100%;margin-top:8px;background:#1f8f43;color:#fff;border:0;border-radius:5px;cursor:pointer;font:inherit;font-weight:700;padding:7px">⬇ Download Layout JSON</button>' +
-        '<div style="margin-top:6px;color:#8fa;font-size:10px;line-height:1.4">Drag to move · handles to resize · ` or Esc hides overlay</div>';
-
-      panel.querySelector("#ldClose").addEventListener("click", toggle);
-      panel.querySelector("#ldRescan").addEventListener("click", scan);
-      panel.querySelector("#ldDownload").addEventListener("click", download);
-      panel.querySelector("#ldNavToggle").addEventListener("click", function () {
-        var nav = panel.querySelector("#ldNav");
-        var open = nav.style.display === "none";
-        nav.style.display = open ? "" : "none";
-        panel.querySelector("#ldNavToggle").textContent = (open ? "▴" : "▾") + " Jump to screen";
-        if (open) { buildNav(); }
-      });
-      buildNav();
-    }
-
-    function renderList() {
-      var list = panel.querySelector("#ldList");
-      if (!list) { return; }
-      panel.querySelector("#ldScreen").textContent = currentScreenName();
-      list.innerHTML = "";
-      tracked.forEach(function (t) {
-        var m = metrics(t.el);
-        var row = document.createElement("div");
-        row.dataset.id = t.id;
-        row.style.cssText = "display:flex;align-items:center;gap:6px;padding:3px 2px;border-radius:4px;cursor:pointer;" +
-          (t === selected ? "background:#3a4d22;" : "");
-        row.innerHTML =
-          '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + t.id + "</span>" +
-          '<span class="ld-xy" style="color:#9fe9ff;font-variant-numeric:tabular-nums">' + m.x + "," + m.y + " · " + m.w + "×" + m.h + "</span>" +
-          '<button class="ld-reset" style="background:#5a2a2a;color:#fff;border:0;border-radius:3px;cursor:pointer;font:inherit;padding:2px 5px">⟲</button>';
-        row.addEventListener("click", function (e) {
-          if (e.target.classList.contains("ld-reset")) { resetOne(t); return; }
-          select(t);
-        });
-        list.appendChild(row);
-        t.row = row;
-      });
-      if (panel.querySelector("#ldNav") && panel.querySelector("#ldNav").style.display !== "none") {
-        buildNav();
-      }
-    }
-
-    function updateRow(t) {
-      if (!t.row) { return; }
-      var m = metrics(t.el);
-      var xy = t.row.querySelector(".ld-xy");
-      if (xy) { xy.textContent = m.x + "," + m.y + " · " + m.w + "×" + m.h; }
-    }
-
-    function download() {
-      var screen = currentScreenName();
-      var assets = tracked.map(function (t) {
-        var m = metrics(t.el);
-        return { id: t.id, x: m.x, y: m.y, w: m.w, h: m.h };
-      });
-      var payload = { screen: screen, assets: assets };
-      var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement("a");
-      var stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-      a.href = url;
-      a.download = "layout_" + screen + "_" + stamp + ".json";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-    }
-
-    /* ── visibility toggle ── */
-    var visible = true;
-    function toggle() {
-      visible = !visible;
-      layer.style.display = visible ? "" : "none";
-      panel.style.display = visible ? "" : "none";
-    }
-    window.addEventListener("keydown", function (e) {
-      if (e.key === "`" || e.key === "Escape") { toggle(); }
+  function scan() {
+    clearRegistry();
+    var candidates = [];
+    ASSET_SELECTORS.forEach(function (sel) {
+      Array.prototype.forEach.call(document.querySelectorAll(sel), function (el) { candidates.push(el); });
     });
 
-    /* Keep boxes glued to their elements through animations/scroll/resize. */
-    function tick() {
-      if (visible) { syncAll(); }
-      requestAnimationFrame(tick);
-    }
-
-    /* Auto re-scan when the game changes screen. */
-    var lastSig = "";
-    setInterval(function () {
-      var sig = (window.state.step) + ":" + (window.state.round) + ":" + (window.state.tutActive ? "t" : "");
-      if (sig !== lastSig) {
-        lastSig = sig;
-        setTimeout(scan, 220); /* let the new screen settle a frame */
-      }
-    }, 300);
-
-    window.addEventListener("resize", function () { refreshScale(); syncAll(); });
-
-    buildPanel();
-    scan();
-    requestAnimationFrame(tick);
-
-    /* Public API (mirrors the skills.md register/setScreen contract) so the
-       game can opt into explicit instrumentation later if desired. */
-    window.DebugOverlay = {
-      rescan: scan,
-      setScreen: function () { scan(); },
-      register: function (id, el) {
-        if (el && tracked.every(function (t) { return t.el !== el; })) {
-          instrument(el, id || assetIdFor(el, {}));
-          syncAll(); renderList();
-        }
-      }
-    };
-
-    console.log("[layout-debug] active — " + tracked.length + " asset(s) on " + currentScreenName());
+    var usedIds = {};
+    candidates.forEach(function (el) {
+      if (!el || !isVisible(el)) { return; }                 /* not on this screen */
+      var r = gameRect(el);
+      if (r.w < 6 || r.h < 6) { return; }
+      if (isBackground(el)) { return; }
+      if (registry.some(function (e) { return e.el === el; })) { return; }
+      var id = idFor(el);
+      if (usedIds[id]) { id = id + "-" + (++usedIds[id]); } else { usedIds[id] = 1; }
+      var entry = { el: el, id: id };
+      makePositionable(el, entry);
+      entry.onDown = function (ev) { startDrag(ev, entry); };
+      el.addEventListener("pointerdown", entry.onDown);
+      el.style.cursor = "move";
+      registry.push(entry);
+    });
+    registerConnectorGroup();
+    registerConnectorHeads();
+    renderInspector();
   }
+
+  /* ── drag + resize ────────────────────────────────────────────────────── */
+  var drag = null;
+  var hdrag = null;   /* active resize-handle drag */
+
+  var HANDLE_DIRS = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
+
+  /* Position the 8 resize grips (corners + edge midpoints) on the selected
+     element's screen box. Hidden when nothing is selected. */
+  function placeHandles() {
+    if (!handles.length) { return; }
+    /* Group (the connector bundle) only translates — no resize grips. */
+    if (!selected || !selected.el.isConnected || selected.group) {
+      handles.forEach(function (h) { h.style.display = "none"; });
+      return;
+    }
+    var r = selected.el.getBoundingClientRect();
+    var mx = r.left + r.width / 2, my = r.top + r.height / 2;
+    var pos = {
+      nw: [r.left, r.top], n: [mx, r.top], ne: [r.right, r.top],
+      e: [r.right, my], se: [r.right, r.bottom], s: [mx, r.bottom],
+      sw: [r.left, r.bottom], w: [r.left, my]
+    };
+    handles.forEach(function (h) {
+      var p = pos[h.getAttribute("data-dir")];
+      h.style.display = "block";
+      h.style.left = (p[0] - 7) + "px";
+      h.style.top = (p[1] - 7) + "px";
+    });
+  }
+
+  /* Start a resize from the given edge/corner. Each side moves independently
+     (no aspect lock) so a block can be cropped or extended from any direction. */
+  function startHandleResize(ev, dir) {
+    if (!selected) { return; }
+    ev.preventDefault();
+    ev.stopPropagation();
+    var g = gameRect(selected.el);
+    hdrag = { dir: dir, sx: ev.clientX, sy: ev.clientY, W: g.w, H: g.h, L: g.left, T: g.top, dx: selected.dx || 0, dy: selected.dy || 0 };
+    window.addEventListener("pointermove", onHandleMove);
+    window.addEventListener("pointerup", onHandleUp);
+  }
+
+  /* Each side resizes independently; W/N edges keep the far edge fixed. Box mode
+     sets left/top/width/height (1:1, no scale); xform mode keeps the rotation and
+     compensates via a prepended translate. */
+  function onHandleMove(ev) {
+    if (!hdrag) { return; }
+    var el = selected.el, d = hdrag.dir;
+    var dx = (ev.clientX - hdrag.sx) * scaleX();
+    var dy = (ev.clientY - hdrag.sy) * scaleY();
+    var W = hdrag.W, H = hdrag.H;
+    if (selected.mode === "box") {
+      var L = hdrag.L, T = hdrag.T;
+      if (d.indexOf("e") !== -1) { W = Math.max(8, hdrag.W + dx); }
+      if (d.indexOf("w") !== -1) { W = Math.max(8, hdrag.W - dx); L = hdrag.L + (hdrag.W - W); }
+      if (d.indexOf("s") !== -1) { H = Math.max(8, hdrag.H + dy); }
+      if (d.indexOf("n") !== -1) { H = Math.max(8, hdrag.H - dy); T = hdrag.T + (hdrag.H - H); }
+      el.style.left = round1(L) + "px";
+      el.style.top = round1(T) + "px";
+      el.style.width = round1(W) + "px";
+      el.style.height = round1(H) + "px";
+    } else {
+      selected.dx = hdrag.dx; selected.dy = hdrag.dy;
+      if (d.indexOf("e") !== -1) { W = Math.max(8, hdrag.W + dx); }
+      if (d.indexOf("w") !== -1) { W = Math.max(8, hdrag.W - dx); selected.dx = hdrag.dx + (hdrag.W - W); }
+      if (d.indexOf("s") !== -1) { H = Math.max(8, hdrag.H + dy); }
+      if (d.indexOf("n") !== -1) { H = Math.max(8, hdrag.H - dy); selected.dy = hdrag.dy + (hdrag.H - H); }
+      el.style.width = round1(W) + "px";
+      el.style.height = round1(H) + "px";
+      applyXform(selected);
+    }
+    placeHandles();
+    renderInspector();
+  }
+
+  function onHandleUp() {
+    hdrag = null;
+    window.removeEventListener("pointermove", onHandleMove);
+    window.removeEventListener("pointerup", onHandleUp);
+  }
+
+  function startDrag(ev, entry) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    select(entry);
+    var resize = ev.shiftKey && !entry.group;   /* Shift+drag = uniform resize, plain drag = move */
+    var g = gameRect(entry.el);
+    drag = {
+      entry: entry, resize: resize,
+      startX: ev.clientX, startY: ev.clientY,
+      dx: entry.dx || 0, dy: entry.dy || 0,
+      left: parseFloat(entry.el.style.left) || 0, top: parseFloat(entry.el.style.top) || 0,
+      w: g.w, h: g.h
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
+
+  function onMove(ev) {
+    if (!drag) { return; }
+    var dx = (ev.clientX - drag.startX) * scaleX();
+    var dy = (ev.clientY - drag.startY) * scaleY();
+    var el = drag.entry.el;
+    if (drag.resize) {
+      /* uniform scale from the drag distance; keeps aspect */
+      var factor = Math.max(0.25, 1 + dy / Math.max(40, drag.h));
+      el.style.width = round1(drag.w * factor) + "px";
+      el.style.height = round1(drag.h * factor) + "px";
+    } else if (drag.entry.mode === "box") {
+      el.style.left = round1(drag.left + dx) + "px";
+      el.style.top = round1(drag.top + dy) + "px";
+    } else {
+      drag.entry.dx = drag.dx + dx;
+      drag.entry.dy = drag.dy + dy;
+      applyXform(drag.entry);
+    }
+    placeHandles();
+    renderInspector();
+  }
+
+  function onUp() {
+    drag = null;
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+  }
+
+  function select(entry) {
+    if (selected) { selected.el.classList.remove("dbg-selected"); }
+    selected = entry;
+    if (entry && !entry.group) { entry.el.classList.add("dbg-selected"); }   /* group is full-frame; skip the box outline */
+    placeHandles();
+    renderInspector();
+  }
+
+  /* Arrow-key nudge for the selected element (Shift = 10px). */
+  function onKey(ev) {
+    if (!selected) { return; }
+    var step = ev.shiftKey ? 10 : 1;
+    if (selected.mode === "box") {
+      var el = selected.el;
+      var l = parseFloat(el.style.left) || 0, t = parseFloat(el.style.top) || 0;
+      if (ev.key === "ArrowLeft") { el.style.left = (l - step) + "px"; }
+      else if (ev.key === "ArrowRight") { el.style.left = (l + step) + "px"; }
+      else if (ev.key === "ArrowUp") { el.style.top = (t - step) + "px"; }
+      else if (ev.key === "ArrowDown") { el.style.top = (t + step) + "px"; }
+      else { return; }
+    } else {
+      if (ev.key === "ArrowLeft") { selected.dx -= step; }
+      else if (ev.key === "ArrowRight") { selected.dx += step; }
+      else if (ev.key === "ArrowUp") { selected.dy -= step; }
+      else if (ev.key === "ArrowDown") { selected.dy += step; }
+      else { return; }
+      applyXform(selected);
+    }
+    ev.preventDefault();
+    placeHandles();
+    renderInspector();
+  }
+
+  /* ── export ───────────────────────────────────────────────────────────── */
+  function currentScreenName() {
+    if (document.querySelector("#flightLayer .dbg-piece")) { return "fit"; }
+    var step = window.FLOW[window.state.step];
+    return step ? step.scene : "?";
+  }
+
+  function buildJSON() {
+    var r = window.ROUNDS[window.state.round] || {};
+    var heads = (typeof window.__connectorHeads === "function") ? window.__connectorHeads() : [];
+    return {
+      round: window.state.round,
+      roundName: r.name || "",
+      screen: currentScreenName(),
+      connectorHeads: heads.map(function (h) { return { i: h.i, x: round1(h.x), y: round1(h.y) }; }),
+      assets: registry.map(function (e) {
+        if (e.group) {
+          /* connector bundle: just the {x,y} translate offset to bake into CONNECTOR_NUDGE */
+          return { id: e.id, x: round1(e.dx), y: round1(e.dy) };
+        }
+        var g = gameRect(e.el);
+        /* dx/dy = how far this asset was nudged from its built-in position (handy
+           for a small CSS tweak); x/y/w/h = its final game-space box. */
+        return {
+          id: e.id,
+          x: round1(g.left), y: round1(g.top),
+          w: round1(g.w), h: round1(g.h),
+          cx: round1(g.cx), cy: round1(g.cy),
+          dx: round1(e.dx || 0), dy: round1(e.dy || 0)
+        };
+      })
+    };
+  }
+
+  function download() {
+    var data = buildJSON();
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "layout_" + data.roundName + "_" + data.screen + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  /* ── navigation ───────────────────────────────────────────────────────── */
+  function gotoScene(stepIndex) {
+    if (typeof window.clearTimers === "function") { window.clearTimers(); }
+    if (typeof window.stopInstructionAudio === "function") { window.stopInstructionAudio(); }
+    window.state.step = stepIndex;
+    window.renderStep();
+    /* When frozen, cancel the scene's auto-advance IMMEDIATELY (not after a
+       delay) so even short charge scenes — intro/plug/plugReady/moveOut, whose
+       durations are under a second — hold on screen instead of slipping to the
+       next one before you can align them. CSS entrance animations still play; we
+       only kill the JS timers (auto-advance + deferred polish). A second clear +
+       scan a moment later catches anything rescheduled as layout settles. */
+    if (frozen) {
+      if (typeof window.clearTimers === "function") { window.clearTimers(); }
+      setTimeout(function () { if (frozen && typeof window.clearTimers === "function") { window.clearTimers(); } scan(); }, 450);
+    } else {
+      setTimeout(scan, 400);
+    }
+  }
+
+  function gotoFit() {
+    if (typeof window.__debugRenderFit === "function") {
+      window.__debugRenderFit(window.state.round);
+      setTimeout(scan, 250);
+    }
+  }
+
+  function setRound(i) {
+    window.state.round = i;
+    syncRoundChips();
+    /* re-render whatever screen we're on for the new round */
+    if (currentScreenName() === "fit") { gotoFit(); }
+    else { gotoScene(window.state.step); }
+  }
+
+  /* ── panel UI ─────────────────────────────────────────────────────────── */
+  var panel, inspectorBox, roundRow;
+
+  function syncRoundChips() {
+    if (!roundRow) { return; }
+    Array.prototype.forEach.call(roundRow.children, function (btn, i) {
+      btn.classList.toggle("on", i === window.state.round);
+    });
+  }
+
+  function renderInspector() {
+    if (!inspectorBox) { return; }
+    var html = "";
+    registry.forEach(function (e) {
+      var on = (selected === e) ? " on" : "";
+      if (e.group) {
+        html += '<div class="dbg-row' + on + '" data-id="' + e.id + '">' +
+          '<b>' + e.id + '</b>' +
+          '<span>offset x ' + round1(e.dx) + ' &nbsp; y ' + round1(e.dy) + '</span>' +
+          '<span>grab a wire / arrows to nudge</span>' +
+          '</div>';
+        return;
+      }
+      var g = gameRect(e.el);
+      html += '<div class="dbg-row' + on + '" data-id="' + e.id + '">' +
+        '<b>' + e.id + '</b>' +
+        '<span>x ' + round1(g.left) + ' &nbsp; y ' + round1(g.top) + '</span>' +
+        '<span>w ' + round1(g.w) + ' &nbsp; h ' + round1(g.h) + '</span>' +
+        '</div>';
+    });
+    if (!registry.length) { html = '<div class="dbg-empty">No elements on this screen. Pick a screen, then Re-scan.</div>'; }
+    inspectorBox.innerHTML = html;
+    Array.prototype.forEach.call(inspectorBox.querySelectorAll(".dbg-row"), function (row) {
+      row.addEventListener("click", function () {
+        var entry = registry.filter(function (e) { return e.id === row.getAttribute("data-id"); })[0];
+        if (entry) { select(entry); entry.el.scrollIntoView && 0; }
+      });
+    });
+  }
+
+  function btn(label, title, cls) {
+    var b = document.createElement("button");
+    b.type = "button"; b.textContent = label; b.title = title || label;
+    b.className = "dbg-btn" + (cls ? " " + cls : "");
+    return b;
+  }
+
+  function build() {
+    var style = document.createElement("style");
+    style.textContent =
+      "#dbgPanel{position:fixed;top:42px;right:8px;z-index:99998;width:248px;max-height:90vh;overflow:auto;" +
+        "background:rgba(14,22,44,.95);border:1px solid #3f6bd0;border-radius:12px;color:#eaf2ff;" +
+        "font:12px 'Trebuchet MS',Arial,sans-serif;padding:10px;box-shadow:0 6px 22px rgba(0,0,0,.45);user-select:none}" +
+      "#dbgPanel h4{margin:0 0 6px;font-size:12px;letter-spacing:.4px;color:#9fc2ff;display:flex;align-items:center;justify-content:space-between;gap:6px}" +
+      "#dbgPanel .dbg-collapse{cursor:pointer;border:none;border-radius:6px;background:#21345f;color:#eaf2ff;width:22px;height:20px;font-size:11px;line-height:1;padding:0}" +
+      "#dbgPanel .dbg-collapse:hover{background:#2c4a86}" +
+      "#dbgPanel .dbg-sec{margin:8px 0;padding-top:8px;border-top:1px solid #2a3c66}" +
+      "#dbgPanel .dbg-btn{cursor:pointer;border:none;border-radius:8px;background:#21345f;color:#eaf2ff;" +
+        "padding:5px 8px;margin:2px 2px 0 0;font:12px 'Trebuchet MS',Arial,sans-serif}" +
+      "#dbgPanel .dbg-btn:hover{background:#2c4a86}" +
+      "#dbgPanel .dbg-btn.on{background:#3f8bd0;color:#fff}" +
+      "#dbgPanel .dbg-btn.go{background:#2e7d4f}#dbgPanel .dbg-btn.go:hover{background:#379a60}" +
+      "#dbgPanel .dbg-btn.dl{background:#b9852b;width:100%;margin-top:6px}#dbgPanel .dbg-btn.dl:hover{background:#d39a33}" +
+      "#dbgPanel select{width:100%;border:none;border-radius:8px;background:#21345f;color:#eaf2ff;" +
+        "padding:5px 6px;font:12px 'Trebuchet MS',Arial,sans-serif;margin-top:4px}" +
+      "#dbgPanel .dbg-row{display:flex;flex-direction:column;gap:1px;padding:4px 6px;border-radius:6px;cursor:pointer;margin-top:3px;background:#19284a}" +
+      "#dbgPanel .dbg-row.on{background:#2f4f86;outline:1px solid #5fa0ff}" +
+      "#dbgPanel .dbg-row b{color:#ffd98a}#dbgPanel .dbg-row span{color:#bcd2f5;font-size:11px}" +
+      "#dbgPanel .dbg-empty{color:#8aa3cf;font-size:11px;padding:4px}" +
+      "#dbgPanel .dbg-hint{color:#8aa3cf;font-size:10.5px;line-height:1.45;margin-top:6px}" +
+      ".dbg-selected{outline:2px dashed #ffd98a !important;outline-offset:1px}" +
+      ".dbg-h{position:fixed;width:14px;height:14px;background:#ffd98a;border:2px solid #b9852b;" +
+        "border-radius:3px;z-index:99999;box-shadow:0 1px 4px rgba(0,0,0,.5)}" +
+      ".dbg-conn-head{position:fixed;width:18px;height:18px;border-radius:50%;z-index:99999;cursor:move;" +
+        "background:#23e0ff;border:2px solid #0a6c8a;box-shadow:0 0 8px rgba(35,224,255,.9);" +
+        "color:#04303f;font:bold 9px/18px 'Trebuchet MS',Arial,sans-serif;text-align:center;" +
+        "letter-spacing:-.5px;user-select:none;touch-action:none}";
+    document.head.appendChild(style);
+
+    /* 8 resize grips: corners + edge midpoints. Each drags its own side(s). */
+    var CURSORS = { nw: "nwse-resize", se: "nwse-resize", ne: "nesw-resize", sw: "nesw-resize", n: "ns-resize", s: "ns-resize", e: "ew-resize", w: "ew-resize" };
+    HANDLE_DIRS.forEach(function (dir) {
+      var h = document.createElement("div");
+      h.className = "dbg-h";
+      h.setAttribute("data-dir", dir);
+      h.style.display = "none";
+      h.style.cursor = CURSORS[dir];
+      h.title = "Drag to resize the " + dir.toUpperCase() + " side";
+      h.addEventListener("pointerdown", function (ev) { startHandleResize(ev, dir); });
+      document.body.appendChild(h);
+      handles.push(h);
+    });
+    window.addEventListener("scroll", function () { placeHandles(); placeConnHeads(); }, true);
+    window.addEventListener("resize", function () { placeHandles(); placeConnHeads(); });
+
+    panel = document.createElement("div");
+    panel.id = "dbgPanel";
+
+    /* Draggable, collapsible header so the panel never traps the corner pieces
+       sitting under it. Click ▾/▸ to collapse to just the bar; drag the title to
+       move the whole panel out of the way. */
+    var h = document.createElement("h4");
+    var hTitle = document.createElement("span");
+    hTitle.textContent = "LAYOUT ALIGN";
+    hTitle.style.cursor = "grab";
+    var hToggle = document.createElement("button");
+    hToggle.type = "button"; hToggle.className = "dbg-collapse"; hToggle.textContent = "▾";
+    hToggle.title = "Collapse / expand";
+    h.appendChild(hTitle);
+    h.appendChild(hToggle);
+    panel.appendChild(h);
+
+    var bodyWrap = document.createElement("div");
+    bodyWrap.className = "dbg-body";
+
+    hToggle.addEventListener("click", function () {
+      var hidden = bodyWrap.style.display === "none";
+      bodyWrap.style.display = hidden ? "" : "none";
+      hToggle.textContent = hidden ? "▾" : "▸";
+    });
+    /* drag the panel by its title */
+    var pdrag = null;
+    hTitle.addEventListener("pointerdown", function (ev) {
+      var pr = panel.getBoundingClientRect();
+      pdrag = { sx: ev.clientX, sy: ev.clientY, left: pr.left, top: pr.top };
+      panel.style.right = "auto";
+      hTitle.style.cursor = "grabbing";
+      ev.preventDefault();
+    });
+    window.addEventListener("pointermove", function (ev) {
+      if (!pdrag) { return; }
+      panel.style.left = (pdrag.left + ev.clientX - pdrag.sx) + "px";
+      panel.style.top = (pdrag.top + ev.clientY - pdrag.sy) + "px";
+    });
+    window.addEventListener("pointerup", function () {
+      if (pdrag) { pdrag = null; hTitle.style.cursor = "grab"; }
+    });
+
+    /* round chips */
+    var rsec = document.createElement("div");
+    rsec.className = "dbg-sec";
+    var rlab = document.createElement("div"); rlab.textContent = "Round"; rlab.style.color = "#9fc2ff";
+    rsec.appendChild(rlab);
+    roundRow = document.createElement("div");
+    window.ROUNDS.forEach(function (r, i) {
+      var b = btn(r.label || r.name || ("R" + i), "Switch to " + (r.name || i));
+      b.addEventListener("click", function () { setRound(i); });
+      roundRow.appendChild(b);
+    });
+    rsec.appendChild(roundRow);
+    bodyWrap.appendChild(rsec);
+
+    /* scene controls */
+    var ssec = document.createElement("div");
+    ssec.className = "dbg-sec";
+    var slab = document.createElement("div"); slab.textContent = "Screen"; slab.style.color = "#9fc2ff";
+    ssec.appendChild(slab);
+    var sel = document.createElement("select");
+    window.FLOW.forEach(function (step, i) {
+      var o = document.createElement("option");
+      o.value = i; o.textContent = i + ": " + step.scene;
+      sel.appendChild(o);
+    });
+    sel.addEventListener("change", function () { gotoScene(Number(sel.value)); });
+    ssec.appendChild(sel);
+    var fitBtn = btn("▶ Blocks-in-slots (fit)", "Render the static fit screen for alignment", "go");
+    fitBtn.style.width = "100%"; fitBtn.style.marginTop = "6px";
+    fitBtn.addEventListener("click", gotoFit);
+    ssec.appendChild(fitBtn);
+    var freezeBtn = btn("🔒 Stay on this screen: ON", "Cancel the screen's auto-advance so it stays put", "on");
+    freezeBtn.style.width = "100%"; freezeBtn.style.marginTop = "6px";
+    freezeBtn.addEventListener("click", function () {
+      frozen = !frozen;
+      freezeBtn.textContent = "🔒 Stay on this screen: " + (frozen ? "ON" : "OFF");
+      freezeBtn.classList.toggle("on", frozen);
+      if (frozen && typeof window.clearTimers === "function") { window.clearTimers(); }
+    });
+    ssec.appendChild(freezeBtn);
+    var rescan = btn("Re-scan elements", "Re-attach drag/resize handles");
+    rescan.addEventListener("click", scan);
+    ssec.appendChild(rescan);
+    bodyWrap.appendChild(ssec);
+
+    /* inspector */
+    var isec = document.createElement("div");
+    isec.className = "dbg-sec";
+    var ilab = document.createElement("div"); ilab.textContent = "Elements (click to select)"; ilab.style.color = "#9fc2ff";
+    isec.appendChild(ilab);
+    inspectorBox = document.createElement("div");
+    isec.appendChild(inspectorBox);
+    var dl = btn("⬇ Download Layout JSON", "Export positions for Claude", "dl");
+    dl.addEventListener("click", download);
+    isec.appendChild(dl);
+    bodyWrap.appendChild(isec);
+
+    var hint = document.createElement("div");
+    hint.className = "dbg-hint";
+    hint.innerHTML = "Click a block to select it.<br>Drag body = move &nbsp;·&nbsp; drag any <b>orange grip</b> (corners + sides) = resize that edge<br>Grab a <b>cyan wire</b> = move the whole charging-connector bundle<br>Drag a <b>cyan TL/TR/BL/BR dot</b> = move that wire's head endpoint (over the bot head); exported as connectorHeads<br>Arrows = nudge (Shift = 10px)<br>Pick a round, hit <b>Blocks-in-slots</b>, align into the hollows, then Download JSON.";
+    bodyWrap.appendChild(hint);
+
+    panel.appendChild(bodyWrap);
+    document.body.appendChild(panel);
+    window.addEventListener("keydown", onKey);
+
+    sel.value = window.state.step;
+    syncRoundChips();
+    setTimeout(scan, 300);
+  }
+
+  whenReady(build);
 })();

@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body>
+<iframe id="f" src="index.html" style="width:1280px;height:720px;border:0"></iframe>
+<script>
+var f=document.getElementById("f");
+f.onload=function(){setTimeout(function(){try{var w=f.contentWindow;w.clearTimers();w.state.round=2;
+var i=0;for(var k=0;k<w.FLOW.length;k++){if(w.FLOW[k].scene==="laser"){i=k;break;}}w.state.step=i;w.renderStep();w.clearTimers();
+w.state.gridCutAngles=[45,135];w.state.gridCutOrients=["slash","backslash"];
+w.__dbgFit("win");document.title="ok";
+}catch(e){document.title="ERR:"+e.message;}},900);};
+</script></body></html>
